@@ -1,0 +1,15 @@
+{
+  "name": "Shelfy — la tua dispensa intelligente",
+  "short_name": "Shelfy",
+  "description": "Tieni traccia dei tuoi alimenti e riduci gli sprechi alimentari.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f3ec",
+  "theme_color": "#2f4a31",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "categories": ["food", "lifestyle", "utilities"]
+}
