@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Shelfy — la tua dispensa intelligente</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+
+<style>
+  html, body { margin: 0; padding: 0; background: #25271f; height: 100%; }
+  body {
+    font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+    color: #1a2018; overflow: hidden;
+  }
+  #root {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background:
+      radial-gradient(circle at 30% 20%, #303728 0%, #1d201a 50%, #15170f 100%);
+  }
+  /* iPhone-frame scale wrapper */
+  .stage {
+    width: 402px; height: 874px;
+    transform-origin: center center;
+  }
+  * { box-sizing: border-box; }
+  input, button, textarea, select { font-family: inherit; }
+  input::placeholder { color: #aeb2a6; }
+  input::-webkit-date-and-time-value { text-align: left; }
+
+  /* scanner animations */
+  @keyframes shelfyScan {
+    0%   { top: 0%;   opacity: 0.8; }
+    50%  { top: 100%; opacity: 1;   }
+    100% { top: 0%;   opacity: 0.8; }
+  }
+  @keyframes shelfySheetIn {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  /* hide scrollbars in pantry chips row */
+  *::-webkit-scrollbar { display: none; }
+
+  /* tweaks override container scaling */
+  .twk-panel { transform-origin: bottom right; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- React + Babel -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- Data + starter components -->
+<script src="data.js"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<!-- App code -->
+<script type="text/babel" src="icons.jsx"></script>
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" src="screen-home.jsx"></script>
+<script type="text/babel" src="screen-scanner.jsx"></script>
+<script type="text/babel" src="screen-add.jsx"></script>
+<script type="text/babel" src="screen-detail.jsx"></script>
+<script type="text/babel" src="screen-notifications.jsx"></script>
+<script type="text/babel" src="screen-recipes.jsx"></script>
+<script type="text/babel" src="app.jsx"></script>
+
+<!-- Mount + responsive scaling -->
+<script type="text/babel">
+  const root = document.getElementById('root');
+  const stage = document.createElement('div');
+  stage.className = 'stage';
+  root.appendChild(stage);
+
+  // Mount the App inside an iOS device frame
+  function Mount() {
+    return (
+      <IOSDevice width={402} height={874} dark={false}>
+        <App/>
+      </IOSDevice>
+    );
+  }
+  ReactDOM.createRoot(stage).render(<Mount/>);
+
+  // Scale the stage to fit viewport while preserving aspect
+  function fit() {
+    const margin = 32;
+    const w = Math.max(0, window.innerWidth - margin);
+    const h = Math.max(0, window.innerHeight - margin);
+    if (w === 0 || h === 0) { requestAnimationFrame(fit); return; }
+    const s = Math.max(0.1, Math.min(w / 402, h / 874, 1));
+    stage.style.transform = 'scale(' + s + ')';
+    document.documentElement.style.setProperty('--dc-inv-zoom', 1 / s);
+  }
+  requestAnimationFrame(fit);
+  window.addEventListener('load', fit);
+  window.addEventListener('resize', fit);
+</script>
+</body>
+</html>
