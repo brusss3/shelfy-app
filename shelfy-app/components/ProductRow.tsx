@@ -2,9 +2,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import FoodTile from './FoodTile';
 import { Product } from '@/types';
-import { urgencyOf } from '@/lib/urgency';
+import { urgencyOf, effectiveDays } from '@/lib/urgency';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
-import { daysTo } from '@/context/ProductsContext';
 
 interface Props {
   product: Product;
@@ -18,14 +17,22 @@ const ZONE_ICONS: Record<string, string> = {
 };
 
 export default function ProductRow({ product, onPress }: Props) {
-  const days = daysTo(product.expiry);
+  const days = effectiveDays(product);
   const u = urgencyOf(days);
+  const isOpened = !!product.openedAt;
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.card}>
       <FoodTile product={product} size={52} radius={RADIUS.md} />
       <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={1}>{product.name}</Text>
+        <View style={styles.nameRow}>
+          <Text style={styles.name} numberOfLines={1}>{product.name}</Text>
+          {isOpened && (
+            <View style={styles.openedBadge}>
+              <Text style={styles.openedBadgeText}>Aperto</Text>
+            </View>
+          )}
+        </View>
         <Text style={styles.sub} numberOfLines={1}>
           {ZONE_ICONS[product.zone]}  {product.qty} · {product.brand}
         </Text>
@@ -48,11 +55,25 @@ const styles = StyleSheet.create({
     ...SHADOW.card,
   },
   info: { flex: 1, minWidth: 0 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   name: {
     fontSize: 15,
     fontFamily: FONTS.sansSemiBold,
     color: T.ink,
     letterSpacing: -0.1,
+    flexShrink: 1,
+  },
+  openedBadge: {
+    backgroundColor: '#e8f0e8',
+    borderRadius: 100,
+    paddingVertical: 2,
+    paddingHorizontal: 7,
+  },
+  openedBadgeText: {
+    fontSize: 10,
+    fontFamily: FONTS.sansBold,
+    color: '#3a6b3a',
+    letterSpacing: 0.2,
   },
   sub: {
     fontSize: 12,

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  StyleSheet, Platform, Alert, ActivityIndicator,
+  StyleSheet, Platform, Alert, ActivityIndicator, Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProducts } from '@/context/ProductsContext';
 import { ScannedProduct, Zone } from '@/types';
 import FoodTile from '@/components/FoodTile';
@@ -37,6 +38,7 @@ export default function AddScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { addNewProduct } = useProducts();
+  const insets = useSafeAreaInsets();
 
   const scanned: ScannedProduct | null = params.scanned
     ? JSON.parse(params.scanned as string)
@@ -49,6 +51,27 @@ export default function AddScreen() {
   const [category, setCategory] = useState(scanned?.category ?? '');
   const [expiry, setExpiry] = useState(addDays(scanned?.suggestExpiry ?? 7));
   const [saving, setSaving] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const [pickerYear, setPickerYear] = useState('');
+  const [pickerMonth, setPickerMonth] = useState('');
+  const [pickerDay, setPickerDay] = useState('');
+
+  const confirmDate = () => {
+    const d = Math.max(1, Math.min(31, parseInt(pickerDay) || 1));
+    const m = Math.max(1, Math.min(12, parseInt(pickerMonth) || 1));
+    const y = parseInt(pickerYear) || new Date().getFullYear();
+    setExpiry(`${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+    setShowDatePicker(false);
+  };
+
+  const openDatePicker = () => {
+    const d = new Date(expiry + 'T00:00:00');
+    setPickerYear(String(d.getFullYear()));
+    setPickerMonth(String(d.getMonth() + 1));
+    setPickerDay(String(d.getDate()));
+    setShowDatePicker(true);
+  };
 
   const tint = scanned?.tint ?? tintForCategory(category);
 
@@ -89,7 +112,7 @@ export default function AddScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
             <Text style={styles.closeBtnText}>✕</Text>
           </TouchableOpacity>
@@ -180,13 +203,10 @@ export default function AddScreen() {
         <Text style={styles.sectionLabel}>SCADENZA</Text>
         <View style={styles.card}>
           <FieldRow label="Data">
-            <TextInput
-              style={styles.input}
-              value={expiry}
-              onChangeText={setExpiry}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={T.mute}
-            />
+            <TouchableOpacity onPress={openDatePicker} activeOpacity={0.85} style={styles.dateBtn}>
+              <Text style={styles.dateBtnText}>{expiry}</Text>
+              <Text style={styles.dateBtnIcon}>📅</Text>
+            </TouchableOpacity>
           </FieldRow>
           <Divider />
           <View style={styles.remainingRow}>
@@ -218,8 +238,78 @@ export default function AddScreen() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
+      {/* Date picker modal */}
+      <Modal visible={showDatePicker} transparent animationType="fade" onRequestClose={() => setShowDatePicker(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowDatePicker(false)}>
+          <TouchableOpacity activeOpacity={1} style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Scegli la data</Text>
+            <View style={styles.pickerRow}>
+              <View style={styles.pickerCol}>
+                <Text style={styles.pickerLabel}>Giorno</Text>
+                <TextInput
+                  style={styles.pickerInput}
+                  value={pickerDay}
+                  onChangeText={setPickerDay}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  selectTextOnFocus
+                />
+              </View>
+              <View style={styles.pickerCol}>
+                <Text style={styles.pickerLabel}>Mese</Text>
+                <TextInput
+                  style={styles.pickerInput}
+                  value={pickerMonth}
+                  onChangeText={setPickerMonth}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  selectTextOnFocus
+                />
+              </View>
+              <View style={styles.pickerCol}>
+                <Text style={styles.pickerLabel}>Anno</Text>
+                <TextInput
+                  style={styles.pickerInput}
+                  value={pickerYear}
+                  onChangeText={setPickerYear}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  selectTextOnFocus
+                />
+              </View>
+            </View>
+            {/* Quick offsets */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 8 }}>
+              {PRESETS.map((p) => (
+                <TouchableOpacity
+                  key={p.d}
+                  style={styles.preset}
+                  onPress={() => {
+                    const d = new Date(Date.now() + p.d * 86400000);
+                    setPickerDay(String(d.getDate()));
+                    setPickerMonth(String(d.getMonth() + 1));
+                    setPickerYear(String(d.getFullYear()));
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.presetText}>+ {p.l}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <View style={styles.modalBtns}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setShowDatePicker(false)} activeOpacity={0.85}>
+                <Text style={styles.modalCancelText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalConfirm} onPress={confirmDate} activeOpacity={0.85}>
+                <Text style={styles.modalConfirmText}>Conferma</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Sticky footer */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <TouchableOpacity
           style={styles.cancelBtn}
           onPress={() => router.back()}
@@ -263,7 +353,7 @@ const styles = StyleSheet.create({
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingTop: Platform.OS === 'ios' ? 16 : 36, paddingBottom: 12,
+    paddingHorizontal: 16, paddingBottom: 12,
   },
   closeBtn: {
     width: 40, height: 40, borderRadius: 100, backgroundColor: T.surface,
@@ -324,8 +414,7 @@ const styles = StyleSheet.create({
 
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    flexDirection: 'row', gap: 10, padding: 16,
-    paddingBottom: Platform.OS === 'ios' ? 36 : 16,
+    flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingTop: 16,
     backgroundColor: T.bg,
     borderTopWidth: 0.5, borderTopColor: T.line,
   },
@@ -339,4 +428,40 @@ const styles = StyleSheet.create({
     alignItems: 'center', backgroundColor: T.primary, ...SHADOW.fab,
   },
   saveBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 16, color: '#fbfaf3' },
+
+  dateBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
+  dateBtnText: { fontFamily: FONTS.sansMedium, fontSize: 15, color: T.ink },
+  dateBtnIcon: { fontSize: 18 },
+
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  modalCard: {
+    backgroundColor: T.surface, borderRadius: 24, padding: 24,
+    width: 320, gap: 12,
+  },
+  modalTitle: { fontFamily: FONTS.serifItalic, fontSize: 22, color: T.ink, letterSpacing: -0.3 },
+  pickerRow: { flexDirection: 'row', gap: 12 },
+  pickerCol: { flex: 1, alignItems: 'center', gap: 6 },
+  pickerLabel: { fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.4 },
+  pickerInput: {
+    width: '100%', textAlign: 'center',
+    backgroundColor: T.bg, borderRadius: RADIUS.md,
+    paddingVertical: 12, fontSize: 20, fontFamily: FONTS.sansBold, color: T.ink,
+    borderWidth: 1, borderColor: T.line,
+  },
+  modalBtns: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  modalCancel: {
+    flex: 1, borderRadius: RADIUS.pill, paddingVertical: 14,
+    alignItems: 'center', borderWidth: 1, borderColor: T.line,
+  },
+  modalCancelText: { fontFamily: FONTS.sansSemiBold, fontSize: 15, color: T.mute },
+  modalConfirm: {
+    flex: 1.5, borderRadius: RADIUS.pill, paddingVertical: 14,
+    alignItems: 'center', backgroundColor: T.primary, ...SHADOW.fab,
+  },
+  modalConfirmText: { fontFamily: FONTS.sansSemiBold, fontSize: 15, color: '#fbfaf3' },
 });

@@ -1,19 +1,32 @@
-import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { Product } from '@/types';
+import { effectiveExpiry } from '@/lib/urgency';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+const isExpoGo = Constants.executionEnvironment === 'storeClient';
+
+// Lazy require — prevents expo-notifications side-effects from running at import time in Expo Go
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function N(): any {
+  return require('expo-notifications');
+}
+
+export function setupNotificationHandler(): void {
+  if (isExpoGo || Platform.OS === 'web') return;
+  N().setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+}
 
 export async function registerForPushNotifications(): Promise<string | null> {
-  if (!Device.isDevice) return null;
+  if (!Device.isDevice || isExpoGo || Platform.OS === 'web') return null;
 
+  const Notifications = N();
   const { status: existing } = await Notifications.getPermissionsAsync();
   let finalStatus = existing;
 
@@ -33,27 +46,37 @@ export async function registerForPushNotifications(): Promise<string | null> {
   }
 
   const token = await Notifications.getExpoPushTokenAsync({
-    projectId: 'your-eas-project-id', // sostituisci con il tuo EAS project ID
+    projectId: 'your-eas-project-id',
   });
 
   return token.data;
 }
 
-export async function scheduleExpiryNotifications(products: Product[]): Promise<void> {
+export async function scheduleExpiryNotifications(
+  products: Product[],
+  enabled = true,
+): Promise<void> {
+  if (isExpoGo || Platform.OS === 'web') return;
+
+  const Notifications = N();
+  // Cancella sempre prima: se l'utente disattiva le notifiche, rimuove anche
+  // quelle già programmate.
   await Notifications.cancelAllScheduledNotificationsAsync();
+  if (!enabled) return;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   for (const product of products) {
-    const expiry = new Date(product.expiry);
+    // Tiene conto della scadenza post-apertura.
+    const expiry = new Date(effectiveExpiry(product));
     expiry.setHours(0, 0, 0, 0);
     const daysLeft = Math.round((expiry.getTime() - today.getTime()) / 86400000);
 
     if (daysLeft < 0 || daysLeft > 7) continue;
 
     const triggerDate = new Date(expiry);
-    triggerDate.setHours(9, 0, 0, 0); // notifica alle 9:00 del giorno di scadenza
+    triggerDate.setHours(9, 0, 0, 0);
 
     if (triggerDate <= new Date()) continue;
 

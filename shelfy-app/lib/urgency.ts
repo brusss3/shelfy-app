@@ -1,5 +1,27 @@
-import { Urgency } from '@/types';
+import { Urgency, Product } from '@/types';
 import { T } from '@/constants/theme';
+
+export function daysTo(iso: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const expiry = new Date(iso);
+  expiry.setHours(0, 0, 0, 0);
+  return Math.round((expiry.getTime() - today.getTime()) / 86400000);
+}
+
+// Data di scadenza "reale": se il prodotto è stato aperto e la scadenza
+// post-apertura cade prima di quella stampata, vale quella post-apertura.
+export function effectiveExpiry(product: Pick<Product, 'expiry' | 'openExpiry'>): string {
+  if (product.openExpiry && daysTo(product.openExpiry) < daysTo(product.expiry)) {
+    return product.openExpiry;
+  }
+  return product.expiry;
+}
+
+// Giorni rimanenti tenendo conto della scadenza post-apertura.
+export function effectiveDays(product: Pick<Product, 'expiry' | 'openExpiry'>): number {
+  return daysTo(effectiveExpiry(product));
+}
 
 export function urgencyOf(days: number): Urgency {
   if (days < 0)  return { key: 'scaduto',   label: 'Scaduto',        color: T.urgent, soft: T.urgentSoft, ink: '#4d1a10' };

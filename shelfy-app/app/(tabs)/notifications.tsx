@@ -1,13 +1,14 @@
 import React from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useProducts } from '@/context/ProductsContext';
-import { urgencyOf, shortDate } from '@/lib/urgency';
-import { daysTo } from '@/context/ProductsContext';
+import { urgencyOf, shortDate, effectiveDays, effectiveExpiry } from '@/lib/urgency';
 import FoodTile from '@/components/FoodTile';
 import Pill from '@/components/Pill';
+import ProfileButton from '@/components/ProfileButton';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 import { Product } from '@/types';
 
@@ -15,10 +16,10 @@ export default function NotificationsScreen() {
   const { products, removeProduct, changeZone, markConsumed } = useProducts();
   const router = useRouter();
 
-  const scaduti  = products.filter((p) => daysTo(p.expiry) < 0);
-  const oggi     = products.filter((p) => daysTo(p.expiry) === 0);
-  const urgenti  = products.filter((p) => { const d = daysTo(p.expiry); return d > 0 && d <= 3; });
-  const prossimi = products.filter((p) => { const d = daysTo(p.expiry); return d > 3 && d <= 7; });
+  const scaduti  = products.filter((p) => effectiveDays(p) < 0);
+  const oggi     = products.filter((p) => effectiveDays(p) === 0);
+  const urgenti  = products.filter((p) => { const d = effectiveDays(p); return d > 0 && d <= 3; });
+  const prossimi = products.filter((p) => { const d = effectiveDays(p); return d > 3 && d <= 7; });
 
   const isEmpty = scaduti.length + oggi.length + urgenti.length + prossimi.length === 0;
 
@@ -26,8 +27,13 @@ export default function NotificationsScreen() {
     <SafeAreaView style={styles.root}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.sub}>Avvisi & azioni</Text>
-          <Text style={styles.title}>Da gestire oggi</Text>
+          <View style={styles.headerRow}>
+            <View>
+              <Text style={styles.sub}>Avvisi & azioni</Text>
+              <Text style={styles.title}>Da gestire oggi</Text>
+            </View>
+            <ProfileButton />
+          </View>
 
           <View style={styles.chips}>
             {[
@@ -133,7 +139,7 @@ interface PriorityCardProps {
 }
 
 function PriorityCard({ product, urgency, onOpen, onRemove, onConsumed, onFreeze, onRecipe, canFreeze }: PriorityCardProps) {
-  const days = daysTo(product.expiry);
+  const days = effectiveDays(product);
   const u = urgencyOf(days);
 
   const suggestion =
@@ -189,14 +195,14 @@ function PriorityCard({ product, urgency, onOpen, onRemove, onConsumed, onFreeze
 }
 
 function CompactCard({ product, onOpen }: { product: Product; onOpen: () => void }) {
-  const days = daysTo(product.expiry);
+  const days = effectiveDays(product);
   const u = urgencyOf(days);
   return (
     <TouchableOpacity onPress={onOpen} activeOpacity={0.85} style={styles.compactCard}>
       <FoodTile product={product} size={48} radius={12} />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
-        <Text style={styles.productSub}>Scade {shortDate(product.expiry)} · {product.zone}</Text>
+        <Text style={styles.productSub}>Scade {shortDate(effectiveExpiry(product))} · {product.zone}</Text>
       </View>
       <View style={[styles.urgencyBadge, { backgroundColor: u.soft }]}>
         <Text style={[styles.urgencyBadgeText, { color: u.ink }]}>{u.label}</Text>
@@ -221,6 +227,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   scroll: { paddingBottom: 110 },
   header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
   sub: { fontSize: 13, color: T.mute, fontFamily: FONTS.sansMedium },
   title: {
     fontFamily: FONTS.serifItalic, fontSize: 38, color: T.ink,

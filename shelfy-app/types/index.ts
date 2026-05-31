@@ -13,6 +13,8 @@ export interface Product {
   tint: string;
   cal: number;
   userId?: string;
+  openedAt?: string;    // ISO date YYYY-MM-DD — when the product was opened
+  openExpiry?: string;  // ISO date YYYY-MM-DD — consume-by after opening
 }
 
 export interface Recipe {
@@ -27,11 +29,23 @@ export interface Recipe {
   steps: string[];
 }
 
+export interface SavedRecipe extends Recipe {
+  completed: boolean;
+  savedAt: string;
+  completedAt?: string;
+}
+
+export type SubscriptionType = 'monthly' | 'annual';
+
 export interface User {
   uid: string;
   email: string | null;
   displayName: string | null;
   isPremium?: boolean;
+  isAdmin?: boolean;
+  subscriptionType?: SubscriptionType | null;
+  subscriptionExpiresAt?: string | null;
+  notificationsEnabled?: boolean;
 }
 
 export type UrgencyKey = 'scaduto' | 'oggi' | 'domani' | 'urgente' | 'prossimo' | 'ok' | 'lungo';

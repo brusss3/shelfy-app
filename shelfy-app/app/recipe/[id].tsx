@@ -4,19 +4,28 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useProducts } from '@/context/ProductsContext';
-import { RECIPES } from '@/constants/recipes';
 import { daysTo } from '@/context/ProductsContext';
+import { useRecipes } from '@/context/RecipesContext';
 import FoodTile from '@/components/FoodTile';
 import Pill from '@/components/Pill';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import { Recipe } from '@/types';
 
 export default function RecipeDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { data } = useLocalSearchParams<{ id: string; data?: string }>();
   const { products } = useProducts();
+  const { savedRecipes, markCompleted } = useRecipes();
   const router = useRouter();
 
-  const recipe = RECIPES.find((r) => r.id === id);
-  if (!recipe) return null;
+  const recipe: Recipe | null = data ? JSON.parse(data as string) : null;
+  const saved = savedRecipes.find((r) => r.id === recipe?.id);
+  const isCompleted = saved?.completed ?? false;
+
+  if (!recipe) return (
+    <View style={[styles.root, { justifyContent: 'center', alignItems: 'center' }]}>
+      <Text style={{ color: T.mute, fontFamily: FONTS.sans }}>Ricetta non trovata.</Text>
+    </View>
+  );
 
   return (
     <View style={styles.root}>
@@ -90,9 +99,18 @@ export default function RecipeDetailScreen() {
 
         {/* CTA */}
         <View style={styles.section}>
-          <Pill variant="primary" size="lg" style={{ justifyContent: 'center' }}>
-            <Text style={{ fontFamily: FONTS.sansSemiBold, fontSize: 16, color: '#fbfaf3' }}>
-              ✓ Segna come cucinata
+          <Pill
+            variant={isCompleted ? 'ghost' : 'primary'}
+            size="lg"
+            style={{ justifyContent: 'center' }}
+            disabled={isCompleted}
+            onPress={() => markCompleted(recipe.id)}
+          >
+            <Text style={{
+              fontFamily: FONTS.sansSemiBold, fontSize: 16,
+              color: isCompleted ? T.primary : '#fbfaf3',
+            }}>
+              {isCompleted ? '✓ Già cucinata' : '✓ Segna come cucinata'}
             </Text>
           </Pill>
         </View>

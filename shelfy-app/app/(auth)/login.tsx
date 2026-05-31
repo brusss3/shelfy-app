@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
+import { authErrorMessage } from '@/lib/authErrors';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 
 export default function LoginScreen() {
@@ -24,7 +25,7 @@ export default function LoginScreen() {
       await signIn(email.trim(), password);
       router.replace('/(tabs)');
     } catch (e: any) {
-      Alert.alert('Accesso fallito', e.message ?? 'Controlla le tue credenziali');
+      Alert.alert('Accesso fallito', authErrorMessage(e, 'Controlla le tue credenziali e riprova.'));
     } finally {
       setLoading(false);
     }

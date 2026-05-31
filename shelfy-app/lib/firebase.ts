@@ -1,21 +1,30 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeAuth, getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { Platform } from 'react-native';
 
-// ─── SOSTITUISCI CON LA TUA CONFIGURAZIONE FIREBASE ──────────────────────────
-// Vai su: https://console.firebase.google.com → Il tuo progetto → Impostazioni → App web
 const firebaseConfig = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'YOUR_AUTH_DOMAIN',
-  projectId: 'YOUR_PROJECT_ID',
-  storageBucket: 'YOUR_STORAGE_BUCKET',
-  messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-  appId: 'YOUR_APP_ID',
+  apiKey: "AIzaSyA5vKbYnVOWyIfcLdwZ62UrpUSAyxeagJk",
+  authDomain: "shelfy-632e0.firebaseapp.com",
+  projectId: "shelfy-632e0",
+  storageBucket: "shelfy-632e0.firebasestorage.app",
+  messagingSenderId: "288975536587",
+  appId: "1:288975536587:web:8a9baeb3a53db632af364e",
+  measurementId: "G-7F5BDPNM29"
 };
-// ─────────────────────────────────────────────────────────────────────────────
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+const alreadyInitialized = getApps().length > 0;
+const app = alreadyInitialized ? getApp() : initializeApp(firebaseConfig);
 
-export const auth = getAuth(app);
+function buildAuth() {
+  if (alreadyInitialized || Platform.OS === 'web') return getAuth(app);
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { getReactNativePersistence } = require('firebase/auth');
+  return initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
+}
+
+export const auth = buildAuth();
 export const db = getFirestore(app);
 export default app;

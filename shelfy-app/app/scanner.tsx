@@ -303,4 +303,5 @@ const styles = StyleSheet.create({
     paddingVertical: 12, paddingHorizontal: 22,
   },
   manualBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: '#fbfaf3' },
+  hint: { fontFamily: FONTS.sans, color: '#fff', lineHeight: 24 },
 });

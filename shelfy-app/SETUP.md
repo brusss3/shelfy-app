@@ -88,30 +88,70 @@ npx expo export --platform web
 # Output in dist/ — carica su Netlify, Vercel, Firebase Hosting...
 ```
 
-## 5. Monetizzazione con RevenueCat (Premium/Base)
+## 5. Monetizzazione con RevenueCat (Premium)
 
-Per aggiungere abbonamenti premium:
+### 5a. Installa il pacchetto
 
 ```bash
-npm install react-native-purchases
+npx expo install react-native-purchases
 ```
 
-1. Crea account su [https://app.revenuecat.com](https://app.revenuecat.com)
-2. Configura i prodotti su App Store Connect e Google Play Console
-3. Aggiungi in `app/_layout.tsx`:
+> ⚠️ RevenueCat usa moduli nativi — **non funziona in Expo Go**.
+> Devi creare un development build con `expo-dev-client` oppure fare una build EAS.
 
-```ts
-import Purchases from 'react-native-purchases';
+### 5b. Crea account e app su RevenueCat
 
-// In useEffect:
-Purchases.configure({ apiKey: 'YOUR_REVENUECAT_API_KEY' });
+1. Registrati su [app.revenuecat.com](https://app.revenuecat.com)
+2. Crea un nuovo **Project** (es. "Shelfy")
+3. Aggiungi due app: una **iOS** e una **Android**
+4. Per ogni app, copia la **Public SDK key** (inizia con `appl_` per iOS, `goog_` per Android)
+5. Incollale in `lib/purchases.ts`:
+   ```ts
+   export const RC_IOS_KEY = 'appl_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+   export const RC_ANDROID_KEY = 'goog_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+   ```
+
+### 5c. Crea i prodotti sullo store
+
+**App Store Connect (iOS)**
+1. [appstoreconnect.apple.com](https://appstoreconnect.apple.com) → La tua app → Abbonamenti
+2. Crea un gruppo di abbonamenti (es. "Shelfy Premium")
+3. Aggiungi prodotti: `shelfy_premium_monthly` (mensile) e `shelfy_premium_annual` (annuale)
+
+**Google Play Console (Android)**
+1. [play.google.com/console](https://play.google.com/console) → La tua app → Monetizza → Abbonamenti
+2. Crea gli stessi prodotti con gli stessi ID
+
+### 5d. Collega i prodotti a RevenueCat
+
+1. RevenueCat → Products → **Import** (importa automaticamente da App Store / Play Store)
+2. RevenueCat → Entitlements → Crea entitlement con identifier `premium`
+3. Collega entrambi i prodotti all'entitlement `premium`
+4. RevenueCat → Offerings → Crea un offering `default` con i due package (Annual + Monthly)
+
+### 5e. Test con Sandbox
+
+- **iOS**: Usa un Apple Sandbox Tester (App Store Connect → Users → Sandbox Testers)
+- **Android**: Pubblica una Internal Testing track su Play Console, aggiungi il tuo account come tester
+
+### 5f. Development build
+
+```bash
+# Installa expo-dev-client
+npx expo install expo-dev-client
+
+# Build Android (usa EAS o locale)
+npx expo run:android
+
+# Build iOS (richiede macOS + Xcode)
+npx expo run:ios
 ```
 
 RevenueCat gestisce automaticamente:
 - ✅ Abbonamenti iOS (App Store)
-- ✅ Abbonamenti Android (Play Store)  
-- ✅ Integrazione Stripe per web
-- ✅ Sincronizzazione cross-platform
+- ✅ Abbonamenti Android (Play Store)
+- ✅ Rinnovi automatici e scadenze
+- ✅ Sincronizzazione cross-platform via `appUserID`
 
 ## 6. Struttura del database Firestore
 

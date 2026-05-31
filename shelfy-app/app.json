@@ -8,13 +8,15 @@
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
-      "resizeMode": "contain",
+      "resizeMode": "cover",
       "backgroundColor": "#2f4a31"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.yourcompany.shelfy",
+      "bundleIdentifier": "com.shelfy.sheflyapp",
       "infoPlist": {
         "NSCameraUsageDescription": "Shelfy usa la fotocamera per scansionare i codici a barre dei prodotti.",
         "NSUserNotificationsUsageDescription": "Shelfy invia notifiche quando i tuoi prodotti stanno per scadere."
@@ -25,11 +27,13 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#2f4a31"
       },
-      "package": "com.yourcompany.shelfy",
+      "package": "com.shelfy.sheflyapp",
       "permissions": [
         "CAMERA",
         "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE"
+        "VIBRATE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ],
       "googleServicesFile": "./google-services.json"
     },
@@ -58,11 +62,18 @@
           "icon": "./assets/notification-icon.png",
           "color": "#2f4a31"
         }
-      ]
+      ],
+      "react-native-edge-to-edge"
     ],
     "scheme": "shelfy",
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "8ca5efb5-8143-4d62-b20e-a3185df70768"
+      }
     }
   }
 }

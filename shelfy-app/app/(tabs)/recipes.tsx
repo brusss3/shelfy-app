@@ -1,188 +1,205 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView,
+  View, Text, ScrollView, TextInput, TouchableOpacity,
+  StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useProducts } from '@/context/ProductsContext';
-import { RECIPES } from '@/constants/recipes';
-import { daysTo } from '@/context/ProductsContext';
-import FoodTile from '@/components/FoodTile';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '@/context/AuthContext';
+import { submitFeedback, FeedbackCategory } from '@/lib/firestore';
+import ProfileButton from '@/components/ProfileButton';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 
-export default function RecipesScreen() {
-  const { products } = useProducts();
-  const router = useRouter();
+const CATEGORIES: { id: FeedbackCategory; label: string; icon: string }[] = [
+  { id: 'bug',          label: 'Segnala un bug',  icon: '🐛' },
+  { id: 'suggerimento', label: 'Suggerimento',     icon: '💡' },
+  { id: 'altro',        label: 'Altro',            icon: '💬' },
+];
 
-  const ranked = RECIPES.map((r) => {
-    const expiring = r.uses.filter((name) => {
-      const p = products.find((pp) => pp.name === name);
-      return p && daysTo(p.expiry) <= 7;
-    });
-    return { recipe: r, expiring, matchCount: expiring.length };
-  }).sort((a, b) => b.matchCount - a.matchCount);
+type Status = 'idle' | 'sending' | 'success' | 'error';
 
-  const featured = ranked[0];
-  const rest = ranked.slice(1);
+export default function FeedbackScreen() {
+  const { user } = useAuth();
+  const [category, setCategory] = useState<FeedbackCategory>('suggerimento');
+  const [message, setMessage] = useState('');
+  const [status, setStatus] = useState<Status>('idle');
+
+  const canSend = message.trim().length >= 10;
+
+  const handleSend = async () => {
+    if (!canSend || !user) return;
+    setStatus('sending');
+    try {
+      await submitFeedback({
+        uid: user.uid,
+        email: user.email ?? '',
+        displayName: user.displayName ?? '',
+        category,
+        message: message.trim(),
+      });
+      setMessage('');
+      setStatus('success');
+    } catch {
+      setStatus('error');
+    }
+  };
+
+  const handleReset = () => setStatus('idle');
 
   return (
     <SafeAreaView style={styles.root}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.sub}>Salva il cibo, ispirati</Text>
-          <Text style={styles.title}>Ricette per te</Text>
-          <Text style={styles.desc}>
-            Basate su {featured?.matchCount ?? 0} ingredienti in scadenza nella tua dispensa.
-          </Text>
-        </View>
-
-        {/* Featured */}
-        {featured && (
-          <TouchableOpacity
-            style={[styles.featured, { backgroundColor: featured.recipe.tint }]}
-            onPress={() => router.push(`/recipe/${featured.recipe.id}`)}
-            activeOpacity={0.9}
-          >
-            <View style={styles.featuredHeader}>
-              <View style={styles.suggeritaBadge}>
-                <Text style={styles.suggeritaText}>✨ Suggerita</Text>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerRow}>
+              <View>
+                <Text style={styles.sub}>Aiutaci a migliorare</Text>
+                <Text style={styles.title}>Segnalazioni</Text>
               </View>
-              {featured.matchCount > 0 && (
-                <View style={styles.matchBadge}>
-                  <Text style={styles.matchText}>{featured.matchCount} in scadenza</Text>
-                </View>
-              )}
+              <ProfileButton />
             </View>
+          </View>
 
-            <Text style={styles.featuredTitle}>{featured.recipe.title}</Text>
-            <Text style={styles.featuredDesc} numberOfLines={2}>{featured.recipe.desc}</Text>
-
-            <View style={styles.featuredMeta}>
-              <Text style={styles.metaItem}>⏱ {featured.recipe.time}</Text>
-              <Text style={styles.metaItem}>🔥 {featured.recipe.difficulty}</Text>
+          {status === 'success' ? (
+            <View style={styles.successBox}>
+              <Text style={styles.successIcon}>✓</Text>
+              <Text style={styles.successTitle}>Grazie per il feedback!</Text>
+              <Text style={styles.successDesc}>
+                Il tuo messaggio è stato inviato. Lo leggeremo al più presto.
+              </Text>
+              <TouchableOpacity style={styles.resetBtn} onPress={handleReset} activeOpacity={0.85}>
+                <Text style={styles.resetBtnText}>Invia un altro messaggio</Text>
+              </TouchableOpacity>
             </View>
-
-            <View style={styles.featuredFooter}>
-              <View style={styles.ingredientStack}>
-                {featured.recipe.uses.slice(0, 3).map((name, i) => {
-                  const p = products.find((pp) => pp.name === name);
+          ) : (
+            <>
+              {/* Category */}
+              <Text style={styles.sectionLabel}>Tipo di segnalazione</Text>
+              <View style={styles.categories}>
+                {CATEGORIES.map((c) => {
+                  const active = category === c.id;
                   return (
-                    <View key={i} style={[styles.stackItem, { marginLeft: i === 0 ? 0 : -10 }]}>
-                      <FoodTile product={p ?? { name, tint: '#e6efde' }} size={36} radius={12} />
-                    </View>
+                    <TouchableOpacity
+                      key={c.id}
+                      onPress={() => setCategory(c.id)}
+                      activeOpacity={0.82}
+                      style={[styles.categoryCard, active && styles.categoryCardActive]}
+                    >
+                      <Text style={styles.categoryIcon}>{c.icon}</Text>
+                      <Text style={[styles.categoryLabel, active && styles.categoryLabelActive]}>
+                        {c.label}
+                      </Text>
+                    </TouchableOpacity>
                   );
                 })}
               </View>
-              <Text style={styles.ingredientCount}>
-                {featured.recipe.uses.length} ingredienti dalla tua dispensa
-              </Text>
-              <View style={styles.openBtn}>
-                <Text style={styles.openBtnText}>Apri ›</Text>
+
+              {/* Message */}
+              <Text style={styles.sectionLabel}>Messaggio</Text>
+              <View style={styles.textareaBox}>
+                <TextInput
+                  value={message}
+                  onChangeText={(t) => { setMessage(t); if (status === 'error') setStatus('idle'); }}
+                  placeholder="Descrivi il problema o il tuo suggerimento…"
+                  placeholderTextColor={T.mute}
+                  multiline
+                  numberOfLines={6}
+                  style={styles.textarea}
+                  textAlignVertical="top"
+                />
+                <Text style={styles.charCount}>{message.trim().length} / min 10</Text>
               </View>
-            </View>
-          </TouchableOpacity>
-        )}
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Altre idee</Text>
-        </View>
+              {status === 'error' && (
+                <Text style={styles.errorText}>Errore durante l'invio. Riprova.</Text>
+              )}
 
-        <View style={styles.list}>
-          {rest.map(({ recipe, matchCount }) => {
-            const inPantry = recipe.uses.filter((n) => products.find((p) => p.name === n)).length;
-            return (
               <TouchableOpacity
-                key={recipe.id}
-                style={styles.recipeRow}
-                onPress={() => router.push(`/recipe/${recipe.id}`)}
+                style={[styles.sendBtn, (!canSend || status === 'sending') && { opacity: 0.45 }]}
+                onPress={handleSend}
+                disabled={!canSend || status === 'sending'}
                 activeOpacity={0.85}
               >
-                <View style={[styles.recipeTile, { backgroundColor: recipe.tint }]}>
-                  <Text style={styles.recipeTileText}>{recipe.title[0]}</Text>
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.recipeTitle} numberOfLines={1}>{recipe.title}</Text>
-                  <Text style={styles.recipeMeta}>⏱ {recipe.time} · {inPantry}/{recipe.uses.length} in dispensa</Text>
-                </View>
-                {matchCount > 0 && (
-                  <View style={styles.urgentBadge}>
-                    <Text style={styles.urgentBadgeText}>{matchCount} urgente{matchCount > 1 ? 'i' : ''}</Text>
-                  </View>
-                )}
+                {status === 'sending'
+                  ? <ActivityIndicator color="#fbfaf3" />
+                  : <Text style={styles.sendBtnText}>Invia segnalazione</Text>}
               </TouchableOpacity>
-            );
-          })}
-        </View>
-      </ScrollView>
+            </>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
-  scroll: { paddingBottom: 110 },
-  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14 },
+  scroll: { paddingBottom: 48 },
+
+  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   sub: { fontSize: 13, color: T.mute, fontFamily: FONTS.sansMedium },
-  title: {
-    fontFamily: FONTS.serifItalic, fontSize: 38, color: T.ink,
-    letterSpacing: -1, lineHeight: 44, marginTop: 2,
-  },
-  desc: { fontSize: 14, color: T.ink2, marginTop: 8, lineHeight: 20, fontFamily: FONTS.sans },
+  title: { fontFamily: FONTS.serifItalic, fontSize: 38, color: T.ink, letterSpacing: -1, lineHeight: 44, marginTop: 2 },
 
-  featured: {
-    marginHorizontal: 20, marginBottom: 20, borderRadius: 28, padding: 20,
-    shadowColor: 'rgba(40,50,35,1)', shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2, shadowRadius: 16, elevation: 6,
+  sectionLabel: {
+    fontFamily: FONTS.sansSemiBold, fontSize: 13, color: T.ink2,
+    paddingHorizontal: 20, marginBottom: 10,
   },
-  featuredHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8,
+
+  categories: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginBottom: 24 },
+  categoryCard: {
+    flex: 1, backgroundColor: T.surface, borderRadius: RADIUS.md,
+    paddingVertical: 14, alignItems: 'center', gap: 6,
+    borderWidth: 2, borderColor: 'transparent', ...SHADOW.card,
   },
-  suggeritaBadge: {
-    backgroundColor: 'rgba(20,28,16,0.85)', borderRadius: RADIUS.pill,
-    paddingVertical: 5, paddingHorizontal: 10,
+  categoryCardActive: { borderColor: T.primary, backgroundColor: T.primarySoft },
+  categoryIcon: { fontSize: 22 },
+  categoryLabel: { fontFamily: FONTS.sansSemiBold, fontSize: 11, color: T.ink2, textAlign: 'center' },
+  categoryLabelActive: { color: T.primaryInk },
+
+  textareaBox: {
+    marginHorizontal: 20, backgroundColor: T.surface,
+    borderRadius: RADIUS.md, padding: 16, marginBottom: 8, ...SHADOW.card,
   },
-  suggeritaText: { color: '#fbfaf3', fontSize: 10, fontFamily: FONTS.sansBold, letterSpacing: 0.4 },
-  matchBadge: {
-    backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: RADIUS.pill,
-    paddingVertical: 5, paddingHorizontal: 10,
+  textarea: {
+    fontFamily: FONTS.sans, fontSize: 14, color: T.ink,
+    minHeight: 130, lineHeight: 22,
   },
-  matchText: { color: T.ink, fontSize: 11, fontFamily: FONTS.sansBold },
-  featuredTitle: {
-    fontFamily: FONTS.serifItalic, fontSize: 34, color: T.ink,
-    letterSpacing: -0.6, lineHeight: 38, marginTop: 12, marginBottom: 6,
+  charCount: { fontFamily: FONTS.sans, fontSize: 11, color: T.mute, textAlign: 'right', marginTop: 8 },
+
+  errorText: {
+    fontFamily: FONTS.sans, fontSize: 13, color: T.urgent,
+    paddingHorizontal: 20, marginBottom: 8,
   },
-  featuredDesc: { fontSize: 13, color: 'rgba(20,28,16,0.75)', lineHeight: 18, fontFamily: FONTS.sans },
-  featuredMeta: { flexDirection: 'row', gap: 14, marginTop: 12 },
-  metaItem: { fontSize: 12, color: 'rgba(20,28,16,0.75)', fontFamily: FONTS.sans },
-  featuredFooter: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16,
-  },
-  ingredientStack: { flexDirection: 'row' },
-  stackItem: { zIndex: 1 },
-  ingredientCount: { flex: 1, fontSize: 12, fontFamily: FONTS.sansSemiBold, color: T.ink },
-  openBtn: {
+
+  sendBtn: {
+    marginHorizontal: 20, marginTop: 8,
     backgroundColor: T.primary, borderRadius: RADIUS.pill,
-    paddingVertical: 10, paddingHorizontal: 14,
+    paddingVertical: 16, alignItems: 'center', ...SHADOW.fab,
   },
-  openBtnText: { color: '#fbfaf3', fontSize: 12, fontFamily: FONTS.sansSemiBold },
+  sendBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 16, color: '#fbfaf3' },
 
-  sectionHeader: { paddingHorizontal: 20, marginBottom: 12 },
-  sectionTitle: { fontFamily: FONTS.serifItalic, fontSize: 22, color: T.ink, letterSpacing: -0.3 },
-
-  list: { paddingHorizontal: 20, gap: 10 },
-  recipeRow: {
-    backgroundColor: T.surface, borderRadius: RADIUS.lg, padding: 12,
-    flexDirection: 'row', gap: 12, alignItems: 'center', ...SHADOW.card,
+  successBox: {
+    margin: 20, backgroundColor: T.surface, borderRadius: RADIUS.xl,
+    padding: 32, alignItems: 'center', ...SHADOW.card,
   },
-  recipeTile: {
-    width: 64, height: 64, borderRadius: 16, flexShrink: 0,
-    alignItems: 'center', justifyContent: 'center',
+  successIcon: {
+    width: 64, height: 64, borderRadius: RADIUS.pill,
+    backgroundColor: T.okSoft, textAlign: 'center', lineHeight: 64,
+    fontSize: 28, color: T.ok, overflow: 'hidden', marginBottom: 16,
   },
-  recipeTileText: { fontFamily: FONTS.serifItalic, fontSize: 32, color: 'rgba(20,28,16,0.78)' },
-  recipeTitle: { fontSize: 15, fontFamily: FONTS.sansBold, color: T.ink, letterSpacing: -0.1 },
-  recipeMeta: { fontSize: 12, color: T.mute, marginTop: 4, fontFamily: FONTS.sans },
-  urgentBadge: {
-    backgroundColor: T.warnSoft, borderRadius: RADIUS.pill,
-    paddingVertical: 5, paddingHorizontal: 10,
+  successTitle: { fontFamily: FONTS.sansBold, fontSize: 20, color: T.ink, marginBottom: 8 },
+  successDesc: { fontFamily: FONTS.sans, fontSize: 14, color: T.ink2, textAlign: 'center', lineHeight: 21 },
+  resetBtn: {
+    marginTop: 24, paddingVertical: 12, paddingHorizontal: 24,
+    backgroundColor: T.primarySoft, borderRadius: RADIUS.pill,
   },
-  urgentBadgeText: { fontSize: 10, fontFamily: FONTS.sansBold, color: '#4a3414', letterSpacing: 0.3 },
+  resetBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.primaryInk },
 });

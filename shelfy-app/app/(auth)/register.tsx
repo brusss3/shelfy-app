@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
+import { authErrorMessage } from '@/lib/authErrors';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 
 export default function RegisterScreen() {
@@ -29,7 +30,7 @@ export default function RegisterScreen() {
       await signUp(email.trim(), password, name.trim());
       router.replace('/(tabs)');
     } catch (e: any) {
-      Alert.alert('Registrazione fallita', e.message ?? 'Riprova');
+      Alert.alert('Registrazione fallita', authErrorMessage(e, 'Impossibile completare la registrazione. Riprova.'));
     } finally {
       setLoading(false);
     }

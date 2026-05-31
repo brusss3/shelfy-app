@@ -14,6 +14,7 @@ interface ProductsContextType {
   removeProduct: (id: string) => Promise<void>;
   changeZone: (id: string, zone: Zone) => Promise<void>;
   markConsumed: (id: string) => Promise<void>;
+  markOpened: (id: string, openExpiry: string) => Promise<void>;
   daysTo: (iso: string) => number;
 }
 
@@ -47,7 +48,7 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
       (data) => {
         setProducts(data);
         setLoading(false);
-        scheduleExpiryNotifications(data).catch(console.warn);
+        scheduleExpiryNotifications(data, user.notificationsEnabled ?? true).catch(console.warn);
       },
       (err) => {
         console.error('Firestore error:', err);
@@ -89,9 +90,20 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
     [user],
   );
 
+  const markOpened = useCallback(
+    async (id: string, openExpiry: string) => {
+      if (!user) return;
+      await updateProduct(user.uid, id, {
+        openedAt: new Date().toISOString().slice(0, 10),
+        openExpiry,
+      });
+    },
+    [user],
+  );
+
   return (
     <ProductsContext.Provider
-      value={{ products, loading, addNewProduct, removeProduct, changeZone, markConsumed, daysTo }}
+      value={{ products, loading, addNewProduct, removeProduct, changeZone, markConsumed, markOpened, daysTo }}
     >
       {children}
     </ProductsContext.Provider>

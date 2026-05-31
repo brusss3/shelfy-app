@@ -18,11 +18,16 @@ export const T = {
 };
 
 export const FONTS = {
-  serif: 'InstrumentSerif_400Regular',
-  serifItalic: 'InstrumentSerif_400Regular_Italic',
+  // Display / heading font. Era Instrument Serif (corsivo) — sostituito con
+  // DM Sans Bold per coerenza con il resto dell'interfaccia su tutte le piattaforme.
+  display: 'DMSans_700Bold',
+  serif: 'DMSans_700Bold',
+  serifItalic: 'DMSans_700Bold',
   sans: 'DMSans_400Regular',
   sansMedium: 'DMSans_500Medium',
-  sansSemiBold: 'DMSans_600SemiBold',
+  // Il pacchetto dm-sans non include il peso 600: usiamo il 500 (caricato)
+  // così il testo "semibold" non ripiega sul font di sistema.
+  sansSemiBold: 'DMSans_500Medium',
   sansBold: 'DMSans_700Bold',
 };
 
