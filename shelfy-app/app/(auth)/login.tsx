@@ -6,6 +6,7 @@ import {
 import { Link, useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { authErrorMessage } from '@/lib/authErrors';
+import GoogleAuthButton from '@/components/GoogleAuthButton';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 
 export default function LoginScreen() {
@@ -89,6 +90,14 @@ export default function LoginScreen() {
               <Text style={styles.btnText}>Accedi</Text>
             )}
           </TouchableOpacity>
+
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>oppure</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <GoogleAuthButton />
         </View>
 
         <View style={styles.footer}>
@@ -144,6 +153,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16, alignItems: 'center', marginTop: 20, ...SHADOW.fab,
   },
   btnText: { fontFamily: FONTS.sansSemiBold, fontSize: 16, color: '#fbfaf3' },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 16 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: T.line },
+  dividerText: { fontFamily: FONTS.sans, fontSize: 12, color: T.mute },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
   footerText: { fontFamily: FONTS.sans, fontSize: 14, color: T.mute },
   footerLink: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.primary },

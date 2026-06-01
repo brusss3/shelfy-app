@@ -5,7 +5,12 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   updateProfile,
+  GoogleAuthProvider,
+  signInWithCredential,
+  signInWithPopup,
+  signInWithRedirect,
 } from 'firebase/auth';
+import { Platform } from 'react-native';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 // import { initPurchases, checkPremiumStatus } from '@/lib/purchases'; // RC disabilitato
@@ -16,6 +21,8 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
+  signInWithGoogleWeb: () => Promise<void>;
+  signInWithGoogleCredential: (idToken: string) => Promise<void>;
   logOut: () => Promise<void>;
   setPremium: (value: boolean) => Promise<void>;
   setSubscription: (info: { type: SubscriptionType; expiresAt: string | null } | null) => Promise<void>;
@@ -28,6 +35,8 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   signIn: stub,
   signUp: stub,
+  signInWithGoogleWeb: stub,
+  signInWithGoogleCredential: stub,
   logOut: stub,
   setPremium: stub,
   setSubscription: stub,
@@ -56,6 +65,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           doc(db, 'users', firebaseUser.uid),
           (snap) => {
             console.log('[AuthContext] user doc snapshot:', JSON.stringify(snap.data()));
+
+            // Auto-provisioning: se il documento non esiste (es. primo accesso
+            // con Google, o creazione fallita in fase di registrazione) lo crea
+            // con i valori di default. Lo snapshot scatterà di nuovo con i dati.
+            if (!snap.exists()) {
+              setDoc(doc(db, 'users', firebaseUser.uid), {
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName,
+                isPremium: false,
+                notificationsEnabled: true,
+                createdAt: new Date().toISOString(),
+              }, { merge: true }).catch((e) => console.warn('[AuthContext] auto-provision failed:', e));
+            }
+
             const data = snap.data();
             const firestorePremium: boolean = data?.isPremium ?? false;
             const isPremium = firestorePremium || rcPremium;
@@ -138,6 +161,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  // Web: popup Google gestito da Firebase. Il documento utente viene creato
+  // automaticamente dall'auto-provisioning nello snapshot.
+  const signInWithGoogleWeb = async () => {
+    const provider = new GoogleAuthProvider();
+    // Safari iOS (e PWA installata) blocca i popup OAuth: usa il redirect.
+    // Su desktop il popup resta più comodo. Rileva i browser mobili.
+    const isMobileWeb =
+      Platform.OS === 'web' &&
+      typeof navigator !== 'undefined' &&
+      /iphone|ipad|ipod|android/i.test(navigator.userAgent);
+
+    if (isMobileWeb) {
+      await signInWithRedirect(auth, provider);
+      return; // il flusso prosegue al ritorno; onAuthStateChanged farà il resto
+    }
+
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (e: any) {
+      // Se il popup è bloccato dal browser, ripiega sul redirect.
+      if (
+        e?.code === 'auth/popup-blocked' ||
+        e?.code === 'auth/operation-not-supported-in-this-environment'
+      ) {
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+      throw e;
+    }
+  };
+
+  // iOS/Android: idToken ottenuto via expo-auth-session → credenziale Firebase.
+  const signInWithGoogleCredential = async (idToken: string) => {
+    const credential = GoogleAuthProvider.credential(idToken);
+    await signInWithCredential(auth, credential);
+  };
+
   const logOut = async () => {
     await signOut(auth);
   };
@@ -170,7 +230,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, logOut, setPremium, setSubscription, setNotificationsEnabled }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signInWithGoogleWeb, signInWithGoogleCredential, logOut, setPremium, setSubscription, setNotificationsEnabled }}>
       {children}
     </AuthContext.Provider>
   );

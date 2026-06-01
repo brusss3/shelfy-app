@@ -63,7 +63,9 @@
           "color": "#2f4a31"
         }
       ],
-      "react-native-edge-to-edge"
+      "react-native-edge-to-edge",
+      "expo-web-browser",
+      "@react-native-google-signin/google-signin"
     ],
     "scheme": "shelfy",
     "experiments": {
@@ -73,6 +75,11 @@
       "router": {},
       "eas": {
         "projectId": "8ca5efb5-8143-4d62-b20e-a3185df70768"
+      },
+      "googleAuth": {
+        "webClientId": "288975536587-1q7p528mc3t4i9plc9udsknfrc7s5u1m.apps.googleusercontent.com",
+        "iosClientId": "",
+        "androidClientId": "288975536587-c26i2ncmtbmcqr4c3rg3953eds7ofhit.apps.googleusercontent.com"
       }
     }
   }
