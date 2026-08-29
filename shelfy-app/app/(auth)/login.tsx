@@ -79,6 +79,10 @@ export default function LoginScreen() {
             />
           </View>
 
+          <Link href="/(auth)/forgot-password" style={styles.forgotLink}>
+            Password dimenticata?
+          </Link>
+
           <TouchableOpacity
             style={[styles.btn, loading && { opacity: 0.7 }]}
             onPress={handleLogin}
@@ -160,4 +164,8 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
   footerText: { fontFamily: FONTS.sans, fontSize: 14, color: T.mute },
   footerLink: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.primary },
+  forgotLink: {
+    fontFamily: FONTS.sansMedium, fontSize: 13, color: T.primary,
+    textAlign: 'right', marginTop: 10,
+  },
 });

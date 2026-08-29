@@ -191,6 +191,14 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </Section>
 
+          {/* Strumenti ristorazione */}
+          <Section title="Ristoranti">
+            <TouchableOpacity style={styles.linkRow} onPress={() => router.push('/labels')} activeOpacity={0.8}>
+              <Text style={styles.rowLabel}>🏷️  Etichette HACCP</Text>
+              <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
+          </Section>
+
           {/* Admin */}
           {user?.isAdmin && (
             <Section title="Amministrazione">

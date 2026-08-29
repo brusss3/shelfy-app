@@ -1,0 +1,314 @@
+import React, { useState } from 'react';
+import {
+  View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator, Modal, TextInput,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Print from 'expo-print';
+import { showAlert } from '@/lib/alert';
+import { buildLabelsHtml } from '@/lib/labels';
+import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+
+const DURATIONS = [
+  { h: 24, l: '24 ore' },
+  { h: 48, l: '48 ore' },
+  { h: 72, l: '3 giorni' },
+  { h: 120, l: '5 giorni' },
+  { h: 168, l: '7 giorni' },
+];
+
+const COPY_PRESETS = [21, 42, 63];
+
+function formatDateTime(d: Date): string {
+  const date = d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const time = d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+  return `${date} · ${time}`;
+}
+
+export default function LabelsScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  const [packagingDate, setPackagingDate] = useState(new Date());
+  const [durationHours, setDurationHours] = useState(72);
+  const [copies, setCopies] = useState(21);
+  const [generating, setGenerating] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  const [pickerDay, setPickerDay] = useState('');
+  const [pickerMonth, setPickerMonth] = useState('');
+  const [pickerYear, setPickerYear] = useState('');
+  const [pickerHour, setPickerHour] = useState('');
+  const [pickerMinute, setPickerMinute] = useState('');
+
+  const expiryDate = new Date(packagingDate.getTime() + durationHours * 3600 * 1000);
+
+  const openTimePicker = () => {
+    setPickerDay(String(packagingDate.getDate()));
+    setPickerMonth(String(packagingDate.getMonth() + 1));
+    setPickerYear(String(packagingDate.getFullYear()));
+    setPickerHour(String(packagingDate.getHours()));
+    setPickerMinute(String(packagingDate.getMinutes()));
+    setShowTimePicker(true);
+  };
+
+  const confirmTimePicker = () => {
+    const d = Math.max(1, Math.min(31, parseInt(pickerDay) || 1));
+    const m = Math.max(1, Math.min(12, parseInt(pickerMonth) || 1));
+    const y = parseInt(pickerYear) || new Date().getFullYear();
+    const h = Math.max(0, Math.min(23, parseInt(pickerHour) || 0));
+    const min = Math.max(0, Math.min(59, parseInt(pickerMinute) || 0));
+    setPackagingDate(new Date(y, m - 1, d, h, min));
+    setShowTimePicker(false);
+  };
+
+  const resetToNow = () => setPackagingDate(new Date());
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    try {
+      const html = buildLabelsHtml({ packagingDate, expiryDate, copies });
+      if (Platform.OS === 'web') {
+        const win = window.open('', '_blank');
+        if (!win) {
+          showAlert('Popup bloccato', 'Abilita i popup per questo sito per generare il PDF.');
+          return;
+        }
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+        win.print();
+      } else {
+        await Print.printAsync({ html });
+      }
+    } catch (e: any) {
+      showAlert('Errore', e?.message ?? 'Impossibile generare le etichette.');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <View style={styles.root}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
+          <Text style={styles.closeBtnText}>✕</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Etichette HACCP</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <View style={styles.content}>
+        <Text style={styles.intro}>
+          Genera un foglio A4 di etichette: data/ora di confezionamento e scadenza già compilate,
+          con una riga vuota per scrivere il nome del prodotto a mano.
+        </Text>
+
+        <Text style={styles.sectionLabel}>CONFEZIONATO IL</Text>
+        <TouchableOpacity style={styles.card} onPress={openTimePicker} activeOpacity={0.85}>
+          <Text style={styles.dateValue}>{formatDateTime(packagingDate)}</Text>
+          <Text style={styles.dateEdit}>Modifica ›</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={resetToNow} activeOpacity={0.7}>
+          <Text style={styles.nowLink}>Usa data/ora attuale</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.sectionLabel}>DURATA (scadenza calcolata)</Text>
+        <View style={styles.chipsRow}>
+          {DURATIONS.map((d) => {
+            const active = durationHours === d.h;
+            return (
+              <TouchableOpacity
+                key={d.h}
+                style={[styles.chip, active && styles.chipActive]}
+                onPress={() => setDurationHours(d.h)}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{d.l}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <View style={styles.card}>
+          <Text style={styles.expiryLabel}>Scade il</Text>
+          <Text style={styles.expiryValue}>{formatDateTime(expiryDate)}</Text>
+        </View>
+
+        <Text style={styles.sectionLabel}>QUANTE ETICHETTE</Text>
+        <View style={styles.chipsRow}>
+          {COPY_PRESETS.map((n) => {
+            const active = copies === n;
+            return (
+              <TouchableOpacity
+                key={n}
+                style={[styles.chip, active && styles.chipActive]}
+                onPress={() => setCopies(n)}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{n} ({Math.round(n / 21)} fogli)</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <View style={styles.stepperRow}>
+          <TouchableOpacity style={styles.stepperBtn} onPress={() => setCopies((c) => Math.max(1, c - 1))} activeOpacity={0.85}>
+            <Text style={styles.stepperBtnText}>−</Text>
+          </TouchableOpacity>
+          <Text style={styles.stepperValue}>{copies} etichette</Text>
+          <TouchableOpacity style={styles.stepperBtn} onPress={() => setCopies((c) => c + 1)} activeOpacity={0.85}>
+            <Text style={styles.stepperBtnText}>+</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <TouchableOpacity
+          style={[styles.generateBtn, generating && { opacity: 0.7 }]}
+          onPress={handleGenerate}
+          disabled={generating}
+          activeOpacity={0.85}
+        >
+          {generating ? (
+            <ActivityIndicator color="#fbfaf3" />
+          ) : (
+            <Text style={styles.generateBtnText}>🖨️ Genera e stampa</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      <Modal visible={showTimePicker} transparent animationType="fade" onRequestClose={() => setShowTimePicker(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowTimePicker(false)}>
+          <TouchableOpacity activeOpacity={1} style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Data e ora confezionamento</Text>
+            <View style={styles.pickerRow}>
+              <PickerCol label="Giorno" value={pickerDay} onChange={setPickerDay} maxLength={2} />
+              <PickerCol label="Mese" value={pickerMonth} onChange={setPickerMonth} maxLength={2} />
+              <PickerCol label="Anno" value={pickerYear} onChange={setPickerYear} maxLength={4} />
+            </View>
+            <View style={styles.pickerRow}>
+              <PickerCol label="Ore" value={pickerHour} onChange={setPickerHour} maxLength={2} />
+              <PickerCol label="Minuti" value={pickerMinute} onChange={setPickerMinute} maxLength={2} />
+            </View>
+            <View style={styles.modalBtns}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setShowTimePicker(false)} activeOpacity={0.85}>
+                <Text style={styles.modalCancelText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalConfirm} onPress={confirmTimePicker} activeOpacity={0.85}>
+                <Text style={styles.modalConfirmText}>Conferma</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+    </View>
+  );
+}
+
+function PickerCol({ label, value, onChange, maxLength }: { label: string; value: string; onChange: (v: string) => void; maxLength: number }) {
+  return (
+    <View style={styles.pickerCol}>
+      <Text style={styles.pickerLabel}>{label}</Text>
+      <TextInput
+        style={styles.pickerInput}
+        value={value}
+        onChangeText={onChange}
+        keyboardType="number-pad"
+        maxLength={maxLength}
+        selectTextOnFocus
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: T.bg },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingBottom: 12,
+  },
+  closeBtn: {
+    width: 40, height: 40, borderRadius: 100, backgroundColor: T.surface,
+    alignItems: 'center', justifyContent: 'center', ...SHADOW.card,
+  },
+  closeBtnText: { fontSize: 18, color: T.ink },
+  headerTitle: { fontSize: 16, fontFamily: FONTS.sansSemiBold, color: T.ink },
+
+  content: { flex: 1, paddingHorizontal: 20 },
+  intro: { fontFamily: FONTS.sans, fontSize: 13, color: T.ink2, lineHeight: 19, marginBottom: 20 },
+
+  sectionLabel: {
+    fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.6,
+    marginBottom: 8, marginTop: 4,
+  },
+  card: {
+    backgroundColor: T.surface, borderRadius: RADIUS.lg, padding: 16,
+    marginBottom: 8, ...SHADOW.card,
+  },
+  dateValue: { fontFamily: FONTS.sansBold, fontSize: 16, color: T.ink },
+  dateEdit: { fontFamily: FONTS.sansMedium, fontSize: 13, color: T.primary, marginTop: 4 },
+  nowLink: { fontFamily: FONTS.sansMedium, fontSize: 13, color: T.mute, marginBottom: 18 },
+
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
+  chip: {
+    backgroundColor: T.surface, borderRadius: RADIUS.pill,
+    paddingVertical: 8, paddingHorizontal: 14,
+    borderWidth: 1, borderColor: T.line,
+  },
+  chipActive: { backgroundColor: T.primary, borderColor: T.primary },
+  chipText: { fontSize: 13, fontFamily: FONTS.sansSemiBold, color: T.ink2 },
+  chipTextActive: { color: '#fbfaf3' },
+
+  expiryLabel: { fontFamily: FONTS.sans, fontSize: 12, color: T.mute },
+  expiryValue: { fontFamily: FONTS.sansBold, fontSize: 16, color: T.primaryInk, marginTop: 2 },
+
+  stepperRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20,
+    marginTop: 8, marginBottom: 18,
+  },
+  stepperBtn: {
+    width: 40, height: 40, borderRadius: 100, backgroundColor: T.surface,
+    alignItems: 'center', justifyContent: 'center', ...SHADOW.card,
+  },
+  stepperBtnText: { fontSize: 22, fontFamily: FONTS.sansBold, color: T.primary, lineHeight: 24 },
+  stepperValue: { fontFamily: FONTS.sansSemiBold, fontSize: 15, color: T.ink, minWidth: 110, textAlign: 'center' },
+
+  footer: {
+    paddingHorizontal: 20, paddingTop: 12,
+    borderTopWidth: 0.5, borderTopColor: T.line, backgroundColor: T.bg,
+  },
+  generateBtn: {
+    borderRadius: RADIUS.pill, paddingVertical: 16,
+    alignItems: 'center', backgroundColor: T.primary, ...SHADOW.fab,
+  },
+  generateBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 16, color: '#fbfaf3' },
+
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  modalCard: {
+    backgroundColor: T.surface, borderRadius: 24, padding: 24,
+    width: 320, gap: 12,
+  },
+  modalTitle: { fontFamily: FONTS.serifItalic, fontSize: 20, color: T.ink, letterSpacing: -0.3 },
+  pickerRow: { flexDirection: 'row', gap: 12 },
+  pickerCol: { flex: 1, alignItems: 'center', gap: 6 },
+  pickerLabel: { fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.4 },
+  pickerInput: {
+    width: '100%', textAlign: 'center',
+    backgroundColor: T.bg, borderRadius: RADIUS.md,
+    paddingVertical: 12, fontSize: 20, fontFamily: FONTS.sansBold, color: T.ink,
+    borderWidth: 1, borderColor: T.line,
+  },
+  modalBtns: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  modalCancel: {
+    flex: 1, borderRadius: RADIUS.pill, paddingVertical: 14,
+    alignItems: 'center', borderWidth: 1, borderColor: T.line,
+  },
+  modalCancelText: { fontFamily: FONTS.sansSemiBold, fontSize: 15, color: T.mute },
+  modalConfirm: {
+    flex: 1.5, borderRadius: RADIUS.pill, paddingVertical: 14,
+    alignItems: 'center', backgroundColor: T.primary, ...SHADOW.fab,
+  },
+  modalConfirmText: { fontFamily: FONTS.sansSemiBold, fontSize: 15, color: '#fbfaf3' },
+});

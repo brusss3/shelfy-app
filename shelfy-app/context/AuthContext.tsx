@@ -11,6 +11,7 @@ import {
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
@@ -23,6 +24,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   signInWithGoogleWeb: () => Promise<void>;
   signInWithGoogleCredential: (idToken: string) => Promise<void>;
   logOut: () => Promise<void>;
@@ -38,6 +40,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   signIn: stub,
   signUp: stub,
+  resetPassword: stub,
   signInWithGoogleWeb: stub,
   signInWithGoogleCredential: stub,
   logOut: stub,
@@ -153,6 +156,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
+  const resetPassword = async (email: string) => {
+    await sendPasswordResetEmail(auth, email);
+  };
+
   const signUp = async (email: string, password: string, name: string) => {
     // L'account viene creato qui. Se la scrittura del profilo su Firestore
     // fallisce (rete/permessi), NON deve far fallire la registrazione: l'utente
@@ -259,7 +266,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signInWithGoogleWeb, signInWithGoogleCredential, logOut, setPremium, setSubscription, setNotificationsEnabled, updateAdminNotifSettings }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, resetPassword, signInWithGoogleWeb, signInWithGoogleCredential, logOut, setPremium, setSubscription, setNotificationsEnabled, updateAdminNotifSettings }}>
       {children}
     </AuthContext.Provider>
   );

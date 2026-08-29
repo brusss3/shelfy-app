@@ -54,6 +54,7 @@ export default function RootLayout() {
             <Stack.Screen name="recipe/[id]" />
             <Stack.Screen name="settings" options={{ headerShown: false }} />
             <Stack.Screen name="admin" options={{ headerShown: false }} />
+            <Stack.Screen name="labels" options={{ headerShown: false, presentation: 'modal' }} />
           </Stack>
           </RecipesProvider>
         </ProductsProvider>
