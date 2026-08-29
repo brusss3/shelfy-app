@@ -1,0 +1,5 @@
+# Chiavi di servizio Firebase/Google Cloud — non vanno mai committate.
+# Es. la service account key FCM V1 scaricata per push notifications admin.
+*-adminsdk-*.json
+shelfy-632e0-*.json
+*.pem

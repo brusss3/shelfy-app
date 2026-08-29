@@ -4,6 +4,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { Product, Zone } from '@/types';
+import { notifyAdminsNewFeedback } from './notifications';
 
 export interface AdminUserRecord {
   uid: string;
@@ -14,11 +15,14 @@ export interface AdminUserRecord {
   createdAt: string;
   subscriptionType: 'monthly' | 'annual' | null;
   subscriptionExpiresAt: string | null;
+  pushToken: string | null;
+  adminNotifNewUsers: boolean;
+  adminNotifFeedback: boolean;
 }
 
 export async function getAllUsers(): Promise<AdminUserRecord[]> {
   const snap = await getDocs(collection(db, 'users'));
-  return snap.docs.map((d) => {
+  const users = snap.docs.map((d) => {
     const data = d.data();
     return {
       uid: d.id,
@@ -29,9 +33,27 @@ export async function getAllUsers(): Promise<AdminUserRecord[]> {
       createdAt: data.createdAt ?? '',
       subscriptionType: data.subscriptionType ?? null,
       subscriptionExpiresAt: data.subscriptionExpiresAt ?? null,
+      pushToken: data.pushToken ?? null,
+      adminNotifNewUsers: data.adminNotifNewUsers ?? true,
+      adminNotifFeedback: data.adminNotifFeedback ?? true,
     };
   });
+  users.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  return users;
 }
+
+export async function saveUserPushToken(uid: string, token: string): Promise<void> {
+  await setDoc(doc(db, 'users', uid), { pushToken: token }, { merge: true });
+}
+
+export async function updateAdminNotifPreferences(
+  uid: string,
+  prefs: { adminNotifNewUsers?: boolean; adminNotifFeedback?: boolean },
+): Promise<void> {
+  await setDoc(doc(db, 'users', uid), prefs, { merge: true });
+}
+
+export type FeedbackCategory = 'suggerimento' | 'bug' | 'prodotto' | 'altro';
 
 export interface FeedbackRecord {
   id: string;
@@ -40,6 +62,7 @@ export interface FeedbackRecord {
   displayName: string;
   category: FeedbackCategory;
   message: string;
+  rating?: number;
   createdAt: string | null;
 }
 
@@ -55,6 +78,7 @@ export async function getAllFeedback(): Promise<FeedbackRecord[]> {
       displayName: data.displayName ?? '',
       category: (data.category ?? 'altro') as FeedbackCategory,
       message: data.message ?? '',
+      rating: data.rating ?? undefined,
       createdAt: ts instanceof Timestamp ? ts.toDate().toISOString() : (typeof ts === 'string' ? ts : null),
     };
   });
@@ -126,17 +150,22 @@ export async function moveProductZone(
   await updateDoc(doc(productsRef(userId), productId), { zone });
 }
 
-export type FeedbackCategory = 'bug' | 'suggerimento' | 'altro';
-
 export async function submitFeedback(payload: {
   uid: string;
   email: string;
   displayName: string;
   category: FeedbackCategory;
   message: string;
+  rating?: number;
 }): Promise<void> {
   await addDoc(collection(db, 'feedback'), {
     ...payload,
     createdAt: serverTimestamp(),
   });
+  notifyAdminsNewFeedback({
+    email: payload.email,
+    displayName: payload.displayName,
+    category: payload.category,
+    message: payload.message,
+  }).catch((e) => console.warn('[firestore] notifyAdminsNewFeedback failed:', e));
 }

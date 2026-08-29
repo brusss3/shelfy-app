@@ -5,16 +5,28 @@ import { GOOGLE_CLIENT_IDS, googleNativeConfigured } from '@/lib/googleAuth';
 import GoogleButtonUI from './GoogleButtonUI';
 
 // Flusso nativo Google (niente browser/redirect/custom scheme).
-// require per non rompere il build prima di installare il pacchetto.
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { GoogleSignin, statusCodes } = require('@react-native-google-signin/google-signin');
+// Caricamento PIGRO e protetto: se il modulo nativo RNGoogleSignin non è
+// presente nel binario (es. build senza prebuild aggiornato), NON deve far
+// crashare l'app all'avvio. In quel caso il pulsante Google viene nascosto.
+let GoogleSignin: any = null;
+let statusCodes: any = null;
+let nativeAvailable = false;
 
-GoogleSignin.configure({
-  // webClientId: necessario per ottenere l'idToken da passare a Firebase.
-  webClientId: GOOGLE_CLIENT_IDS.web || undefined,
-  iosClientId: GOOGLE_CLIENT_IDS.ios || undefined,
-  offlineAccess: false,
-});
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const mod = require('@react-native-google-signin/google-signin');
+  GoogleSignin = mod.GoogleSignin;
+  statusCodes = mod.statusCodes;
+  GoogleSignin.configure({
+    // webClientId: necessario per ottenere l'idToken da passare a Firebase.
+    webClientId: GOOGLE_CLIENT_IDS.web || undefined,
+    iosClientId: GOOGLE_CLIENT_IDS.ios || undefined,
+    offlineAccess: false,
+  });
+  nativeAvailable = true;
+} catch (e) {
+  console.warn('[GoogleAuthButton] modulo nativo Google non disponibile:', e);
+}
 
 export default function GoogleAuthButton() {
   const { signInWithGoogleCredential } = useAuth();
@@ -45,7 +57,7 @@ export default function GoogleAuthButton() {
     }
   };
 
-  if (!googleNativeConfigured) return null;
+  if (!nativeAvailable || !googleNativeConfigured) return null;
 
   return <GoogleButtonUI onPress={onPress} loading={loading} />;
 }

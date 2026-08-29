@@ -13,12 +13,23 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Documento utente: l'utente legge/scrive il proprio; l'admin può leggere
-    // tutti e aggiornarli (es. abilitare Premium).
+    // Helper per verificare che l'utente non modifichi campi riservati (ruoli/abbonamento)
+    function notUpdatingProtectedFields() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'isPremium', 'subscriptionType', 'subscriptionExpiresAt']);
+    }
+
+    // Documento utente: l'utente legge il proprio; l'admin può leggere tutti.
+    // L'utente può creare il proprio documento iniziale purché isAdmin e isPremium non siano true.
+    // L'utente può aggiornare solo campi non protetti (es. displayName, email, notificationsEnabled).
+    // Solo un admin può modificare i campi protetti (isAdmin, isPremium, ecc.).
     match /users/{userId} {
       allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      allow create, update, delete: if request.auth != null && request.auth.uid == userId;
-      allow update: if isAdmin();
+      allow create: if request.auth != null && request.auth.uid == userId
+                    && request.resource.data.get('isAdmin', false) == false
+                    && request.resource.data.get('isPremium', false) == false;
+      allow update: if (request.auth != null && request.auth.uid == userId && notUpdatingProtectedFields())
+                    || isAdmin();
+      allow delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
     }
 
     // Feedback: ogni utente autenticato può inviarlo; solo l'admin può leggerlo.

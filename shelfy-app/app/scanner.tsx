@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Platform, Alert, ActivityIndicator,
+  View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator,
 } from 'react-native';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { T, FONTS, RADIUS } from '@/constants/theme';
 import { ScannedProduct } from '@/types';
 import { tintForCategory } from '@/lib/urgency';
@@ -36,19 +37,62 @@ async function lookupBarcode(barcode: string): Promise<ScannedProduct | null> {
 
 export default function ScannerScreen() {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(true);
   const [loading, setLoading] = useState(false);
   const [found, setFound] = useState<ScannedProduct | null>(null);
+  const [zoom, setZoom] = useState(0);
+  const [camKey, setCamKey] = useState(0);
+  const [mountError, setMountError] = useState<string | null>(null);
   const lastScan = useRef<string>('');
   const cooldown = useRef(false);
 
   useEffect(() => {
-    if (!permission?.granted) requestPermission();
+    // Su web CameraView richiede da sola lo stream camera al mount: chiamare
+    // qui anche requestPermission() genera una seconda richiesta concorrente
+    // che su alcuni browser/webcam va in conflitto con la prima (onMountError).
+    // Su nativo invece il prompt di sistema è sicuro da anticipare.
+    if (!permission?.granted && Platform.OS !== 'web') requestPermission();
   }, []);
 
+  // Su web una fotocamera "bloccata" (es. permesso "consenti una volta" già
+  // consumato) fallisce silenziosamente: onMountError la intercetta e permette
+  // di riprovare forzando un remount completo del componente.
+  const handleMountError = ({ message }: { message: string }) => {
+    setMountError(message || 'Fotocamera non disponibile.');
+  };
+
+  const retryCamera = () => {
+    // Se il permesso è già concesso basta rimontare CameraView (camKey):
+    // chiamare anche requestPermission() qui farebbe partire una seconda
+    // richiesta concorrente di getUserMedia, causa comune di un nuovo
+    // onMountError su web.
+    setMountError(null);
+    if (permission?.granted) {
+      setCamKey((k) => k + 1);
+    } else {
+      requestPermission();
+    }
+  };
+
+  // Quando lo schermo torna a fuoco, resetta lo stato dello scanner per consentire nuove scansioni
+  useEffect(() => {
+    if (isFocused) {
+      setScanning(true);
+      setLoading(false);
+      setFound(null);
+      setMountError(null);
+      setZoom(0);
+      lastScan.current = '';
+      cooldown.current = false;
+    } else {
+      setScanning(false);
+    }
+  }, [isFocused]);
+
   const handleBarcode = async (result: BarcodeScanningResult) => {
-    if (cooldown.current || !scanning) return;
+    if (cooldown.current || !scanning || !isFocused) return;
     const code = result.data;
     if (code === lastScan.current) return;
     lastScan.current = code;
@@ -79,7 +123,7 @@ export default function ScannerScreen() {
 
   const handleConfirm = () => {
     if (!found) return;
-    router.push({ pathname: '/add', params: { scanned: JSON.stringify(found) } });
+    router.replace({ pathname: '/add', params: { scanned: JSON.stringify(found) } });
   };
 
   const handleRetry = () => {
@@ -111,12 +155,28 @@ export default function ScannerScreen() {
 
   return (
     <View style={styles.root}>
-      <CameraView
-        style={StyleSheet.absoluteFillObject}
-        facing="back"
-        barcodeScannerSettings={{ barcodeTypes: ['ean8', 'ean13', 'upc_a', 'upc_e', 'qr', 'code128'] }}
-        onBarcodeScanned={scanning ? handleBarcode : undefined}
-      />
+      {isFocused && !mountError && (
+        <CameraView
+          key={camKey}
+          style={StyleSheet.absoluteFillObject}
+          facing="back"
+          zoom={zoom}
+          onMountError={handleMountError}
+          barcodeScannerSettings={{ barcodeTypes: ['ean8', 'ean13', 'upc_a', 'upc_e', 'qr', 'code128'] }}
+          onBarcodeScanned={scanning ? handleBarcode : undefined}
+        />
+      )}
+
+      {mountError && (
+        <View style={[styles.root, styles.mountErrorBox]}>
+          <Text style={[styles.hint, { fontSize: 16, textAlign: 'center' }]}>
+            Fotocamera non disponibile. Se hai scelto "Consenti una volta" nel browser, il permesso potrebbe essere scaduto.
+          </Text>
+          <TouchableOpacity style={styles.manualBtn} onPress={retryCamera}>
+            <Text style={styles.manualBtnText}>Riprova</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Dark overlay with cutout */}
       <View style={styles.overlay}>
@@ -140,9 +200,7 @@ export default function ScannerScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.glassBtn}>
           <Text style={styles.glassBtnText}>✕</Text>
         </TouchableOpacity>
-        <View style={styles.modeLabel}>
-          <Text style={styles.modeLabelText}>CODICE A BARRE</Text>
-        </View>
+        <Text style={styles.topBarTitle}>Scansiona barcode</Text>
         <View style={styles.glassBtn} />
       </View>
 
@@ -200,6 +258,27 @@ export default function ScannerScreen() {
         </View>
       )}
 
+      {/* Zoom control */}
+      {!found && !mountError && (
+        <View style={styles.zoomControl}>
+          <TouchableOpacity
+            style={styles.zoomBtn}
+            onPress={() => setZoom((z) => Math.max(0, +(z - 0.1).toFixed(2)))}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.zoomBtnText}>−</Text>
+          </TouchableOpacity>
+          <Text style={styles.zoomLabel}>{Math.round(zoom * 100)}%</Text>
+          <TouchableOpacity
+            style={styles.zoomBtn}
+            onPress={() => setZoom((z) => Math.min(1, +(z + 0.1).toFixed(2)))}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.zoomBtnText}>+</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Manual entry */}
       {!found && !loading && (
         <TouchableOpacity
@@ -243,11 +322,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   glassBtnText: { color: '#fff', fontSize: 18, fontFamily: FONTS.sans },
-  modeLabel: {
-    backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: RADIUS.pill,
-    paddingVertical: 8, paddingHorizontal: 14,
-  },
-  modeLabelText: { fontSize: 12, fontFamily: FONTS.sansBold, color: '#fbfaf3', letterSpacing: 0.3 },
+  topBarTitle: { color: '#fbfaf3', fontSize: 15, fontFamily: FONTS.sansSemiBold, letterSpacing: 0.2 },
 
   statusBox: {
     position: 'absolute', left: 0, right: 0, zIndex: 5,
@@ -304,4 +379,18 @@ const styles = StyleSheet.create({
   },
   manualBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: '#fbfaf3' },
   hint: { fontFamily: FONTS.sans, color: '#fff', lineHeight: 24 },
+
+  mountErrorBox: { justifyContent: 'center', alignItems: 'center', gap: 16, padding: 32, zIndex: 30 },
+
+  zoomControl: {
+    position: 'absolute', right: 16, top: '38%', zIndex: 10,
+    backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: RADIUS.pill,
+    paddingVertical: 8, alignItems: 'center', gap: 6,
+  },
+  zoomBtn: {
+    width: 36, height: 36, borderRadius: 100, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)', marginHorizontal: 6,
+  },
+  zoomBtnText: { fontSize: 20, color: '#fbfaf3', fontFamily: FONTS.sansBold, lineHeight: 22 },
+  zoomLabel: { fontSize: 11, color: '#fbfaf3', fontFamily: FONTS.sansSemiBold },
 });

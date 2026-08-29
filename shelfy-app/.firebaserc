@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "shelfy-632e0"
-  }
+    "default": "shelfy-632e0",
+    "shelfy": "shelfy-632e0"
+  },
+  "targets": {},
+  "etags": {}
 }

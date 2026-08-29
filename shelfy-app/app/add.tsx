@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  StyleSheet, Platform, Alert, ActivityIndicator, Modal,
+  StyleSheet, Platform, ActivityIndicator, Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProducts } from '@/context/ProductsContext';
 import { ScannedProduct, Zone } from '@/types';
 import FoodTile from '@/components/FoodTile';
+import DateScannerModal from '@/components/DateScannerModal';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 import { tintForCategory } from '@/lib/urgency';
+import { ocrAvailable } from '@/lib/ocr';
+import { showAlert } from '@/lib/alert';
 
 const ZONES: { id: Zone; label: string; icon: string }[] = [
   { id: 'frigo',    label: 'Frigo',    icon: '❄️' },
@@ -47,11 +50,15 @@ export default function AddScreen() {
   const [name, setName] = useState(scanned?.name ?? '');
   const [brand, setBrand] = useState(scanned?.brand ?? '');
   const [qty, setQty] = useState(scanned?.qty ?? '');
-  const [zone, setZone] = useState<Zone>(scanned?.zone ?? 'frigo');
+  // Zona e scadenza NON vengono precompilate dal barcode: non sono dati letti
+  // dal codice a barre (solo un suggerimento euristico) e l'utente deve
+  // sceglierle esplicitamente per non pensare che siano state "lette".
+  const [zone, setZone] = useState<Zone | null>(null);
   const [category, setCategory] = useState(scanned?.category ?? '');
-  const [expiry, setExpiry] = useState(addDays(scanned?.suggestExpiry ?? 7));
+  const [expiry, setExpiry] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showOcr, setShowOcr] = useState(false);
 
   const [pickerYear, setPickerYear] = useState('');
   const [pickerMonth, setPickerMonth] = useState('');
@@ -66,7 +73,7 @@ export default function AddScreen() {
   };
 
   const openDatePicker = () => {
-    const d = new Date(expiry + 'T00:00:00');
+    const d = expiry ? new Date(expiry + 'T00:00:00') : new Date();
     setPickerYear(String(d.getFullYear()));
     setPickerMonth(String(d.getMonth() + 1));
     setPickerDay(String(d.getDate()));
@@ -77,7 +84,15 @@ export default function AddScreen() {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Errore', 'Inserisci il nome del prodotto');
+      showAlert('Errore', 'Inserisci il nome del prodotto');
+      return;
+    }
+    if (!zone) {
+      showAlert('Errore', 'Seleziona dove conservi il prodotto (Frigo, Freezer o Dispensa)');
+      return;
+    }
+    if (!expiry) {
+      showAlert('Errore', 'Seleziona la data di scadenza');
       return;
     }
     setSaving(true);
@@ -96,13 +111,13 @@ export default function AddScreen() {
       });
       router.back();
     } catch (e: any) {
-      Alert.alert('Errore', e.message ?? 'Impossibile salvare il prodotto');
+      showAlert('Errore', e.message ?? 'Impossibile salvare il prodotto');
     } finally {
       setSaving(false);
     }
   };
 
-  const remaining = daysLeft(expiry);
+  const remaining = expiry ? daysLeft(expiry) : null;
 
   return (
     <View style={styles.root}>
@@ -204,18 +219,37 @@ export default function AddScreen() {
         <View style={styles.card}>
           <FieldRow label="Data">
             <TouchableOpacity onPress={openDatePicker} activeOpacity={0.85} style={styles.dateBtn}>
-              <Text style={styles.dateBtnText}>{expiry}</Text>
+              <Text style={[styles.dateBtnText, !expiry && styles.dateBtnPlaceholder]}>
+                {expiry ?? 'Seleziona data'}
+              </Text>
               <Text style={styles.dateBtnIcon}>📅</Text>
             </TouchableOpacity>
           </FieldRow>
-          <Divider />
-          <View style={styles.remainingRow}>
-            <Text style={styles.remainingLabel}>Rimangono</Text>
-            <Text style={styles.remainingValue}>
-              {remaining >= 0 ? remaining : 0} giorni
-            </Text>
-          </View>
+          {remaining !== null && (
+            <>
+              <Divider />
+              <View style={styles.remainingRow}>
+                <Text style={styles.remainingLabel}>Rimangono</Text>
+                <Text style={styles.remainingValue}>
+                  {remaining >= 0 ? remaining : 0} giorni
+                </Text>
+              </View>
+            </>
+          )}
         </View>
+
+        {/* OCR: scansiona la data dalla confezione. Disponibile solo dove l'OCR
+            è supportato (build nativa o web), nascosto in Expo Go. */}
+        {ocrAvailable && (
+          <TouchableOpacity
+            style={styles.ocrBtn}
+            onPress={() => setShowOcr(true)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.ocrBtnIcon}>📷</Text>
+            <Text style={styles.ocrBtnText}>Scansiona la data</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Quick presets */}
         <ScrollView
@@ -307,6 +341,13 @@ export default function AddScreen() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
+      {/* OCR camera modal */}
+      <DateScannerModal
+        visible={showOcr}
+        onClose={() => setShowOcr(false)}
+        onResult={(iso) => setExpiry(iso)}
+      />
 
       {/* Sticky footer */}
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
@@ -429,10 +470,19 @@ const styles = StyleSheet.create({
   },
   saveBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 16, color: '#fbfaf3' },
 
+  ocrBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: T.primarySoft, borderRadius: RADIUS.pill,
+    marginHorizontal: 16, marginBottom: 12, paddingVertical: 14,
+  },
+  ocrBtnIcon: { fontSize: 18 },
+  ocrBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 15, color: T.primaryInk },
+
   dateBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   dateBtnText: { fontFamily: FONTS.sansMedium, fontSize: 15, color: T.ink },
+  dateBtnPlaceholder: { color: T.mute },
   dateBtnIcon: { fontSize: 18 },
 
   modalOverlay: {

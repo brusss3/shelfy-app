@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Switch, Platform, Alert, TextInput, ActivityIndicator,
+  Switch, Platform, TextInput, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -9,6 +9,7 @@ import Constants from 'expo-constants';
 import { useAuth } from '@/context/AuthContext';
 import { submitFeedback, FeedbackCategory } from '@/lib/firestore';
 import { openSubscriptionManagement } from '@/lib/purchases';
+import { showAlert } from '@/lib/alert';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 
 function formatDate(iso: string | null | undefined): string {
@@ -18,8 +19,9 @@ function formatDate(iso: string | null | undefined): string {
 }
 
 const CATEGORIES: { id: FeedbackCategory; label: string }[] = [
-  { id: 'bug', label: '🐞 Bug' },
   { id: 'suggerimento', label: '💡 Idea' },
+  { id: 'bug', label: '🐞 Bug' },
+  { id: 'prodotto', label: '📦 Cibo' },
   { id: 'altro', label: '💬 Altro' },
 ];
 
@@ -57,11 +59,7 @@ export default function SettingsScreen() {
   };
 
   const handleLogout = () => {
-    if (Platform.OS === 'web') {
-      if (window.confirm("Vuoi uscire dall'account?")) logOut();
-      return;
-    }
-    Alert.alert('Logout', "Vuoi uscire dall'account?", [
+    showAlert('Logout', "Vuoi uscire dall'account?", [
       { text: 'Annulla', style: 'cancel' },
       { text: 'Esci', style: 'destructive', onPress: () => logOut() },
     ]);
@@ -79,11 +77,9 @@ export default function SettingsScreen() {
         message: fbMessage.trim(),
       });
       setFbMessage('');
-      const ok = 'Grazie! La tua segnalazione è stata inviata.';
-      if (Platform.OS === 'web') alert(ok); else Alert.alert('Inviato', ok);
+      showAlert('Inviato', 'Grazie! La tua segnalazione è stata inviata.');
     } catch {
-      const err = 'Invio non riuscito. Riprova più tardi.';
-      if (Platform.OS === 'web') alert(err); else Alert.alert('Errore', err);
+      showAlert('Errore', 'Invio non riuscito. Riprova più tardi.');
     } finally {
       setSendingFb(false);
     }

@@ -2,17 +2,17 @@ import { useEffect } from 'react';
 import { Tabs, useRouter } from 'expo-router';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { T, FONTS } from '@/constants/theme';
+import { T } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { registerForPushNotifications } from '@/lib/notifications';
+import { saveUserPushToken } from '@/lib/firestore';
 
-type TabIconProps = { color: string; focused: boolean; icon: string; label: string };
+type TabIconProps = { focused: boolean; icon: string };
 
-function TabIcon({ color, focused, icon, label }: TabIconProps) {
+function TabIcon({ focused, icon }: TabIconProps) {
   return (
     <View style={styles.tabItem}>
       <Text style={[styles.tabEmoji, { opacity: focused ? 1 : 0.5 }]}>{icon}</Text>
-      <Text style={[styles.tabLabel, { color }]}>{label}</Text>
     </View>
   );
 }
@@ -29,8 +29,14 @@ export default function TabsLayout() {
   }, [user, loading]);
 
   useEffect(() => {
-    registerForPushNotifications().catch(console.warn);
-  }, []);
+    registerForPushNotifications()
+      .then((token) => {
+        if (token && user?.isAdmin) {
+          saveUserPushToken(user.uid, token).catch(console.warn);
+        }
+      })
+      .catch(console.warn);
+  }, [user?.isAdmin]);
 
   if (!user) return null;
 
@@ -59,25 +65,26 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon color={color} focused={focused} icon="🏠" label="Dispensa" />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="🏠" />,
         }}
       />
       <Tabs.Screen
         name="notifications"
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon color={color} focused={focused} icon="🔔" label="Avvisi" />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="🔔" />,
         }}
       />
       <Tabs.Screen
+        name="feedback"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="💡" />,
+        }}
+      />
+      {/* Scheda ricette nascosta dalla barra utente, pronta per essere riattivata successivamente */}
+      <Tabs.Screen
         name="recipes"
         options={{
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon color={color} focused={focused} icon="💬" label="Feedback" />
-          ),
+          href: null,
         }}
       />
     </Tabs>
@@ -85,7 +92,6 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  tabItem: { alignItems: 'center', gap: 2 },
-  tabEmoji: { fontSize: 22 },
-  tabLabel: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 0.2 },
+  tabItem: { alignItems: 'center', justifyContent: 'center' },
+  tabEmoji: { fontSize: 26 },
 });

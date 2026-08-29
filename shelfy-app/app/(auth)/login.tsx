@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert,
+  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { authErrorMessage } from '@/lib/authErrors';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
+import { showAlert } from '@/lib/alert';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 
 export default function LoginScreen() {
@@ -18,7 +19,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Errore', 'Inserisci email e password');
+      showAlert('Errore', 'Inserisci email e password');
       return;
     }
     setLoading(true);
@@ -26,7 +27,7 @@ export default function LoginScreen() {
       await signIn(email.trim(), password);
       router.replace('/(tabs)');
     } catch (e: any) {
-      Alert.alert('Accesso fallito', authErrorMessage(e, 'Controlla le tue credenziali e riprova.'));
+      showAlert('Accesso fallito', authErrorMessage(e, 'Controlla le tue credenziali e riprova.'));
     } finally {
       setLoading(false);
     }

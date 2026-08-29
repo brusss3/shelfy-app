@@ -1,6 +1,8 @@
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { Product } from '@/types';
 import { effectiveExpiry } from '@/lib/urgency';
 
@@ -43,10 +45,23 @@ export async function registerForPushNotifications(): Promise<string | null> {
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#2f4a31',
     });
+    // Le push remote (Expo API) senza channelId esplicito finiscono sul
+    // canale "default": se non esiste, Android le scarta senza errori.
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'Generali',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#2f4a31',
+    });
   }
 
+  const projectId =
+    (Constants.expoConfig?.extra as any)?.eas?.projectId ||
+    Constants.easConfig?.projectId ||
+    '8ca5efb5-8143-4d62-b20e-a3185df70768';
+
   const token = await Notifications.getExpoPushTokenAsync({
-    projectId: 'your-eas-project-id',
+    projectId,
   });
 
   return token.data;
@@ -59,42 +74,144 @@ export async function scheduleExpiryNotifications(
   if (isExpoGo || Platform.OS === 'web') return;
 
   const Notifications = N();
-  // Cancella sempre prima: se l'utente disattiva le notifiche, rimuove anche
-  // quelle già programmate.
+  // Cancella sempre prima: se l'utente disattiva le notifiche o modifica i prodotti,
+  // rimuove quelle obsolete e rischedula quelle aggiornate.
   await Notifications.cancelAllScheduledNotificationsAsync();
   if (!enabled) return;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const now = new Date();
 
   for (const product of products) {
-    // Tiene conto della scadenza post-apertura.
-    const expiry = new Date(effectiveExpiry(product));
-    expiry.setHours(0, 0, 0, 0);
-    const daysLeft = Math.round((expiry.getTime() - today.getTime()) / 86400000);
+    const expiryIso = effectiveExpiry(product);
+    const expiryDate = new Date(expiryIso + 'T00:00:00');
 
-    if (daysLeft < 0 || daysLeft > 7) continue;
+    // 1) Notifica il giorno stesso della scadenza alle 09:00
+    const triggerSameDay = new Date(expiryDate);
+    triggerSameDay.setHours(9, 0, 0, 0);
 
-    const triggerDate = new Date(expiry);
-    triggerDate.setHours(9, 0, 0, 0);
+    if (triggerSameDay > now) {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '⏰ Shelfy — Scade oggi',
+          body: `${product.name} scade oggi. Usalo subito o congelalo!`,
+          data: { productId: product.id },
+          sound: true,
+        },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerSameDay },
+      });
+    }
 
-    if (triggerDate <= new Date()) continue;
+    // 2) Notifica preventiva 1 giorno prima della scadenza alle 09:00
+    const triggerDayBefore = new Date(expiryDate);
+    triggerDayBefore.setDate(triggerDayBefore.getDate() - 1);
+    triggerDayBefore.setHours(9, 0, 0, 0);
 
-    const body =
-      daysLeft === 0
-        ? `${product.name} scade oggi — usalo subito!`
-        : daysLeft === 1
-        ? `${product.name} scade domani`
-        : `${product.name} scade tra ${daysLeft} giorni`;
-
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: '⏰ Shelfy — Scadenza vicina',
-        body,
-        data: { productId: product.id },
-        sound: true,
-      },
-      trigger: { date: triggerDate },
-    });
+    if (triggerDayBefore > now) {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '⏰ Shelfy — Scadenza vicina',
+          body: `${product.name} scade domani.`,
+          data: { productId: product.id },
+          sound: true,
+        },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDayBefore },
+      });
+    }
   }
+}
+
+// --- Notifiche push Admin (Expo Push API) ---
+
+interface AdminPushRecipient {
+  uid: string;
+  pushToken: string;
+}
+
+async function getAdminPushRecipients(prefField: 'adminNotifNewUsers' | 'adminNotifFeedback'): Promise<AdminPushRecipient[]> {
+  const snap = await getDocs(query(collection(db, 'users'), where('isAdmin', '==', true)));
+  const recipients: AdminPushRecipient[] = [];
+  snap.docs.forEach((d) => {
+    const data = d.data();
+    const token: string | undefined = data.pushToken;
+    const enabled: boolean = data[prefField] !== false;
+    if (token && enabled) recipients.push({ uid: d.id, pushToken: token });
+  });
+  return recipients;
+}
+
+export async function sendExpoPushNotification(
+  tokens: string[],
+  payload: { title: string; body: string; data?: Record<string, unknown> },
+): Promise<void> {
+  if (tokens.length === 0) return;
+
+  // exp.host non manda header CORS: dal browser il preflight fallisce sempre.
+  // Su nativo (Android/iOS) fetch non passa da CORS, quindi funziona.
+  if (Platform.OS === 'web') {
+    throw new Error('Invio push non disponibile da browser (limite CORS di Expo). Prova dall\'app su dispositivo mobile.');
+  }
+
+  const messages = tokens.map((to) => ({
+    to,
+    title: payload.title,
+    body: payload.body,
+    data: payload.data ?? {},
+    sound: 'default',
+    channelId: 'default',
+  }));
+
+  const res = await fetch('https://exp.host/--/api/v2/push/send', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(messages),
+  });
+
+  const json = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(`Expo push API HTTP ${res.status}: ${JSON.stringify(json)}`);
+  }
+
+  // La risposta è sempre 200 anche se il singolo messaggio fallisce — lo stato
+  // reale è dentro data[i].status ('ok' | 'error').
+  const results: Array<{ status: string; message?: string; details?: { error?: string } }> = json?.data ?? [];
+  const errors = results.filter((r) => r.status === 'error');
+  if (errors.length > 0) {
+    console.warn('[notifications] Expo push errors:', errors);
+    throw new Error(errors.map((e) => e.details?.error ?? e.message ?? 'errore sconosciuto').join(', '));
+  }
+}
+
+export async function notifyAdminsNewUser(newUser: { email: string; displayName?: string | null }): Promise<void> {
+  const recipients = await getAdminPushRecipients('adminNotifNewUsers');
+  if (recipients.length === 0) return;
+  const who = newUser.displayName ? `${newUser.displayName} (${newUser.email})` : newUser.email;
+  await sendExpoPushNotification(recipients.map((r) => r.pushToken), {
+    title: '👤 Nuovo utente registrato',
+    body: who,
+    data: { type: 'new_user' },
+  });
+}
+
+export async function notifyAdminsNewFeedback(feedback: {
+  email: string;
+  displayName?: string | null;
+  category: string;
+  message: string;
+}): Promise<void> {
+  const recipients = await getAdminPushRecipients('adminNotifFeedback');
+  if (recipients.length === 0) return;
+  const who = feedback.displayName ? `${feedback.displayName} (${feedback.email})` : feedback.email;
+  await sendExpoPushNotification(recipients.map((r) => r.pushToken), {
+    title: '📮 Nuova segnalazione',
+    body: `${who}: ${feedback.message.slice(0, 100)}`,
+    data: { type: 'new_feedback' },
+  });
+}
+
+export async function sendAdminTestPushNotification(token: string): Promise<void> {
+  await sendExpoPushNotification([token], {
+    title: '🔔 Shelfy — Notifica di test',
+    body: 'Il canale push admin funziona correttamente.',
+    data: { type: 'test' },
+  });
 }

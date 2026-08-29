@@ -1,12 +1,16 @@
+import Constants from 'expo-constants';
 import { Product, Recipe } from '@/types';
 import { daysTo } from '@/lib/urgency';
 
-const GROQ_API_KEY = 'ROTATED_REMOVED_FROM_HISTORY';
+const extra = (Constants.expoConfig?.extra as any) ?? {};
+const GROQ_API_KEY = process.env.EXPO_PUBLIC_GROQ_API_KEY || (extra.groqApiKey as string) || '';
 
 const TINTS = ['#e6efde','#f1ede0','#f3e9e0','#f4e9c8','#e8dcc6','#eceee5','#f4dad0','#e6dfd1'];
 
 export async function generateRecipe(products: Product[], selectedIngredients: string[]): Promise<Recipe> {
-  if (!GROQ_API_KEY) throw new Error('Chiave API Groq mancante. Registrati su console.groq.com e inseriscila in lib/recipeAI.ts');
+  if (!GROQ_API_KEY) {
+    throw new Error('Chiave API Groq non configurata. Imposta EXPO_PUBLIC_GROQ_API_KEY nel tuo file .env');
+  }
 
   const randomSeed = Math.floor(Math.random() * 1000);
 

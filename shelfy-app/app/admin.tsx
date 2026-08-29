@@ -1,25 +1,27 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, ActivityIndicator, Alert, RefreshControl, Platform,
+  View, Text, ScrollView, TouchableOpacity, TextInput, Switch,
+  StyleSheet, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import {
   getAllUsers, adminSetPremium, adminSetAdmin, AdminUserRecord,
-  getAllFeedback, FeedbackRecord,
+  getAllFeedback, FeedbackRecord, saveUserPushToken,
 } from '@/lib/firestore';
+import { registerForPushNotifications, sendAdminTestPushNotification } from '@/lib/notifications';
+import { showAlert } from '@/lib/alert';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 
-type Tab = 'users' | 'feedback';
+type Tab = 'users' | 'feedback' | 'notifiche';
+type SortMode = 'newest' | 'oldest' | 'az' | 'za';
+type FilterChip = 'all' | 'new' | 'premium' | 'admin';
+
+const NEW_USER_DAYS = 7;
 
 function confirm(title: string, message: string, onYes: () => void, destructive = false) {
-  if (Platform.OS === 'web') {
-    if (window.confirm(`${title}\n\n${message}`)) onYes();
-    return;
-  }
-  Alert.alert(title, message, [
+  showAlert(title, message, [
     { text: 'Annulla', style: 'cancel' },
     { text: 'Conferma', style: destructive ? 'destructive' : 'default', onPress: onYes },
   ]);
@@ -30,8 +32,24 @@ function formatDate(iso: string | null | undefined): string {
   return new Date(iso).toLocaleDateString('it-IT');
 }
 
+function daysSince(iso: string | null | undefined): number | null {
+  if (!iso) return null;
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return null;
+  return Math.floor((Date.now() - then) / (1000 * 60 * 60 * 24));
+}
+
+function formatRelative(iso: string | null | undefined): string {
+  const d = daysSince(iso);
+  if (d === null) return '';
+  if (d <= 0) return 'Oggi';
+  if (d === 1) return 'Ieri';
+  if (d < 7) return `${d} giorni fa`;
+  return formatDate(iso);
+}
+
 export default function AdminScreen() {
-  const { user } = useAuth();
+  const { user, updateAdminNotifSettings } = useAuth();
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('users');
   const [users, setUsers] = useState<AdminUserRecord[]>([]);
@@ -40,14 +58,21 @@ export default function AdminScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
 
+  const [search, setSearch] = useState('');
+  const [sortMode, setSortMode] = useState<SortMode>('newest');
+  const [filterChip, setFilterChip] = useState<FilterChip>('all');
+
+  const [registeringPush, setRegisteringPush] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
+
   const load = useCallback(async () => {
     try {
       const [u, f] = await Promise.all([getAllUsers(), getAllFeedback().catch(() => [])]);
-      u.sort((a, b) => a.email.localeCompare(b.email));
+      // getAllUsers ora ritorna già ordinato per data iscrizione decrescente
       setUsers(u);
       setFeedback(f);
     } catch (e: any) {
-      Alert.alert('Errore', e?.message ?? 'Impossibile caricare i dati.');
+      showAlert('Errore', e?.message ?? 'Impossibile caricare i dati.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -72,14 +97,14 @@ export default function AdminScreen() {
         await adminSetPremium(u.uid, next);
         setUsers((prev) => prev.map((x) => x.uid === u.uid ? { ...x, isPremium: next } : x));
       } catch (e: any) {
-        Alert.alert('Errore', e?.message ?? 'Aggiornamento fallito.');
+        showAlert('Errore', e?.message ?? 'Aggiornamento fallito.');
       } finally { setUpdating(null); }
     }, !next);
   };
 
   const toggleAdmin = (u: AdminUserRecord) => {
     if (u.uid === user?.uid) {
-      Alert.alert('Attenzione', 'Non puoi modificare il tuo ruolo admin.');
+      showAlert('Attenzione', 'Non puoi modificare il tuo ruolo admin.');
       return;
     }
     const next = !u.isAdmin;
@@ -89,9 +114,71 @@ export default function AdminScreen() {
         await adminSetAdmin(u.uid, next);
         setUsers((prev) => prev.map((x) => x.uid === u.uid ? { ...x, isAdmin: next } : x));
       } catch (e: any) {
-        Alert.alert('Errore', e?.message ?? 'Aggiornamento fallito.');
+        showAlert('Errore', e?.message ?? 'Aggiornamento fallito.');
       } finally { setUpdating(null); }
     }, true);
+  };
+
+  const visibleUsers = useMemo(() => {
+    let list = users;
+
+    if (filterChip === 'new') {
+      list = list.filter((u) => { const d = daysSince(u.createdAt); return d !== null && d < NEW_USER_DAYS; });
+    } else if (filterChip === 'premium') {
+      list = list.filter((u) => u.isPremium);
+    } else if (filterChip === 'admin') {
+      list = list.filter((u) => u.isAdmin);
+    }
+
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter((u) =>
+        u.displayName.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        u.uid.toLowerCase().includes(q),
+      );
+    }
+
+    const sorted = [...list];
+    if (sortMode === 'newest') sorted.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    else if (sortMode === 'oldest') sorted.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+    else if (sortMode === 'az') sorted.sort((a, b) => (a.displayName || a.email).localeCompare(b.displayName || b.email));
+    else if (sortMode === 'za') sorted.sort((a, b) => (b.displayName || b.email).localeCompare(a.displayName || a.email));
+    return sorted;
+  }, [users, search, sortMode, filterChip]);
+
+  const handleRegisterPush = async () => {
+    if (!user) return;
+    setRegisteringPush(true);
+    try {
+      const token = await registerForPushNotifications();
+      if (!token) {
+        showAlert('Notifiche push', 'Permesso non concesso o non disponibile su questo dispositivo/browser.');
+        return;
+      }
+      await saveUserPushToken(user.uid, token);
+      showAlert('Notifiche push', 'Dispositivo registrato con successo.');
+    } catch (e: any) {
+      showAlert('Errore', e?.message ?? 'Registrazione fallita.');
+    } finally {
+      setRegisteringPush(false);
+    }
+  };
+
+  const handleTestPush = async () => {
+    if (!user?.pushToken) {
+      showAlert('Notifiche push', 'Registra prima il dispositivo per ricevere notifiche.');
+      return;
+    }
+    setSendingTest(true);
+    try {
+      await sendAdminTestPushNotification(user.pushToken);
+      showAlert('Notifiche push', 'Notifica di test inviata.');
+    } catch (e: any) {
+      showAlert('Errore', e?.message ?? 'Invio fallito.');
+    } finally {
+      setSendingTest(false);
+    }
   };
 
   if (!user?.isAdmin) return null;
@@ -111,6 +198,7 @@ export default function AdminScreen() {
           <View style={styles.tabs}>
             <TabBtn label="Utenti" active={tab === 'users'} onPress={() => setTab('users')} />
             <TabBtn label="Feedback" active={tab === 'feedback'} onPress={() => setTab('feedback')} />
+            <TabBtn label="Notifiche" active={tab === 'notifiche'} onPress={() => setTab('notifiche')} />
           </View>
         </View>
       </View>
@@ -123,59 +211,110 @@ export default function AdminScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.primary} />}
         >
           <View style={styles.container}>
-            {tab === 'users' ? (
-              users.length === 0 ? <Text style={styles.empty}>Nessun utente.</Text> :
-              users.map((u) => (
-                <View key={u.uid} style={styles.card}>
-                  <View style={styles.cardTop}>
-                    <View style={styles.cardInfo}>
-                      <Text style={styles.name} numberOfLines={1}>{u.displayName || '—'}</Text>
-                      <Text style={styles.email} numberOfLines={1}>{u.email}</Text>
-                      {u.createdAt ? <Text style={styles.date}>Iscritto {formatDate(u.createdAt)}</Text> : null}
-                      {u.isPremium && (
-                        <Text style={styles.subInfo}>
-                          {u.subscriptionType === 'annual' ? 'Annuale' : u.subscriptionType === 'monthly' ? 'Mensile' : 'Premium'}
-                          {u.subscriptionExpiresAt ? ` · rinnovo ${formatDate(u.subscriptionExpiresAt)}` : ''}
-                        </Text>
-                      )}
-                    </View>
-                    <View style={styles.badges}>
-                      {u.isPremium && <View style={[styles.badge, styles.badgePremium]}><Text style={styles.badgeText}>Premium</Text></View>}
-                      {u.isAdmin && <View style={[styles.badge, styles.badgeAdmin]}><Text style={styles.badgeText}>Admin</Text></View>}
-                    </View>
-                  </View>
-
-                  {updating === u.uid ? (
-                    <ActivityIndicator color={T.primary} style={{ marginTop: 10 }} />
-                  ) : (
-                    <View style={styles.actions}>
-                      <TouchableOpacity
-                        style={[styles.btn, u.isPremium ? styles.btnDestructive : styles.btnPrimary]}
-                        onPress={() => togglePremium(u)}
-                      >
-                        <Text style={[styles.btnText, u.isPremium && styles.btnTextDanger]}>
-                          {u.isPremium ? 'Rimuovi Premium' : 'Abilita Premium'}
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.btn, u.isAdmin ? styles.btnDestructive : styles.btnSecondary]}
-                        onPress={() => toggleAdmin(u)}
-                      >
-                        <Text style={[styles.btnText, u.isAdmin ? styles.btnTextDanger : styles.btnTextSecondary]}>
-                          {u.isAdmin ? 'Rimuovi Admin' : 'Rendi Admin'}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
+            {tab === 'users' && (
+              <>
+                <View style={styles.searchRow}>
+                  <TextInput
+                    value={search}
+                    onChangeText={setSearch}
+                    placeholder="Cerca per nome, email o UID..."
+                    placeholderTextColor={T.mute}
+                    style={styles.searchInput}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  {search.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearch('')} style={styles.clearBtn}>
+                      <Text style={styles.clearBtnText}>✕</Text>
+                    </TouchableOpacity>
                   )}
                 </View>
-              ))
-            ) : (
+
+                <View style={styles.chipsRow}>
+                  <Chip label="Tutti" active={filterChip === 'all'} onPress={() => setFilterChip('all')} />
+                  <Chip label={`Nuovi < ${NEW_USER_DAYS}gg`} active={filterChip === 'new'} onPress={() => setFilterChip('new')} />
+                  <Chip label="Premium ✦" active={filterChip === 'premium'} onPress={() => setFilterChip('premium')} />
+                  <Chip label="Admin 🛡️" active={filterChip === 'admin'} onPress={() => setFilterChip('admin')} />
+                </View>
+
+                <View style={styles.sortRow}>
+                  <SortBtn label="Più recenti" active={sortMode === 'newest'} onPress={() => setSortMode('newest')} />
+                  <SortBtn label="Meno recenti" active={sortMode === 'oldest'} onPress={() => setSortMode('oldest')} />
+                  <SortBtn label="A-Z" active={sortMode === 'az'} onPress={() => setSortMode('az')} />
+                  <SortBtn label="Z-A" active={sortMode === 'za'} onPress={() => setSortMode('za')} />
+                </View>
+
+                <Text style={styles.resultCount}>{visibleUsers.length} risultat{visibleUsers.length === 1 ? 'o' : 'i'}</Text>
+
+                {visibleUsers.length === 0 ? <Text style={styles.empty}>Nessun utente trovato.</Text> :
+                  visibleUsers.map((u) => {
+                    const isNew = (() => { const d = daysSince(u.createdAt); return d !== null && d < NEW_USER_DAYS; })();
+                    return (
+                      <View key={u.uid} style={styles.card}>
+                        <View style={styles.cardTop}>
+                          <View style={styles.cardInfo}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Text style={styles.name} numberOfLines={1}>{u.displayName || '—'}</Text>
+                              {isNew && <View style={styles.newBadge}><Text style={styles.newBadgeText}>Nuovo</Text></View>}
+                            </View>
+                            <Text style={styles.email} numberOfLines={1}>{u.email}</Text>
+                            {u.createdAt ? <Text style={styles.date}>Iscritto {formatRelative(u.createdAt)}</Text> : null}
+                            {u.isPremium && (
+                              <Text style={styles.subInfo}>
+                                {u.subscriptionType === 'annual' ? 'Annuale' : u.subscriptionType === 'monthly' ? 'Mensile' : 'Premium'}
+                                {u.subscriptionExpiresAt ? ` · rinnovo ${formatDate(u.subscriptionExpiresAt)}` : ''}
+                              </Text>
+                            )}
+                          </View>
+                          <View style={styles.badges}>
+                            {u.isPremium && <View style={[styles.badge, styles.badgePremium]}><Text style={styles.badgeText}>Premium</Text></View>}
+                            {u.isAdmin && <View style={[styles.badge, styles.badgeAdmin]}><Text style={styles.badgeText}>Admin</Text></View>}
+                          </View>
+                        </View>
+
+                        {updating === u.uid ? (
+                          <ActivityIndicator color={T.primary} style={{ marginTop: 10 }} />
+                        ) : (
+                          <View style={styles.actions}>
+                            <TouchableOpacity
+                              style={[styles.btn, u.isPremium ? styles.btnDestructive : styles.btnPrimary]}
+                              onPress={() => togglePremium(u)}
+                            >
+                              <Text style={[styles.btnText, u.isPremium && styles.btnTextDanger]}>
+                                {u.isPremium ? 'Rimuovi Premium' : 'Abilita Premium'}
+                              </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[styles.btn, u.isAdmin ? styles.btnDestructive : styles.btnSecondary]}
+                              onPress={() => toggleAdmin(u)}
+                            >
+                              <Text style={[styles.btnText, u.isAdmin ? styles.btnTextDanger : styles.btnTextSecondary]}>
+                                {u.isAdmin ? 'Rimuovi Admin' : 'Rendi Admin'}
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })
+                }
+              </>
+            )}
+
+            {tab === 'feedback' && (
               feedback.length === 0 ? <Text style={styles.empty}>Nessuna segnalazione.</Text> :
               feedback.map((f) => (
                 <View key={f.id} style={styles.card}>
                   <View style={styles.fbHeader}>
-                    <View style={[styles.fbTag, fbTagStyle(f.category)]}>
-                      <Text style={styles.fbTagText}>{fbLabel(f.category)}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <View style={[styles.fbTag, fbTagStyle(f.category)]}>
+                        <Text style={styles.fbTagText}>{fbLabel(f.category)}</Text>
+                      </View>
+                      {f.rating ? (
+                        <Text style={{ fontSize: 12, color: '#f59e0b', fontFamily: FONTS.sansSemiBold }}>
+                          {'★'.repeat(f.rating)}
+                        </Text>
+                      ) : null}
                     </View>
                     {f.createdAt ? <Text style={styles.date}>{formatDate(f.createdAt)}</Text> : null}
                   </View>
@@ -183,6 +322,68 @@ export default function AdminScreen() {
                   <Text style={styles.fbFrom}>{f.displayName || 'Anonimo'} · {f.email}</Text>
                 </View>
               ))
+            )}
+
+            {tab === 'notifiche' && (
+              <View style={{ gap: 12 }}>
+                <View style={styles.card}>
+                  <Text style={styles.notifSectionTitle}>Dispositivo</Text>
+                  <Text style={styles.notifSectionDesc}>
+                    {user.pushToken ? 'Dispositivo registrato per le notifiche push.' : 'Nessun dispositivo registrato.'}
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.btn, styles.btnPrimary, { marginTop: 12 }]}
+                    onPress={handleRegisterPush}
+                    disabled={registeringPush}
+                  >
+                    {registeringPush ? <ActivityIndicator color="#fbfaf3" /> : (
+                      <Text style={styles.btnText}>{user.pushToken ? 'Ri-registra dispositivo' : 'Registra dispositivo'}</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.card}>
+                  <View style={styles.switchRow}>
+                    <View style={{ flex: 1, marginRight: 12 }}>
+                      <Text style={styles.notifSectionTitle}>Nuovi Utenti Iscritti</Text>
+                      <Text style={styles.notifSectionDesc}>Ricevi un avviso push ogni volta che un nuovo utente si registra a Shelfy.</Text>
+                    </View>
+                    <Switch
+                      value={user.adminNotifNewUsers ?? true}
+                      onValueChange={(v) => updateAdminNotifSettings({ adminNotifNewUsers: v })}
+                      trackColor={{ false: T.line, true: T.primary }}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.card}>
+                  <View style={styles.switchRow}>
+                    <View style={{ flex: 1, marginRight: 12 }}>
+                      <Text style={styles.notifSectionTitle}>Nuove Segnalazioni / Feedback</Text>
+                      <Text style={styles.notifSectionDesc}>Ricevi un avviso push per ogni nuovo feedback o segnalazione inviata.</Text>
+                    </View>
+                    <Switch
+                      value={user.adminNotifFeedback ?? true}
+                      onValueChange={(v) => updateAdminNotifSettings({ adminNotifFeedback: v })}
+                      trackColor={{ false: T.line, true: T.primary }}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.card}>
+                  <Text style={styles.notifSectionTitle}>Test</Text>
+                  <Text style={styles.notifSectionDesc}>Invia una notifica push di prova al tuo dispositivo registrato.</Text>
+                  <TouchableOpacity
+                    style={[styles.btn, styles.btnSecondary, { marginTop: 12 }]}
+                    onPress={handleTestPush}
+                    disabled={sendingTest}
+                  >
+                    {sendingTest ? <ActivityIndicator color={T.primaryInk} /> : (
+                      <Text style={[styles.btnText, styles.btnTextSecondary]}>Invia notifica di test</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
             )}
           </View>
         </ScrollView>
@@ -199,11 +400,33 @@ function TabBtn({ label, active, onPress }: { label: string; active: boolean; on
   );
 }
 
+function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <TouchableOpacity onPress={onPress} style={[styles.chip, active && styles.chipActive]} activeOpacity={0.85}>
+      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function SortBtn({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <TouchableOpacity onPress={onPress} style={[styles.sortBtn, active && styles.sortBtnActive]} activeOpacity={0.85}>
+      <Text style={[styles.sortBtnText, active && styles.sortBtnTextActive]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 function fbLabel(c: string) {
-  return c === 'bug' ? '🐞 Bug' : c === 'suggerimento' ? '💡 Idea' : '💬 Altro';
+  if (c === 'bug') return '🐞 Bug';
+  if (c === 'suggerimento') return '💡 Idea';
+  if (c === 'prodotto') return '📦 Barcode';
+  return '💬 Altro';
 }
 function fbTagStyle(c: string) {
-  return c === 'bug' ? { backgroundColor: T.urgentSoft } : c === 'suggerimento' ? { backgroundColor: T.okSoft } : { backgroundColor: T.primarySoft };
+  if (c === 'bug') return { backgroundColor: T.urgentSoft };
+  if (c === 'suggerimento') return { backgroundColor: T.okSoft };
+  if (c === 'prodotto') return { backgroundColor: T.warnSoft };
+  return { backgroundColor: T.primarySoft };
 }
 
 const styles = StyleSheet.create({
@@ -227,6 +450,25 @@ const styles = StyleSheet.create({
   container: { width: '100%', maxWidth: 760, alignSelf: 'center', gap: 12 },
   empty: { textAlign: 'center', color: T.mute, fontFamily: FONTS.sans, paddingVertical: 40 },
 
+  searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: T.surface, borderRadius: RADIUS.sm, borderWidth: 1, borderColor: T.line, paddingHorizontal: 12 },
+  searchInput: { flex: 1, paddingVertical: 10, fontFamily: FONTS.sans, fontSize: 14, color: T.ink },
+  clearBtn: { paddingHorizontal: 6, paddingVertical: 6 },
+  clearBtnText: { color: T.mute, fontSize: 14, fontFamily: FONTS.sansSemiBold },
+
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { paddingVertical: 7, paddingHorizontal: 14, borderRadius: RADIUS.pill, backgroundColor: T.surface, borderWidth: 1, borderColor: T.line },
+  chipActive: { backgroundColor: T.primary, borderColor: T.primary },
+  chipText: { fontFamily: FONTS.sansMedium, fontSize: 13, color: T.ink2 },
+  chipTextActive: { color: '#fbfaf3' },
+
+  sortRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  sortBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: RADIUS.sm, backgroundColor: T.primarySoft },
+  sortBtnActive: { backgroundColor: T.primary },
+  sortBtnText: { fontFamily: FONTS.sansMedium, fontSize: 12, color: T.primaryInk },
+  sortBtnTextActive: { color: '#fbfaf3' },
+
+  resultCount: { fontFamily: FONTS.sans, fontSize: 12, color: T.mute },
+
   card: { backgroundColor: T.surface, borderRadius: RADIUS.md, padding: 16, ...SHADOW.card },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   cardInfo: { flex: 1, marginRight: 8 },
@@ -234,6 +476,9 @@ const styles = StyleSheet.create({
   email: { fontFamily: FONTS.sans, fontSize: 13, color: T.ink2, marginTop: 2 },
   date: { fontFamily: FONTS.sans, fontSize: 12, color: T.mute, marginTop: 4 },
   subInfo: { fontFamily: FONTS.sansMedium, fontSize: 12, color: T.primary, marginTop: 4 },
+
+  newBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: RADIUS.pill, backgroundColor: T.okSoft },
+  newBadgeText: { fontFamily: FONTS.sansSemiBold, fontSize: 10, color: T.ok },
 
   badges: { flexDirection: 'column', gap: 4, alignItems: 'flex-end' },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill },
@@ -255,4 +500,8 @@ const styles = StyleSheet.create({
   fbTagText: { fontFamily: FONTS.sansSemiBold, fontSize: 12, color: T.ink },
   fbMessage: { fontFamily: FONTS.sans, fontSize: 14, color: T.ink, lineHeight: 20 },
   fbFrom: { fontFamily: FONTS.sans, fontSize: 12, color: T.mute, marginTop: 8 },
+
+  notifSectionTitle: { fontFamily: FONTS.sansSemiBold, fontSize: 15, color: T.ink },
+  notifSectionDesc: { fontFamily: FONTS.sans, fontSize: 13, color: T.mute, marginTop: 4, lineHeight: 18 },
+  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 });

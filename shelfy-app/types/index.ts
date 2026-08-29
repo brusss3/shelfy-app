@@ -46,6 +46,9 @@ export interface User {
   subscriptionType?: SubscriptionType | null;
   subscriptionExpiresAt?: string | null;
   notificationsEnabled?: boolean;
+  pushToken?: string;
+  adminNotifNewUsers?: boolean;
+  adminNotifFeedback?: boolean;
 }
 
 export type UrgencyKey = 'scaduto' | 'oggi' | 'domani' | 'urgente' | 'prossimo' | 'ok' | 'lungo';

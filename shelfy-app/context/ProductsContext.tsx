@@ -5,6 +5,7 @@ import {
   deleteProduct, moveProductZone,
 } from '@/lib/firestore';
 import { scheduleExpiryNotifications } from '@/lib/notifications';
+import { daysTo } from '@/lib/urgency';
 import { useAuth } from './AuthContext';
 
 interface ProductsContextType {
@@ -13,22 +14,13 @@ interface ProductsContextType {
   addNewProduct: (data: Omit<Product, 'id' | 'userId'>) => Promise<void>;
   removeProduct: (id: string) => Promise<void>;
   changeZone: (id: string, zone: Zone) => Promise<void>;
+  editProduct: (id: string, data: Partial<Product>) => Promise<void>;
   markConsumed: (id: string) => Promise<void>;
   markOpened: (id: string, openExpiry: string) => Promise<void>;
   daysTo: (iso: string) => number;
 }
 
 const ProductsContext = createContext<ProductsContextType>({} as ProductsContextType);
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-function daysTo(iso: string): number {
-  const expiry = new Date(iso);
-  expiry.setHours(0, 0, 0, 0);
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  return Math.round((expiry.getTime() - now.getTime()) / DAY_MS);
-}
 
 export function ProductsProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -82,6 +74,14 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
     [user],
   );
 
+  const editProduct = useCallback(
+    async (id: string, data: Partial<Product>) => {
+      if (!user) return;
+      await updateProduct(user.uid, id, data);
+    },
+    [user],
+  );
+
   const markConsumed = useCallback(
     async (id: string) => {
       if (!user) return;
@@ -103,7 +103,7 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ProductsContext.Provider
-      value={{ products, loading, addNewProduct, removeProduct, changeZone, markConsumed, markOpened, daysTo }}
+      value={{ products, loading, addNewProduct, removeProduct, changeZone, editProduct, markConsumed, markOpened, daysTo }}
     >
       {children}
     </ProductsContext.Provider>

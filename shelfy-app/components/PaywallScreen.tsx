@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform, StyleSheet,
+  View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Platform, StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { useAuth } from '@/context/AuthContext';
 import { getOfferings, purchasePackage, restorePurchases, getActiveSubscriptionInfo } from '@/lib/purchases';
+import { showAlert } from '@/lib/alert';
 import { SubscriptionType } from '@/types';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 
@@ -39,7 +40,7 @@ export default function PaywallScreen() {
         if (info) await setSubscription(info);
       }
     } catch (e: any) {
-      Alert.alert('Errore acquisto', e?.message ?? 'Riprova più tardi.');
+      showAlert('Errore acquisto', e?.message ?? 'Riprova più tardi.');
     } finally {
       setPurchasing(false);
     }
@@ -66,12 +67,12 @@ export default function PaywallScreen() {
       const ok = await restorePurchases();
       if (ok) {
         await setPremium(true);
-        Alert.alert('Ripristino completato', 'Abbonamento premium attivato.');
+        showAlert('Ripristino completato', 'Abbonamento premium attivato.');
       } else {
-        Alert.alert('Nessun acquisto trovato', 'Nessun abbonamento attivo trovato su questo account.');
+        showAlert('Nessun acquisto trovato', 'Nessun abbonamento attivo trovato su questo account.');
       }
     } catch {
-      Alert.alert('Errore', 'Impossibile ripristinare gli acquisti.');
+      showAlert('Errore', 'Impossibile ripristinare gli acquisti.');
     } finally {
       setPurchasing(false);
     }

@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform, Alert, Modal, TextInput,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform, Modal, TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useProducts } from '@/context/ProductsContext';
 import { urgencyOf, shortDate, daysTo } from '@/lib/urgency';
 import Pill from '@/components/Pill';
+import DateScannerModal from '@/components/DateScannerModal';
+import { ocrAvailable } from '@/lib/ocr';
+import { showAlert } from '@/lib/alert';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 import { Zone } from '@/types';
 
@@ -35,7 +39,7 @@ function addDays(n: number): string {
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { products, removeProduct, changeZone, markOpened } = useProducts();
+  const { products, removeProduct, changeZone, editProduct, markOpened } = useProducts();
   const router = useRouter();
 
   const [showOpenModal, setShowOpenModal] = useState(false);
@@ -43,6 +47,21 @@ export default function ProductDetailScreen() {
   const [openPickerMonth, setOpenPickerMonth] = useState('');
   const [openPickerYear, setOpenPickerYear] = useState('');
   const [openExpiryPreview, setOpenExpiryPreview] = useState('');
+
+  // ─── Modalità modifica ───────────────────────────────────────────────────
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [eName, setEName] = useState('');
+  const [eBrand, setEBrand] = useState('');
+  const [eQty, setEQty] = useState('');
+  const [eCategory, setECategory] = useState('');
+  const [eZone, setEZone] = useState<Zone>('frigo');
+  const [eExpiry, setEExpiry] = useState('');
+  const [showExpiryPicker, setShowExpiryPicker] = useState(false);
+  const [expDay, setExpDay] = useState('');
+  const [expMonth, setExpMonth] = useState('');
+  const [expYear, setExpYear] = useState('');
+  const [showOcr, setShowOcr] = useState(false);
 
   const product = products.find((p) => p.id === id);
   if (!product) {
@@ -57,7 +76,9 @@ export default function ProductDetailScreen() {
     ? daysTo(product.openExpiry) < daysTo(product.expiry) ? product.openExpiry : product.expiry
     : product.expiry;
 
-  const days = daysTo(effectiveExpiry);
+  // In modifica la card scadenza riflette la data che si sta impostando.
+  const displayExpiry = editing ? eExpiry : effectiveExpiry;
+  const days = daysTo(displayExpiry);
   const u = urgencyOf(days);
 
   const totalDays = Math.max(1,
@@ -93,8 +114,61 @@ export default function ProductDetailScreen() {
     await markOpened(product.id, iso);
   };
 
+  const startEdit = () => {
+    setEName(product.name);
+    setEBrand(product.brand);
+    setEQty(product.qty);
+    setECategory(product.category);
+    setEZone(product.zone);
+    setEExpiry(product.expiry);
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setEditing(false);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!eName.trim()) {
+      showAlert('Errore', 'Inserisci il nome del prodotto');
+      return;
+    }
+    setSaving(true);
+    try {
+      await editProduct(product.id, {
+        name: eName.trim(),
+        brand: eBrand.trim(),
+        qty: eQty.trim(),
+        category: eCategory.trim() || 'Altro',
+        zone: eZone,
+        expiry: eExpiry,
+      });
+      setEditing(false);
+    } catch (e: any) {
+      showAlert('Errore', e?.message ?? 'Impossibile salvare le modifiche');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openExpiryPicker = () => {
+    const d = new Date(eExpiry + 'T00:00:00');
+    setExpDay(String(d.getDate()));
+    setExpMonth(String(d.getMonth() + 1));
+    setExpYear(String(d.getFullYear()));
+    setShowExpiryPicker(true);
+  };
+
+  const confirmExpiry = () => {
+    const d = Math.max(1, Math.min(31, parseInt(expDay) || 1));
+    const m = Math.max(1, Math.min(12, parseInt(expMonth) || 1));
+    const y = parseInt(expYear) || new Date().getFullYear();
+    setEExpiry(`${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+    setShowExpiryPicker(false);
+  };
+
   const handleDelete = () => {
-    Alert.alert(
+    showAlert(
       'Rimuovi prodotto',
       `Vuoi rimuovere "${product.name}" dalla dispensa?`,
       [
@@ -116,30 +190,100 @@ export default function ProductDetailScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Nav */}
         <View style={styles.nav}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.navBtn}>
-            <Text style={styles.navBtnText}>‹</Text>
+          <TouchableOpacity
+            onPress={() => (editing ? cancelEdit() : router.back())}
+            style={styles.navBtn}
+          >
+            <Text style={styles.navBtnText}>{editing ? '✕' : '‹'}</Text>
           </TouchableOpacity>
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity style={styles.navBtn}>
-              <Text style={styles.navBtnText}>↗</Text>
-            </TouchableOpacity>
+            {editing ? (
+              <TouchableOpacity
+                style={[styles.navBtn, styles.navBtnSave]}
+                onPress={handleSaveEdit}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#fbfaf3" size="small" />
+                ) : (
+                  <Text style={[styles.navBtnText, { color: '#fbfaf3' }]}>✓</Text>
+                )}
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.navBtn} onPress={startEdit}>
+                <Text style={styles.navBtnText}>✎</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
         {/* Hero */}
         <View style={[styles.hero, { backgroundColor: product.tint || T.primarySoft }]}>
           <Text style={styles.heroInitials}>
-            {product.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()}
+            {(editing ? eName : product.name).split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()}
           </Text>
-          <Text style={styles.heroBrand}>{product.brand.toUpperCase()}</Text>
-          <Text style={styles.heroName}>{product.name}</Text>
-          <Text style={styles.heroSub}>{product.qty} · {product.category}</Text>
+          <Text style={styles.heroBrand}>{(editing ? eBrand : product.brand).toUpperCase()}</Text>
+          <Text style={styles.heroName}>{editing ? (eName || 'Senza nome') : product.name}</Text>
+          <Text style={styles.heroSub}>
+            {(editing ? eQty : product.qty)} · {(editing ? (eCategory || 'Altro') : product.category)}
+          </Text>
           {product.openedAt && (
             <View style={styles.openedHeroBadge}>
               <Text style={styles.openedHeroBadgeText}>🔓 Aperto il {shortDate(product.openedAt)}</Text>
             </View>
           )}
         </View>
+
+        {/* Form di modifica */}
+        {editing && (
+          <View style={styles.section}>
+            <View style={styles.editCard}>
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>Nome</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={eName}
+                  onChangeText={setEName}
+                  placeholder="es. Latte intero"
+                  placeholderTextColor={T.mute}
+                />
+              </View>
+              <View style={styles.fieldDivider} />
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>Marca</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={eBrand}
+                  onChangeText={setEBrand}
+                  placeholder="es. Granarolo"
+                  placeholderTextColor={T.mute}
+                />
+              </View>
+              <View style={styles.fieldDivider} />
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>Quantità</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={eQty}
+                  onChangeText={setEQty}
+                  placeholder="es. 1 L"
+                  placeholderTextColor={T.mute}
+                />
+              </View>
+              <View style={styles.fieldDivider} />
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>Categoria</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={eCategory}
+                  onChangeText={setECategory}
+                  placeholder="es. Latticini"
+                  placeholderTextColor={T.mute}
+                />
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Expiry card */}
         <View style={styles.section}>
@@ -150,7 +294,7 @@ export default function ProductDetailScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.expiryLabel, { color: u.ink }]}>{u.label.toUpperCase()}</Text>
-                <Text style={[styles.expiryDate, { color: u.ink }]}>{shortDate(effectiveExpiry)}</Text>
+                <Text style={[styles.expiryDate, { color: u.ink }]}>{shortDate(displayExpiry)}</Text>
                 {product.openedAt && product.openExpiry && (
                   <Text style={[styles.expiryAdded, { color: u.ink, opacity: 0.8 }]}>
                     Da consumare entro dopo apertura
@@ -177,7 +321,24 @@ export default function ProductDetailScreen() {
           </View>
         </View>
 
+        {/* Azioni modifica scadenza */}
+        {editing && (
+          <View style={styles.section}>
+            <View style={styles.editExpiryActions}>
+              <TouchableOpacity style={styles.editDateBtn} onPress={openExpiryPicker} activeOpacity={0.85}>
+                <Text style={styles.editDateBtnText}>📅 Cambia data</Text>
+              </TouchableOpacity>
+              {ocrAvailable && (
+                <TouchableOpacity style={styles.editOcrBtn} onPress={() => setShowOcr(true)} activeOpacity={0.85}>
+                  <Text style={styles.editOcrBtnText}>📷 Scansiona</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
+
         {/* Open product action */}
+        {!editing && (
         <View style={styles.section}>
           {!product.openedAt ? (
             <TouchableOpacity style={styles.openBtn} onPress={openOpenModal} activeOpacity={0.85}>
@@ -205,18 +366,19 @@ export default function ProductDetailScreen() {
             </TouchableOpacity>
           )}
         </View>
+        )}
 
         {/* Zone selector */}
         <Text style={styles.sectionTitle}>Conservazione</Text>
         <View style={styles.section}>
           <View style={styles.card}>
             {ZONES.map((z, i) => {
-              const active = product.zone === z.id;
+              const active = (editing ? eZone : product.zone) === z.id;
               return (
                 <React.Fragment key={z.id}>
                   <TouchableOpacity
                     style={styles.zoneRow}
-                    onPress={() => changeZone(product.id, z.id)}
+                    onPress={() => (editing ? setEZone(z.id) : changeZone(product.id, z.id))}
                     activeOpacity={0.85}
                   >
                     <View style={[styles.zoneIconBox, { backgroundColor: active ? T.primary : T.primarySoft }]}>
@@ -240,6 +402,8 @@ export default function ProductDetailScreen() {
         </View>
 
         {/* Details */}
+        {!editing && (
+        <>
         <Text style={styles.sectionTitle}>Dettagli</Text>
         <View style={styles.section}>
           <View style={styles.card}>
@@ -272,6 +436,8 @@ export default function ProductDetailScreen() {
             </Text>
           </Pill>
         </View>
+        </>
+        )}
 
         <View style={{ height: 32 }} />
       </ScrollView>
@@ -383,6 +549,69 @@ export default function ProductDetailScreen() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
+      {/* Expiry picker modal (modifica) */}
+      <Modal
+        visible={showExpiryPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowExpiryPicker(false)}
+      >
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowExpiryPicker(false)}>
+          <TouchableOpacity activeOpacity={1} style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Data di scadenza</Text>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+              {PRESETS.map((p) => (
+                <TouchableOpacity
+                  key={p.d}
+                  style={styles.preset}
+                  onPress={() => {
+                    const d = new Date(Date.now() + p.d * 86400000);
+                    setExpDay(String(d.getDate()));
+                    setExpMonth(String(d.getMonth() + 1));
+                    setExpYear(String(d.getFullYear()));
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.presetText}>+{p.l}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <View style={styles.pickerRow}>
+              <View style={styles.pickerCol}>
+                <Text style={styles.pickerLabel}>Giorno</Text>
+                <TextInput style={styles.pickerInput} value={expDay} onChangeText={setExpDay} keyboardType="number-pad" maxLength={2} selectTextOnFocus />
+              </View>
+              <View style={styles.pickerCol}>
+                <Text style={styles.pickerLabel}>Mese</Text>
+                <TextInput style={styles.pickerInput} value={expMonth} onChangeText={setExpMonth} keyboardType="number-pad" maxLength={2} selectTextOnFocus />
+              </View>
+              <View style={styles.pickerCol}>
+                <Text style={styles.pickerLabel}>Anno</Text>
+                <TextInput style={styles.pickerInput} value={expYear} onChangeText={setExpYear} keyboardType="number-pad" maxLength={4} selectTextOnFocus />
+              </View>
+            </View>
+
+            <View style={styles.modalBtns}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setShowExpiryPicker(false)} activeOpacity={0.85}>
+                <Text style={styles.modalCancelText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalConfirm} onPress={confirmExpiry} activeOpacity={0.85}>
+                <Text style={styles.modalConfirmText}>Conferma</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* OCR camera modal (modifica) */}
+      <DateScannerModal
+        visible={showOcr}
+        onClose={() => setShowOcr(false)}
+        onResult={(iso) => setEExpiry(iso)}
+      />
     </View>
   );
 }
@@ -400,6 +629,28 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', ...SHADOW.card,
   },
   navBtnText: { fontSize: 24, color: T.ink, lineHeight: 28 },
+  navBtnSave: { backgroundColor: T.primary },
+
+  editCard: {
+    backgroundColor: T.surface, borderRadius: RADIUS.lg, overflow: 'hidden', ...SHADOW.card,
+  },
+  fieldRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
+  fieldLabel: { fontSize: 13, fontFamily: FONTS.sansSemiBold, color: T.ink2, width: 80 },
+  fieldInput: { flex: 1, fontFamily: FONTS.sans, fontSize: 15, color: T.ink, padding: 0, fontWeight: '500' },
+  fieldDivider: { height: 0.5, backgroundColor: T.line, marginLeft: 16 },
+
+  editExpiryActions: { flexDirection: 'row', gap: 10 },
+  editDateBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: T.surface, borderRadius: RADIUS.pill, paddingVertical: 14,
+    borderWidth: 1, borderColor: T.line, ...SHADOW.card,
+  },
+  editDateBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.ink },
+  editOcrBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: T.primarySoft, borderRadius: RADIUS.pill, paddingVertical: 14,
+  },
+  editOcrBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.primaryInk },
 
   hero: {
     margin: 16, borderRadius: 28, padding: 24,

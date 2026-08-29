@@ -6,11 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "cover",
-      "backgroundColor": "#2f4a31"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -32,8 +27,7 @@
         "CAMERA",
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.CAMERA"
       ],
       "googleServicesFile": "./google-services.json"
     },
@@ -61,6 +55,14 @@
         {
           "icon": "./assets/notification-icon.png",
           "color": "#2f4a31"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "cover",
+          "backgroundColor": "#2f4a31"
         }
       ],
       "react-native-edge-to-edge",

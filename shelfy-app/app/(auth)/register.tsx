@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert,
+  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { authErrorMessage } from '@/lib/authErrors';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
+import { showAlert } from '@/lib/alert';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 
 export default function RegisterScreen() {
@@ -19,11 +20,11 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!name || !email || !password) {
-      Alert.alert('Errore', 'Compila tutti i campi');
+      showAlert('Errore', 'Compila tutti i campi');
       return;
     }
     if (password.length < 6) {
-      Alert.alert('Errore', 'La password deve avere almeno 6 caratteri');
+      showAlert('Errore', 'La password deve avere almeno 6 caratteri');
       return;
     }
     setLoading(true);
@@ -31,7 +32,7 @@ export default function RegisterScreen() {
       await signUp(email.trim(), password, name.trim());
       router.replace('/(tabs)');
     } catch (e: any) {
-      Alert.alert('Registrazione fallita', authErrorMessage(e, 'Impossibile completare la registrazione. Riprova.'));
+      showAlert('Registrazione fallita', authErrorMessage(e, 'Impossibile completare la registrazione. Riprova.'));
     } finally {
       setLoading(false);
     }

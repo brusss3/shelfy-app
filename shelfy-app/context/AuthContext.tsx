@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -9,12 +10,13 @@ import {
   signInWithCredential,
   signInWithPopup,
   signInWithRedirect,
+  getRedirectResult,
 } from 'firebase/auth';
-import { Platform } from 'react-native';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 // import { initPurchases, checkPremiumStatus } from '@/lib/purchases'; // RC disabilitato
 import { User, SubscriptionType } from '@/types';
+import { notifyAdminsNewUser } from '@/lib/notifications';
 
 interface AuthContextType {
   user: User | null;
@@ -27,6 +29,7 @@ interface AuthContextType {
   setPremium: (value: boolean) => Promise<void>;
   setSubscription: (info: { type: SubscriptionType; expiresAt: string | null } | null) => Promise<void>;
   setNotificationsEnabled: (value: boolean) => Promise<void>;
+  updateAdminNotifSettings: (prefs: { adminNotifNewUsers?: boolean; adminNotifFeedback?: boolean }) => Promise<void>;
 }
 
 const stub = (): never => { throw new Error('useAuth must be used inside AuthProvider'); };
@@ -41,6 +44,7 @@ const AuthContext = createContext<AuthContextType>({
   setPremium: stub,
   setSubscription: stub,
   setNotificationsEnabled: stub,
+  updateAdminNotifSettings: stub,
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -48,6 +52,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Completa un eventuale login via redirect (fallback PWA). Su successo
+    // onAuthStateChanged scatterà da solo; qui logghiamo solo eventuali errori.
+    // getRedirectResult esiste SOLO nel build web di Firebase: su nativo
+    // (iOS/Android) è undefined e chiamarlo farebbe crashare l'app all'avvio.
+    if (Platform.OS === 'web' && typeof getRedirectResult === 'function') {
+      getRedirectResult(auth).catch((e) =>
+        console.warn('[AuthContext] getRedirectResult error:', e?.code, e?.message),
+      );
+    }
+
     let unsubFirestore: (() => void) | null = null;
 
     const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -77,6 +91,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 notificationsEnabled: true,
                 createdAt: new Date().toISOString(),
               }, { merge: true }).catch((e) => console.warn('[AuthContext] auto-provision failed:', e));
+
+              notifyAdminsNewUser({
+                email: firebaseUser.email ?? '',
+                displayName: firebaseUser.displayName,
+              }).catch((e) => console.warn('[AuthContext] notifyAdminsNewUser failed:', e));
             }
 
             const data = snap.data();
@@ -86,6 +105,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const subscriptionType = data?.subscriptionType ?? null;
             const subscriptionExpiresAt = data?.subscriptionExpiresAt ?? null;
             const notificationsEnabled: boolean = data?.notificationsEnabled ?? true;
+            const pushToken: string | undefined = data?.pushToken ?? undefined;
+            const adminNotifNewUsers: boolean = data?.adminNotifNewUsers ?? true;
+            const adminNotifFeedback: boolean = data?.adminNotifFeedback ?? true;
 
             // RC sync disabilitato: if (rcPremium && !firestorePremium) { ... }
 
@@ -98,6 +120,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               subscriptionType,
               subscriptionExpiresAt,
               notificationsEnabled,
+              pushToken,
+              adminNotifNewUsers,
+              adminNotifFeedback,
             });
             setLoading(false);
           },
@@ -148,6 +173,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         notificationsEnabled: true,
         createdAt: new Date().toISOString(),
       });
+      notifyAdminsNewUser({ email, displayName: name }).catch((e) =>
+        console.warn('[AuthContext] notifyAdminsNewUser failed:', e),
+      );
     } catch (err) {
       console.warn('[AuthContext] user doc creation failed:', err);
     }
@@ -165,24 +193,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // automaticamente dall'auto-provisioning nello snapshot.
   const signInWithGoogleWeb = async () => {
     const provider = new GoogleAuthProvider();
-    // Safari iOS (e PWA installata) blocca i popup OAuth: usa il redirect.
-    // Su desktop il popup resta più comodo. Rileva i browser mobili.
-    const isMobileWeb =
-      Platform.OS === 'web' &&
-      typeof navigator !== 'undefined' &&
-      /iphone|ipad|ipod|android/i.test(navigator.userAgent);
-
-    if (isMobileWeb) {
-      await signInWithRedirect(auth, provider);
-      return; // il flusso prosegue al ritorno; onAuthStateChanged farà il resto
-    }
-
+    // Il popup funziona nei normali tab (desktop e Safari iOS), perché aperto
+    // da un gesto utente. Su Safari iOS il redirect spesso NON si completa
+    // (storage cross-domain bloccato), quindi popup è la via preferita.
+    // Il redirect resta solo come fallback (es. PWA installata in standalone,
+    // dove non si può aprire un popup).
     try {
       await signInWithPopup(auth, provider);
     } catch (e: any) {
-      // Se il popup è bloccato dal browser, ripiega sul redirect.
       if (
         e?.code === 'auth/popup-blocked' ||
+        e?.code === 'auth/cancelled-popup-request' ||
         e?.code === 'auth/operation-not-supported-in-this-environment'
       ) {
         await signInWithRedirect(auth, provider);
@@ -229,8 +250,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser((prev) => prev ? { ...prev, notificationsEnabled: value } : null);
   };
 
+  const updateAdminNotifSettings = async (prefs: { adminNotifNewUsers?: boolean; adminNotifFeedback?: boolean }) => {
+    if (!user) return;
+    try {
+      await setDoc(doc(db, 'users', user.uid), prefs, { merge: true });
+    } catch {}
+    setUser((prev) => prev ? { ...prev, ...prefs } : null);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signInWithGoogleWeb, signInWithGoogleCredential, logOut, setPremium, setSubscription, setNotificationsEnabled }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signInWithGoogleWeb, signInWithGoogleCredential, logOut, setPremium, setSubscription, setNotificationsEnabled, updateAdminNotifSettings }}>
       {children}
     </AuthContext.Provider>
   );
