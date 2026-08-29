@@ -48,9 +48,9 @@ export default function TabsLayout() {
           backgroundColor: T.surface,
           borderTopColor: T.line,
           borderTopWidth: 0.5,
-          height: Platform.OS === 'ios' ? 88 : 52 + insets.bottom,
-          paddingBottom: Platform.OS === 'ios' ? 28 : insets.bottom > 0 ? insets.bottom : 8,
-          paddingTop: 8,
+          height: Platform.OS === 'ios' ? 88 : 64 + insets.bottom,
+          paddingBottom: Platform.OS === 'ios' ? 28 : insets.bottom > 0 ? insets.bottom : 14,
+          paddingTop: 10,
           elevation: 0,
           shadowColor: 'rgba(40,50,35,1)',
           shadowOffset: { width: 0, height: -4 },
@@ -60,6 +60,10 @@ export default function TabsLayout() {
         tabBarActiveTintColor: T.primary,
         tabBarInactiveTintColor: T.mute,
         tabBarShowLabel: false,
+        // React Navigation racchiude l'icona in un contenitore fisso a 28px
+        // di altezza indipendente dalla tabBarStyle: alcuni emoji (🔔, 💡)
+        // ci restano tagliati sotto. Lo allarghiamo esplicitamente.
+        tabBarIconStyle: { height: 36, width: 36 },
       }}
     >
       <Tabs.Screen
@@ -93,5 +97,7 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabItem: { alignItems: 'center', justifyContent: 'center' },
-  tabEmoji: { fontSize: 26 },
+  // lineHeight esplicito: senza, i glifi emoji vengono tagliati in basso su
+  // Android (metriche del font più alte del box di riga di default).
+  tabEmoji: { fontSize: 26, lineHeight: 34 },
 });

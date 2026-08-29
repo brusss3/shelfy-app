@@ -8,7 +8,10 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "build:android": "eas build --platform android",
-    "build:ios": "eas build --platform ios"
+    "build:ios": "eas build --platform ios",
+    "build:preview": "eas build --platform android --profile preview --non-interactive",
+    "build:dev": "eas build --platform android --profile development --non-interactive",
+    "deploy:web": "expo export -p web && firebase deploy --only hosting"
   },
   "dependencies": {
     "@expo-google-fonts/dm-sans": "^0.2.3",
@@ -27,6 +30,7 @@
     "expo-haptics": "~55.0.14",
     "expo-linear-gradient": "~55.0.14",
     "expo-linking": "~55.0.15",
+    "expo-navigation-bar": "~55.0.17",
     "expo-notifications": "~55.0.23",
     "expo-router": "~55.0.14",
     "expo-splash-screen": "~55.0.21",

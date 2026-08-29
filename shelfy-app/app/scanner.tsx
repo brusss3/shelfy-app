@@ -6,8 +6,25 @@ import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-ca
 import { useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import { T, FONTS, RADIUS } from '@/constants/theme';
-import { ScannedProduct } from '@/types';
+import { ScannedProduct, Zone } from '@/types';
 import { tintForCategory } from '@/lib/urgency';
+import { useProducts } from '@/context/ProductsContext';
+import { showAlert } from '@/lib/alert';
+
+const ZONES: { id: Zone; label: string; icon: string }[] = [
+  { id: 'frigo',    label: 'Frigo',    icon: '❄️' },
+  { id: 'freezer',  label: 'Freezer',  icon: '🧊' },
+  { id: 'dispensa', label: 'Dispensa', icon: '📦' },
+];
+
+const PRESETS = [
+  { d: 3, l: '3 giorni' }, { d: 7, l: '1 settimana' },
+  { d: 30, l: '1 mese' }, { d: 180, l: '6 mesi' }, { d: 365, l: '1 anno' },
+];
+
+function addDays(n: number): string {
+  return new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+}
 
 // Fetch product info from Open Food Facts
 async function lookupBarcode(barcode: string): Promise<ScannedProduct | null> {
@@ -38,10 +55,14 @@ async function lookupBarcode(barcode: string): Promise<ScannedProduct | null> {
 export default function ScannerScreen() {
   const router = useRouter();
   const isFocused = useIsFocused();
+  const { addNewProduct } = useProducts();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(true);
   const [loading, setLoading] = useState(false);
   const [found, setFound] = useState<ScannedProduct | null>(null);
+  const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
+  const [selectedExpiry, setSelectedExpiry] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [zoom, setZoom] = useState(0);
   const [camKey, setCamKey] = useState(0);
   const [mountError, setMountError] = useState<string | null>(null);
@@ -82,6 +103,8 @@ export default function ScannerScreen() {
       setScanning(true);
       setLoading(false);
       setFound(null);
+      setSelectedZone(null);
+      setSelectedExpiry(null);
       setMountError(null);
       setZoom(0);
       lastScan.current = '';
@@ -121,15 +144,41 @@ export default function ScannerScreen() {
     setTimeout(() => { cooldown.current = false; }, 2000);
   };
 
-  const handleConfirm = () => {
+  const handleEditDetails = () => {
     if (!found) return;
     router.replace({ pathname: '/add', params: { scanned: JSON.stringify(found) } });
   };
 
   const handleRetry = () => {
     setFound(null);
+    setSelectedZone(null);
+    setSelectedExpiry(null);
     setScanning(true);
     lastScan.current = '';
+  };
+
+  const handleQuickSave = async () => {
+    if (!found || !selectedZone || !selectedExpiry) return;
+    setSaving(true);
+    try {
+      await addNewProduct({
+        name: found.name,
+        brand: found.brand,
+        qty: found.qty,
+        zone: selectedZone,
+        category: found.category || 'Altro',
+        expiry: selectedExpiry,
+        added: new Date().toISOString().slice(0, 10),
+        barcode: found.barcode,
+        tint: found.tint,
+        cal: 0,
+      });
+      router.back();
+    } catch (e: any) {
+      showAlert('Errore', e?.message ?? 'Impossibile salvare il prodotto');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!permission) {
@@ -239,22 +288,63 @@ export default function ScannerScreen() {
             </View>
           </View>
 
-          <View style={styles.sheetSuggest}>
-            <Text>✨ </Text>
-            <Text style={styles.sheetSuggestText}>
-              <Text style={{ fontFamily: FONTS.sansBold }}>Scadenza suggerita:</Text>
-              {' '}circa {found.suggestExpiry} giorni · {found.zone}
-            </Text>
+          <Text style={styles.sheetSectionLabel}>DOVE LO CONSERVI?</Text>
+          <View style={styles.sheetZoneRow}>
+            {ZONES.map((z) => {
+              const active = selectedZone === z.id;
+              return (
+                <TouchableOpacity
+                  key={z.id}
+                  style={[styles.sheetZoneBtn, active && styles.sheetZoneBtnActive]}
+                  onPress={() => setSelectedZone(z.id)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.sheetZoneIcon}>{z.icon}</Text>
+                  <Text style={[styles.sheetZoneLabel, active && styles.sheetZoneLabelActive]}>{z.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Text style={styles.sheetSectionLabel}>QUANDO SCADE?</Text>
+          <View style={styles.sheetPresetsRow}>
+            {PRESETS.map((p) => {
+              const iso = addDays(p.d);
+              const active = selectedExpiry === iso;
+              return (
+                <TouchableOpacity
+                  key={p.d}
+                  style={[styles.sheetPreset, active && styles.sheetPresetActive]}
+                  onPress={() => setSelectedExpiry(iso)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={[styles.sheetPresetText, active && styles.sheetPresetTextActive]}>+ {p.l}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           <View style={styles.sheetActions}>
             <TouchableOpacity style={styles.sheetGhostBtn} onPress={handleRetry} activeOpacity={0.85}>
-              <Text style={styles.sheetGhostBtnText}>Rifai scansione</Text>
+              <Text style={styles.sheetGhostBtnText}>Rifai</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.sheetPrimaryBtn} onPress={handleConfirm} activeOpacity={0.85}>
-              <Text style={styles.sheetPrimaryBtnText}>Aggiungi ›</Text>
+            <TouchableOpacity style={styles.sheetGhostBtn} onPress={handleEditDetails} activeOpacity={0.85}>
+              <Text style={styles.sheetGhostBtnText}>Modifica dettagli</Text>
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            style={[styles.sheetSaveBtn, (!selectedZone || !selectedExpiry || saving) && styles.sheetSaveBtnDisabled]}
+            onPress={handleQuickSave}
+            disabled={!selectedZone || !selectedExpiry || saving}
+            activeOpacity={0.85}
+          >
+            {saving ? (
+              <ActivityIndicator color="#fbfaf3" />
+            ) : (
+              <Text style={styles.sheetSaveBtnText}>✓ Salva nel diario</Text>
+            )}
+          </TouchableOpacity>
         </View>
       )}
 
@@ -353,24 +443,44 @@ const styles = StyleSheet.create({
   sheetName: { fontSize: 17, fontFamily: FONTS.sansBold, color: T.ink, letterSpacing: -0.2, marginTop: 2 },
   sheetBarcode: { fontSize: 12, color: T.mute, marginTop: 4, fontFamily: FONTS.sans },
 
-  sheetSuggest: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    backgroundColor: T.primarySoft, borderRadius: 14, padding: 12,
-    marginBottom: 14,
+  sheetSectionLabel: {
+    fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.6,
+    marginBottom: 8, marginTop: 4,
   },
-  sheetSuggestText: { fontSize: 12, color: T.primaryInk, flex: 1, fontFamily: FONTS.sans },
-
-  sheetActions: { flexDirection: 'row', gap: 10 },
-  sheetGhostBtn: {
-    flex: 1, borderRadius: RADIUS.pill, paddingVertical: 16, alignItems: 'center',
+  sheetZoneRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  sheetZoneBtn: {
+    flex: 1, backgroundColor: T.surface, borderRadius: RADIUS.md,
+    paddingVertical: 12, alignItems: 'center', gap: 4,
     borderWidth: 1, borderColor: T.line,
   },
-  sheetGhostBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 16, color: T.primary },
-  sheetPrimaryBtn: {
-    flex: 1.4, borderRadius: RADIUS.pill, paddingVertical: 16,
+  sheetZoneBtnActive: { backgroundColor: T.primary, borderColor: T.primary },
+  sheetZoneIcon: { fontSize: 20 },
+  sheetZoneLabel: { fontFamily: FONTS.sansSemiBold, fontSize: 12, color: T.ink },
+  sheetZoneLabelActive: { color: '#fbfaf3' },
+
+  sheetPresetsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
+  sheetPreset: {
+    backgroundColor: T.surface, borderRadius: RADIUS.pill,
+    paddingVertical: 8, paddingHorizontal: 14,
+    borderWidth: 1, borderColor: T.line,
+  },
+  sheetPresetActive: { backgroundColor: T.primary, borderColor: T.primary },
+  sheetPresetText: { fontSize: 13, fontFamily: FONTS.sansSemiBold, color: T.ink2 },
+  sheetPresetTextActive: { color: '#fbfaf3' },
+
+  sheetActions: { flexDirection: 'row', gap: 10, marginBottom: 10 },
+  sheetGhostBtn: {
+    flex: 1, borderRadius: RADIUS.pill, paddingVertical: 14, alignItems: 'center',
+    borderWidth: 1, borderColor: T.line,
+  },
+  sheetGhostBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.primary },
+
+  sheetSaveBtn: {
+    borderRadius: RADIUS.pill, paddingVertical: 16,
     alignItems: 'center', backgroundColor: T.primary,
   },
-  sheetPrimaryBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 16, color: '#fbfaf3' },
+  sheetSaveBtnDisabled: { backgroundColor: T.sage },
+  sheetSaveBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 16, color: '#fbfaf3' },
 
   manualBtn: {
     position: 'absolute', bottom: 50, alignSelf: 'center', zIndex: 10,

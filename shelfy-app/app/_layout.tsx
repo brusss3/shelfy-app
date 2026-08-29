@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts,
   DMSans_400Regular, DMSans_500Medium, DMSans_700Bold,
 } from '@expo-google-fonts/dm-sans';
 import * as SplashScreen from 'expo-splash-screen';
+import * as NavigationBar from 'expo-navigation-bar';
 import { AuthProvider } from '@/context/AuthContext';
 import { ProductsProvider } from '@/context/ProductsContext';
 import { RecipesProvider } from '@/context/RecipesContext';
@@ -24,6 +26,16 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsLoaded || fontError) SplashScreen.hideAsync();
   }, [fontsLoaded, fontError]);
+
+  useEffect(() => {
+    // Nasconde la barra di navigazione Android (tasti indietro/home/recenti):
+    // riappare temporaneamente con uno swipe dal bordo e si richiude da sola
+    // ("overlay-swipe" = immersive sticky). No-op su iOS/web.
+    if (Platform.OS === 'android') {
+      NavigationBar.setVisibilityAsync('hidden');
+      NavigationBar.setBehaviorAsync('overlay-swipe');
+    }
+  }, []);
 
   if (!fontsLoaded && !fontError) return null;
 
