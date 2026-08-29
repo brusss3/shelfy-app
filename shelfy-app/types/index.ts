@@ -1,5 +1,18 @@
 export type Zone = 'frigo' | 'freezer' | 'dispensa';
 
+// Voti Nutri-Score / Eco-Score di Open Food Facts (scala europea A-E).
+export type ScoreGrade = 'a' | 'b' | 'c' | 'd' | 'e';
+
+// Valori nutrizionali per 100g/100ml, da Open Food Facts.
+export interface NutritionInfo {
+  calories?: number;
+  proteins?: number;
+  fat?: number;
+  carbs?: number;
+  sugars?: number;
+  salt?: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -15,6 +28,12 @@ export interface Product {
   userId?: string;
   openedAt?: string;    // ISO date YYYY-MM-DD — when the product was opened
   openExpiry?: string;  // ISO date YYYY-MM-DD — consume-by after opening
+  // Dati facoltativi da Open Food Facts, presenti solo se il prodotto è
+  // stato aggiunto tramite scanner barcode e la voce li aveva compilati.
+  nutrition?: NutritionInfo;
+  allergens?: string[];
+  nutriscore?: ScoreGrade;
+  ecoscore?: ScoreGrade;
 }
 
 export interface Recipe {
@@ -70,4 +89,8 @@ export interface ScannedProduct {
   zone: Zone;
   tint: string;
   suggestExpiry: number;
+  nutrition?: NutritionInfo;
+  allergens?: string[];
+  nutriscore?: ScoreGrade;
+  ecoscore?: ScoreGrade;
 }

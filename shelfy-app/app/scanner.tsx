@@ -6,7 +6,7 @@ import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-ca
 import { useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import { T, FONTS, RADIUS } from '@/constants/theme';
-import { ScannedProduct, Zone } from '@/types';
+import { ScannedProduct, Zone, NutritionInfo, ScoreGrade } from '@/types';
 import { tintForCategory } from '@/lib/urgency';
 import { useProducts } from '@/context/ProductsContext';
 import { showAlert } from '@/lib/alert';
@@ -26,10 +26,44 @@ function addDays(n: number): string {
   return new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
 }
 
+function parseGrade(g: unknown): ScoreGrade | undefined {
+  const v = typeof g === 'string' ? g.toLowerCase() : '';
+  return (['a', 'b', 'c', 'd', 'e'] as const).includes(v as ScoreGrade) ? (v as ScoreGrade) : undefined;
+}
+
+// Estrae i valori nutrizionali per 100g/100ml; undefined se il prodotto non
+// ne ha nessuno compilato (evita di mostrare una sezione vuota).
+function parseNutrition(nutriments: Record<string, unknown> | undefined): NutritionInfo | undefined {
+  if (!nutriments) return undefined;
+  const num = (k: string) => (typeof nutriments[k] === 'number' ? (nutriments[k] as number) : undefined);
+  const info: NutritionInfo = {
+    calories: num('energy-kcal_100g'),
+    proteins: num('proteins_100g'),
+    fat: num('fat_100g'),
+    carbs: num('carbohydrates_100g'),
+    sugars: num('sugars_100g'),
+    salt: num('salt_100g'),
+  };
+  return Object.values(info).some((v) => v !== undefined) ? info : undefined;
+}
+
+function parseAllergens(p: Record<string, any>): string[] | undefined {
+  const raw: string = p.allergens ?? '';
+  if (raw.trim()) {
+    return raw.split(',').map((a) => a.trim()).filter(Boolean);
+  }
+  const tags: string[] = p.allergens_tags ?? [];
+  if (tags.length === 0) return undefined;
+  return tags.map((t) => {
+    const clean = t.replace(/^[a-z]{2,3}:/, '').replace(/-/g, ' ');
+    return clean.charAt(0).toUpperCase() + clean.slice(1);
+  });
+}
+
 // Fetch product info from Open Food Facts
 async function lookupBarcode(barcode: string): Promise<ScannedProduct | null> {
   try {
-    const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+    const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json?lc=it`);
     const data = await res.json();
     if (data.status !== 1 || !data.product) return null;
     const p = data.product;
@@ -46,6 +80,10 @@ async function lookupBarcode(barcode: string): Promise<ScannedProduct | null> {
       zone: zone as any,
       tint: tintForCategory(category),
       suggestExpiry: zone === 'frigo' ? 7 : 180,
+      nutrition: parseNutrition(p.nutriments),
+      allergens: parseAllergens(p),
+      nutriscore: parseGrade(p.nutriscore_grade),
+      ecoscore: parseGrade(p.ecoscore_grade),
     };
   } catch {
     return null;
@@ -171,7 +209,11 @@ export default function ScannerScreen() {
         added: new Date().toISOString().slice(0, 10),
         barcode: found.barcode,
         tint: found.tint,
-        cal: 0,
+        cal: found.nutrition?.calories ?? 0,
+        nutrition: found.nutrition,
+        allergens: found.allergens,
+        nutriscore: found.nutriscore,
+        ecoscore: found.ecoscore,
       });
       router.back();
     } catch (e: any) {

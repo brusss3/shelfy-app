@@ -11,7 +11,11 @@ import DateScannerModal from '@/components/DateScannerModal';
 import { ocrAvailable } from '@/lib/ocr';
 import { showAlert } from '@/lib/alert';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
-import { Zone } from '@/types';
+import { Zone, ScoreGrade } from '@/types';
+
+const GRADE_COLORS: Record<ScoreGrade, string> = {
+  a: '#038141', b: '#85bb2f', c: '#fecb02', d: '#ee8100', e: '#e63e11',
+};
 
 const ZONES: { id: Zone; label: string; icon: string; sub: string }[] = [
   { id: 'frigo',    label: 'Frigo',    icon: '❄️', sub: '4 °C' },
@@ -62,6 +66,7 @@ export default function ProductDetailScreen() {
   const [expMonth, setExpMonth] = useState('');
   const [expYear, setExpYear] = useState('');
   const [showOcr, setShowOcr] = useState(false);
+  const [showNutrition, setShowNutrition] = useState(false);
 
   const product = products.find((p) => p.id === id);
   if (!product) {
@@ -423,6 +428,79 @@ export default function ProductDetailScreen() {
           </View>
         </View>
 
+        {/* Info nutrizionali (solo se presenti — dati portati dal barcode) */}
+        {(product.nutrition || product.allergens?.length || product.nutriscore || product.ecoscore) && (
+          <View style={styles.section}>
+            <View style={styles.card}>
+              <TouchableOpacity
+                style={styles.nutritionToggle}
+                onPress={() => setShowNutrition((v) => !v)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.nutritionToggleText}>🥗 Informazioni nutrizionali</Text>
+                <Text style={styles.nutritionToggleIcon}>{showNutrition ? '▲' : '▼'}</Text>
+              </TouchableOpacity>
+
+              {showNutrition && (
+                <View style={styles.nutritionBody}>
+                  {(product.nutriscore || product.ecoscore) && (
+                    <View style={styles.scoreRow}>
+                      {product.nutriscore && (
+                        <View style={styles.scoreBadge}>
+                          <View style={[styles.scoreCircle, { backgroundColor: GRADE_COLORS[product.nutriscore] }]}>
+                            <Text style={styles.scoreCircleText}>{product.nutriscore.toUpperCase()}</Text>
+                          </View>
+                          <Text style={styles.scoreLabel}>Nutri-Score</Text>
+                        </View>
+                      )}
+                      {product.ecoscore && (
+                        <View style={styles.scoreBadge}>
+                          <View style={[styles.scoreCircle, { backgroundColor: GRADE_COLORS[product.ecoscore] }]}>
+                            <Text style={styles.scoreCircleText}>{product.ecoscore.toUpperCase()}</Text>
+                          </View>
+                          <Text style={styles.scoreLabel}>Eco-Score</Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+
+                  {product.nutrition && (
+                    <View>
+                      <Text style={styles.nutritionCaption}>Valori per 100g/100ml</Text>
+                      {[
+                        { label: 'Calorie', value: product.nutrition.calories, unit: 'kcal' },
+                        { label: 'Proteine', value: product.nutrition.proteins, unit: 'g' },
+                        { label: 'Grassi', value: product.nutrition.fat, unit: 'g' },
+                        { label: 'Carboidrati', value: product.nutrition.carbs, unit: 'g' },
+                        { label: 'di cui zuccheri', value: product.nutrition.sugars, unit: 'g' },
+                        { label: 'Sale', value: product.nutrition.salt, unit: 'g' },
+                      ].filter((r) => r.value !== undefined).map((r) => (
+                        <View key={r.label} style={styles.nutritionRow}>
+                          <Text style={styles.nutritionRowLabel}>{r.label}</Text>
+                          <Text style={styles.nutritionRowValue}>{r.value} {r.unit}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {product.allergens && product.allergens.length > 0 && (
+                    <View>
+                      <Text style={styles.nutritionCaption}>Allergeni</Text>
+                      <View style={styles.allergensRow}>
+                        {product.allergens.map((a) => (
+                          <View key={a} style={styles.allergenPill}>
+                            <Text style={styles.allergenPillText}>{a}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
         {/* Delete */}
         <View style={styles.section}>
           <Pill
@@ -733,6 +811,35 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: 14, fontFamily: FONTS.sansSemiBold, color: T.ink,
   },
+
+  nutritionToggle: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 14,
+  },
+  nutritionToggleText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.ink },
+  nutritionToggleIcon: { fontSize: 11, color: T.mute },
+  nutritionBody: { paddingHorizontal: 16, paddingBottom: 16, gap: 14 },
+  scoreRow: { flexDirection: 'row', gap: 24 },
+  scoreBadge: { alignItems: 'center', gap: 4 },
+  scoreCircle: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  scoreCircleText: { fontFamily: FONTS.sansBold, fontSize: 15, color: '#fff' },
+  scoreLabel: { fontSize: 11, fontFamily: FONTS.sansMedium, color: T.mute },
+  nutritionCaption: {
+    fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.4,
+    marginBottom: 4,
+  },
+  nutritionRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    paddingVertical: 5, borderBottomWidth: 0.5, borderBottomColor: T.line,
+  },
+  nutritionRowLabel: { fontSize: 13, fontFamily: FONTS.sans, color: T.ink2 },
+  nutritionRowValue: { fontSize: 13, fontFamily: FONTS.sansSemiBold, color: T.ink },
+  allergensRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  allergenPill: {
+    backgroundColor: T.warnSoft, borderRadius: RADIUS.pill,
+    paddingVertical: 5, paddingHorizontal: 10,
+  },
+  allergenPillText: { fontSize: 12, fontFamily: FONTS.sansMedium, color: T.warn },
 
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',

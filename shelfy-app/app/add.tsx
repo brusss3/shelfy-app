@@ -6,7 +6,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProducts } from '@/context/ProductsContext';
-import { ScannedProduct, Zone } from '@/types';
+import { ScannedProduct, Zone, ScoreGrade } from '@/types';
 import FoodTile from '@/components/FoodTile';
 import DateScannerModal from '@/components/DateScannerModal';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
@@ -59,6 +59,7 @@ export default function AddScreen() {
   const [saving, setSaving] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showOcr, setShowOcr] = useState(false);
+  const [showNutrition, setShowNutrition] = useState(false);
 
   const [pickerYear, setPickerYear] = useState('');
   const [pickerMonth, setPickerMonth] = useState('');
@@ -107,7 +108,11 @@ export default function AddScreen() {
         added: new Date().toISOString().slice(0, 10),
         barcode: scanned?.barcode ?? '',
         tint,
-        cal: 0,
+        cal: scanned?.nutrition?.calories ?? 0,
+        nutrition: scanned?.nutrition,
+        allergens: scanned?.allergens,
+        nutriscore: scanned?.nutriscore,
+        ecoscore: scanned?.ecoscore,
       });
       router.back();
     } catch (e: any) {
@@ -192,6 +197,57 @@ export default function AddScreen() {
             />
           </FieldRow>
         </View>
+
+        {/* Info nutrizionali (solo se il prodotto scansionato le ha) — richiudibile,
+            per non ingombrare il flusso di salvataggio. */}
+        {(scanned?.nutrition || scanned?.allergens || scanned?.nutriscore || scanned?.ecoscore) && (
+          <View style={styles.card}>
+            <TouchableOpacity
+              style={styles.nutritionToggle}
+              onPress={() => setShowNutrition((v) => !v)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.nutritionToggleText}>🥗 Informazioni nutrizionali</Text>
+              <Text style={styles.nutritionToggleIcon}>{showNutrition ? '▲' : '▼'}</Text>
+            </TouchableOpacity>
+
+            {showNutrition && (
+              <View style={styles.nutritionBody}>
+                {(scanned?.nutriscore || scanned?.ecoscore) && (
+                  <View style={styles.scoreRow}>
+                    {scanned?.nutriscore && <ScoreBadge label="Nutri-Score" grade={scanned.nutriscore} />}
+                    {scanned?.ecoscore && <ScoreBadge label="Eco-Score" grade={scanned.ecoscore} />}
+                  </View>
+                )}
+
+                {scanned?.nutrition && (
+                  <View style={styles.nutritionGrid}>
+                    <Text style={styles.nutritionCaption}>Valori per 100g/100ml</Text>
+                    <NutritionRow label="Calorie" value={scanned.nutrition.calories} unit="kcal" />
+                    <NutritionRow label="Proteine" value={scanned.nutrition.proteins} unit="g" />
+                    <NutritionRow label="Grassi" value={scanned.nutrition.fat} unit="g" />
+                    <NutritionRow label="Carboidrati" value={scanned.nutrition.carbs} unit="g" />
+                    <NutritionRow label="di cui zuccheri" value={scanned.nutrition.sugars} unit="g" />
+                    <NutritionRow label="Sale" value={scanned.nutrition.salt} unit="g" />
+                  </View>
+                )}
+
+                {scanned?.allergens && scanned.allergens.length > 0 && (
+                  <View style={styles.allergensBlock}>
+                    <Text style={styles.nutritionCaption}>Allergeni</Text>
+                    <View style={styles.allergensRow}>
+                      {scanned.allergens.map((a) => (
+                        <View key={a} style={styles.allergenPill}>
+                          <Text style={styles.allergenPillText}>{a}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Zone */}
         <Text style={styles.sectionLabel}>CONSERVAZIONE</Text>
@@ -388,6 +444,32 @@ function Divider() {
   return <View style={{ height: 0.5, backgroundColor: T.line, marginLeft: 16 }} />;
 }
 
+// Colori standard UE per Nutri-Score / Eco-Score (scala A-E).
+const GRADE_COLORS: Record<ScoreGrade, string> = {
+  a: '#038141', b: '#85bb2f', c: '#fecb02', d: '#ee8100', e: '#e63e11',
+};
+
+function ScoreBadge({ label, grade }: { label: string; grade: ScoreGrade }) {
+  return (
+    <View style={styles.scoreBadge}>
+      <View style={[styles.scoreCircle, { backgroundColor: GRADE_COLORS[grade] }]}>
+        <Text style={styles.scoreCircleText}>{grade.toUpperCase()}</Text>
+      </View>
+      <Text style={styles.scoreLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function NutritionRow({ label, value, unit }: { label: string; value?: number; unit: string }) {
+  if (value === undefined) return null;
+  return (
+    <View style={styles.nutritionRow}>
+      <Text style={styles.nutritionRowLabel}>{label}</Text>
+      <Text style={styles.nutritionRowValue}>{value} {unit}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   scroll: { paddingBottom: 20 },
@@ -429,6 +511,40 @@ const styles = StyleSheet.create({
     fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.6,
     marginHorizontal: 24, marginBottom: 8, marginTop: 4,
   },
+
+  nutritionToggle: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 14,
+  },
+  nutritionToggleText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.ink },
+  nutritionToggleIcon: { fontSize: 11, color: T.mute },
+  nutritionBody: { paddingHorizontal: 16, paddingBottom: 16, gap: 14 },
+
+  scoreRow: { flexDirection: 'row', gap: 24 },
+  scoreBadge: { alignItems: 'center', gap: 4 },
+  scoreCircle: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  scoreCircleText: { fontFamily: FONTS.sansBold, fontSize: 15, color: '#fff' },
+  scoreLabel: { fontSize: 11, fontFamily: FONTS.sansMedium, color: T.mute },
+
+  nutritionCaption: {
+    fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.4,
+    marginBottom: 4,
+  },
+  nutritionGrid: { gap: 2 },
+  nutritionRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    paddingVertical: 5, borderBottomWidth: 0.5, borderBottomColor: T.line,
+  },
+  nutritionRowLabel: { fontSize: 13, fontFamily: FONTS.sans, color: T.ink2 },
+  nutritionRowValue: { fontSize: 13, fontFamily: FONTS.sansSemiBold, color: T.ink },
+
+  allergensBlock: {},
+  allergensRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  allergenPill: {
+    backgroundColor: T.warnSoft, borderRadius: RADIUS.pill,
+    paddingVertical: 5, paddingHorizontal: 10,
+  },
+  allergenPillText: { fontSize: 12, fontFamily: FONTS.sansMedium, color: T.warn },
   zoneRow: { flexDirection: 'row', gap: 8, marginHorizontal: 16, marginBottom: 12 },
   zoneBtn: {
     flex: 1, backgroundColor: T.surface, borderRadius: RADIUS.md,

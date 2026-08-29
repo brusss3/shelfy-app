@@ -6,6 +6,22 @@ import { db } from './firebase';
 import { Product, Zone } from '@/types';
 import { notifyAdminsNewFeedback } from './notifications';
 
+// Firestore rifiuta i valori `undefined` (anche annidati, es. Product.nutrition):
+// i campi opzionali da Open Food Facts arrivano spesso parzialmente compilati.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function removeUndefinedDeep<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(removeUndefinedDeep) as unknown as T;
+  if (value !== null && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v === undefined) continue;
+      out[k] = removeUndefinedDeep(v);
+    }
+    return out as T;
+  }
+  return value;
+}
+
 export interface AdminUserRecord {
   uid: string;
   email: string;
@@ -120,7 +136,7 @@ export async function addProduct(
   data: Omit<Product, 'id' | 'userId'>,
 ): Promise<string> {
   const ref = await addDoc(productsRef(userId), {
-    ...data,
+    ...removeUndefinedDeep(data),
     userId,
     createdAt: serverTimestamp(),
   });
@@ -132,7 +148,7 @@ export async function updateProduct(
   productId: string,
   data: Partial<Product>,
 ): Promise<void> {
-  await updateDoc(doc(productsRef(userId), productId), data);
+  await updateDoc(doc(productsRef(userId), productId), removeUndefinedDeep(data));
 }
 
 export async function deleteProduct(
