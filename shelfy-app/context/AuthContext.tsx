@@ -111,6 +111,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const pushToken: string | undefined = data?.pushToken ?? undefined;
             const adminNotifNewUsers: boolean = data?.adminNotifNewUsers ?? true;
             const adminNotifFeedback: boolean = data?.adminNotifFeedback ?? true;
+            // Blocco AI per singolo utente, impostato solo dall'admin.
+            const aiDisabled: boolean = data?.aiDisabled ?? false;
 
             // RC sync disabilitato: if (rcPremium && !firestorePremium) { ... }
 
@@ -126,6 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               pushToken,
               adminNotifNewUsers,
               adminNotifFeedback,
+              aiDisabled,
             });
             setLoading(false);
           },

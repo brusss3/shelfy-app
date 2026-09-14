@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { useProducts } from '@/context/ProductsContext';
 import { useAuth } from '@/context/AuthContext';
 import { urgencyOf, effectiveDays } from '@/lib/urgency';
+import { ocrAvailable } from '@/lib/ocr';
 import ProductRow from '@/components/ProductRow';
 import StatCard from '@/components/StatCard';
 import ProfileButton from '@/components/ProfileButton';
@@ -196,6 +197,16 @@ export default function HomeScreen() {
               <Text style={styles.fabOptionText}>Scansiona</Text>
               <View style={styles.fabOptionBadge}><Text style={{ fontSize: 18 }}>📷</Text></View>
             </TouchableOpacity>
+            {ocrAvailable && (
+              <TouchableOpacity
+                style={styles.fabOption}
+                onPress={() => { setFabOpen(false); router.push('/receipt-scan'); }}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.fabOptionText}>Scontrino</Text>
+                <View style={styles.fabOptionBadge}><Text style={{ fontSize: 18 }}>🧾</Text></View>
+              </TouchableOpacity>
+            )}
           </>
         )}
         <TouchableOpacity

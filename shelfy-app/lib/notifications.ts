@@ -8,6 +8,10 @@ import { effectiveExpiry } from '@/lib/urgency';
 
 const isExpoGo = Constants.executionEnvironment === 'storeClient';
 
+// Categoria con action button "Consumato" mostrata direttamente sulla notifica
+// di scadenza. Deve essere registrata prima di schedulare le notifiche.
+export const EXPIRY_CATEGORY = 'expiry';
+
 // Lazy require — prevents expo-notifications side-effects from running at import time in Expo Go
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function N(): any {
@@ -16,13 +20,48 @@ function N(): any {
 
 export function setupNotificationHandler(): void {
   if (isExpoGo || Platform.OS === 'web') return;
-  N().setNotificationHandler({
+  const Notifications = N();
+  Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert: true,
       shouldPlaySound: true,
       shouldSetBadge: true,
     }),
   });
+  // Fire-and-forget: se fallisce (es. piattaforma non supportata) la notifica
+  // resta comunque valida, solo senza il pulsante.
+  Notifications.setNotificationCategoryAsync(EXPIRY_CATEGORY, [
+    {
+      identifier: 'consumed',
+      buttonTitle: '✓ Consumato',
+      // MVP: apre l'app in foreground; l'handler cancella il prodotto.
+      options: { opensAppToForeground: true },
+    },
+  ]).catch((e: unknown) => console.warn('[notifications] setNotificationCategoryAsync failed:', e));
+}
+
+// Registra un listener che intercetta il tap sul pulsante "Consumato" della
+// notifica (anche quando l'app parte da chiusa). Chiama `onConsumed` con
+// l'id del prodotto. Ritorna la funzione di cleanup.
+export function subscribeToConsumedAction(onConsumed: (productId: string) => void): () => void {
+  if (isExpoGo || Platform.OS === 'web') return () => {};
+
+  const Notifications = N();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handle = (response: any) => {
+    if (response?.actionIdentifier !== 'consumed') return;
+    const productId = response?.notification?.request?.content?.data?.productId;
+    if (typeof productId === 'string' && productId) onConsumed(productId);
+  };
+
+  // Cold start: l'app è stata aperta proprio dal pulsante della notifica.
+  Notifications.getLastNotificationResponseAsync?.()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .then((r: any) => { if (r) handle(r); })
+    .catch(() => {});
+
+  const sub = Notifications.addNotificationResponseReceivedListener(handle);
+  return () => sub.remove();
 }
 
 export async function registerForPushNotifications(): Promise<string | null> {
@@ -95,6 +134,7 @@ export async function scheduleExpiryNotifications(
           title: '⏰ Shelfy — Scade oggi',
           body: `${product.name} scade oggi. Usalo subito o congelalo!`,
           data: { productId: product.id },
+          categoryIdentifier: EXPIRY_CATEGORY,
           sound: true,
         },
         trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerSameDay },
@@ -112,6 +152,7 @@ export async function scheduleExpiryNotifications(
           title: '⏰ Shelfy — Scadenza vicina',
           body: `${product.name} scade domani.`,
           data: { productId: product.id },
+          categoryIdentifier: EXPIRY_CATEGORY,
           sound: true,
         },
         trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDayBefore },

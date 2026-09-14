@@ -7,6 +7,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useProducts } from '@/context/ProductsContext';
 import { urgencyOf, shortDate, daysTo } from '@/lib/urgency';
 import Pill from '@/components/Pill';
+import QuantityStepper from '@/components/QuantityStepper';
 import DateScannerModal from '@/components/DateScannerModal';
 import { ocrAvailable } from '@/lib/ocr';
 import { showAlert } from '@/lib/alert';
@@ -43,7 +44,7 @@ function addDays(n: number): string {
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { products, removeProduct, changeZone, editProduct, markOpened } = useProducts();
+  const { products, removeProduct, changeZone, editProduct, markOpened, consumeOne, consumeAll } = useProducts();
   const router = useRouter();
 
   const [showOpenModal, setShowOpenModal] = useState(false);
@@ -58,6 +59,7 @@ export default function ProductDetailScreen() {
   const [eName, setEName] = useState('');
   const [eBrand, setEBrand] = useState('');
   const [eQty, setEQty] = useState('');
+  const [eCount, setECount] = useState(1);
   const [eCategory, setECategory] = useState('');
   const [eZone, setEZone] = useState<Zone>('frigo');
   const [eExpiry, setEExpiry] = useState('');
@@ -123,6 +125,7 @@ export default function ProductDetailScreen() {
     setEName(product.name);
     setEBrand(product.brand);
     setEQty(product.qty);
+    setECount(product.count);
     setECategory(product.category);
     setEZone(product.zone);
     setEExpiry(product.expiry);
@@ -144,6 +147,7 @@ export default function ProductDetailScreen() {
         name: eName.trim(),
         brand: eBrand.trim(),
         qty: eQty.trim(),
+        count: eCount,
         category: eCategory.trim() || 'Altro',
         zone: eZone,
         expiry: eExpiry,
@@ -170,6 +174,46 @@ export default function ProductDetailScreen() {
     const y = parseInt(expYear) || new Date().getFullYear();
     setEExpiry(`${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
     setShowExpiryPicker(false);
+  };
+
+  // Con più unità il consumo è immediato (scala il contatore); quando resta
+  // l'ultima il prodotto sparisce dalla dispensa, quindi chiediamo conferma.
+  const handleConsumeOne = async () => {
+    if (product.count > 1) {
+      await consumeOne(product.id);
+      return;
+    }
+    showAlert(
+      'Consumato',
+      `Hai finito "${product.name}"? Verrà rimosso dalla dispensa.`,
+      [
+        { text: 'Annulla', style: 'cancel' },
+        {
+          text: 'Consumato',
+          onPress: async () => {
+            await consumeOne(product.id);
+            router.back();
+          },
+        },
+      ],
+    );
+  };
+
+  const handleConsumeAll = () => {
+    showAlert(
+      'Consuma tutto',
+      `Hai consumato tutte le ${product.count} unità di "${product.name}"?`,
+      [
+        { text: 'Annulla', style: 'cancel' },
+        {
+          text: 'Consumato',
+          onPress: async () => {
+            await consumeAll(product.id);
+            router.back();
+          },
+        },
+      ],
+    );
   };
 
   const handleDelete = () => {
@@ -230,6 +274,7 @@ export default function ProductDetailScreen() {
           <Text style={styles.heroBrand}>{(editing ? eBrand : product.brand).toUpperCase()}</Text>
           <Text style={styles.heroName}>{editing ? (eName || 'Senza nome') : product.name}</Text>
           <Text style={styles.heroSub}>
+            {(editing ? eCount : product.count) > 1 ? `${editing ? eCount : product.count} × ` : ''}
             {(editing ? eQty : product.qty)} · {(editing ? (eCategory || 'Altro') : product.category)}
           </Text>
           {product.openedAt && (
@@ -274,6 +319,13 @@ export default function ProductDetailScreen() {
                   placeholder="es. 1 L"
                   placeholderTextColor={T.mute}
                 />
+              </View>
+              <View style={styles.fieldDivider} />
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>Unità</Text>
+                <View style={{ flex: 1 }}>
+                  <QuantityStepper value={eCount} onChange={setECount} />
+                </View>
               </View>
               <View style={styles.fieldDivider} />
               <View style={styles.fieldRow}>
@@ -349,11 +401,15 @@ export default function ProductDetailScreen() {
             <TouchableOpacity style={styles.openBtn} onPress={openOpenModal} activeOpacity={0.85}>
               <Text style={styles.openBtnIcon}>🔓</Text>
               <View style={{ flex: 1 }}>
-                <Text style={styles.openBtnTitle}>Segna come aperto</Text>
+                <Text style={styles.openBtnTitle}>
+                  {product.count > 1 ? 'Apri una unità' : 'Segna come aperto'}
+                </Text>
                 <Text style={styles.openBtnSub}>
-                  {product.zone === 'frigo' && 'Calcola scadenza post-apertura (3 giorni)'}
-                  {product.zone === 'dispensa' && 'Calcola scadenza post-apertura (3 mesi)'}
-                  {product.zone === 'freezer' && 'Calcola scadenza post-apertura (30 giorni)'}
+                  {product.count > 1
+                    ? `Le altre ${product.count - 1} restano chiuse con la scadenza originale`
+                    : product.zone === 'frigo' ? 'Calcola scadenza post-apertura (3 giorni)'
+                    : product.zone === 'dispensa' ? 'Calcola scadenza post-apertura (3 mesi)'
+                    : 'Calcola scadenza post-apertura (30 giorni)'}
                 </Text>
               </View>
               <Text style={styles.openBtnArrow}>›</Text>
@@ -500,6 +556,25 @@ export default function ProductDetailScreen() {
             </View>
           </View>
         )}
+
+        {/* Consumo */}
+        <View style={styles.section}>
+          <Pill
+            variant="primary"
+            size="lg"
+            onPress={handleConsumeOne}
+            style={{ justifyContent: 'center' }}
+          >
+            <Text style={{ fontFamily: FONTS.sansSemiBold, color: '#fbfaf3', fontSize: 16 }}>
+              ✓ Consumato{product.count > 1 ? ` (ne restano ${product.count - 1})` : ''}
+            </Text>
+          </Pill>
+          {product.count > 1 && (
+            <TouchableOpacity onPress={handleConsumeAll} activeOpacity={0.85} style={styles.consumeAllBtn}>
+              <Text style={styles.consumeAllText}>Consuma tutte le {product.count} unità</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Delete */}
         <View style={styles.section}>
@@ -835,6 +910,8 @@ const styles = StyleSheet.create({
   nutritionRowLabel: { fontSize: 13, fontFamily: FONTS.sans, color: T.ink2 },
   nutritionRowValue: { fontSize: 13, fontFamily: FONTS.sansSemiBold, color: T.ink },
   allergensRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  consumeAllBtn: { alignItems: 'center', paddingVertical: 12 },
+  consumeAllText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.mute },
   allergenPill: {
     backgroundColor: T.warnSoft, borderRadius: RADIUS.pill,
     paddingVertical: 5, paddingHorizontal: 10,

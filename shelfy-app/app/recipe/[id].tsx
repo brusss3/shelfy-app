@@ -1,179 +1,186 @@
-import React from 'react';
-import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform,
-} from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useProducts } from '@/context/ProductsContext';
-import { daysTo } from '@/context/ProductsContext';
+import { useAuth } from '@/context/AuthContext';
 import { useRecipes } from '@/context/RecipesContext';
-import FoodTile from '@/components/FoodTile';
+import { useCommunity } from '@/context/CommunityContext';
+import { getCommunityRecipe, getMyRecipeRating } from '@/lib/firestore';
+import { showAlert } from '@/lib/alert';
+import RecipeDetailView from '@/components/RecipeDetailView';
 import Pill from '@/components/Pill';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
-import { Recipe } from '@/types';
+import { CommunityRecipe } from '@/types';
+
+const STARS = [1, 2, 3, 4, 5];
 
 export default function RecipeDetailScreen() {
-  const { data } = useLocalSearchParams<{ id: string; data?: string }>();
-  const { products } = useProducts();
-  const { savedRecipes, markCompleted } = useRecipes();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { user } = useAuth();
+  const { savedRecipes, saveRecipe, markCompleted } = useRecipes();
+  const { recipes, rateRecipe, deleteRecipe } = useCommunity();
   const router = useRouter();
 
-  const recipe: Recipe | null = data ? JSON.parse(data as string) : null;
+  const fromContext = useMemo(() => recipes.find((r) => r.id === id) ?? null, [recipes, id]);
+  const [recipe, setRecipe] = useState<CommunityRecipe | null>(fromContext);
+  const [loading, setLoading] = useState(!fromContext);
+  const [myRating, setMyRating] = useState<number | null>(null);
+  const [rating, setRating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    if (fromContext) { setRecipe(fromContext); setLoading(false); }
+  }, [fromContext]);
+
+  useEffect(() => {
+    if (fromContext || !id) return;
+    setLoading(true);
+    getCommunityRecipe(id).then((r) => { setRecipe(r); setLoading(false); }).catch(() => setLoading(false));
+  }, [id, fromContext]);
+
+  useEffect(() => {
+    if (!id || !user) return;
+    getMyRecipeRating(id, user.uid).then(setMyRating).catch(() => {});
+  }, [id, user?.uid]);
+
   const saved = savedRecipes.find((r) => r.id === recipe?.id);
   const isCompleted = saved?.completed ?? false;
+  const isAuthor = !!user && recipe?.authorId === user.uid;
+  const avg = recipe && recipe.ratingCount > 0 ? (recipe.ratingSum / recipe.ratingCount).toFixed(1) : null;
 
-  if (!recipe) return (
-    <View style={[styles.root, { justifyContent: 'center', alignItems: 'center' }]}>
-      <Text style={{ color: T.mute, fontFamily: FONTS.sans }}>Ricetta non trovata.</Text>
-    </View>
-  );
+  const handleRate = async (value: number) => {
+    if (!recipe || rating) return;
+    setRating(true);
+    try {
+      await rateRecipe(recipe.id, value);
+      setRecipe((r) => r ? {
+        ...r,
+        ratingSum: myRating === null ? r.ratingSum + value : r.ratingSum - myRating + value,
+        ratingCount: myRating === null ? r.ratingCount + 1 : r.ratingCount,
+      } : r);
+      setMyRating(value);
+    } catch (e: any) {
+      showAlert('Errore', e?.message ?? 'Voto non riuscito');
+    } finally {
+      setRating(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!recipe) return;
+    try {
+      await saveRecipe(recipe);
+    } catch (e: any) {
+      showAlert('Errore', e?.message ?? 'Salvataggio non riuscito');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!recipe) return;
+    setDeleting(true);
+    try {
+      await deleteRecipe(recipe.id);
+      router.back();
+    } catch (e: any) {
+      showAlert('Errore', e?.message ?? 'Impossibile eliminare la ricetta');
+      setDeleting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={T.primary} />
+      </View>
+    );
+  }
+
+  if (!recipe) {
+    return (
+      <View style={styles.center}>
+        <Text style={{ color: T.mute, fontFamily: FONTS.sans }}>Ricetta non trovata.</Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Hero */}
-        <View style={[styles.hero, { backgroundColor: recipe.tint }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>‹</Text>
-          </TouchableOpacity>
-          <Text style={styles.heroTitle}>{recipe.title}</Text>
-        </View>
-
-        {/* Meta */}
-        <View style={styles.metaRow}>
-          <Text style={styles.metaItem}>⏱ {recipe.time}</Text>
+    <RecipeDetailView
+      title={recipe.title}
+      tint={recipe.tint}
+      desc={recipe.desc}
+      time={recipe.time}
+      difficulty={recipe.difficulty}
+      ingredients={recipe.ingredients}
+      steps={recipe.steps}
+      meta={
+        <>
+          <Text style={styles.metaItem}>di {recipe.authorName}</Text>
           <Text style={styles.metaDot}>·</Text>
-          <Text style={styles.metaItem}>🔥 {recipe.difficulty}</Text>
-        </View>
-        <Text style={styles.desc}>{recipe.desc}</Text>
-
-        {/* Ingredients */}
-        <Text style={styles.sectionTitle}>Ingredienti</Text>
-        <View style={styles.section}>
-          {recipe.uses.map((name) => {
-            const p = products.find((pp) => pp.name === name);
-            const has = !!p;
-            const days = p ? daysTo(p.expiry) : null;
-            return (
-              <View key={name} style={styles.ingredientCard}>
-                <FoodTile product={p ?? { name, tint: '#eceee5' }} size={42} radius={12} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.ingredientName}>{name}</Text>
-                  {has ? (
-                    <Text style={styles.ingredientSub}>
-                      {p!.qty} · scade {new Date(p!.expiry).toLocaleDateString('it-IT')}
-                    </Text>
-                  ) : (
-                    <Text style={styles.ingredientSub}>Non in dispensa</Text>
-                  )}
-                </View>
-                {has ? (
-                  <View style={[styles.statusBadge, {
-                    backgroundColor: days! <= 3 ? T.warnSoft : T.okSoft,
-                  }]}>
-                    <Text style={{ fontSize: 11, fontFamily: FONTS.sansBold, color: days! <= 3 ? '#4a3414' : '#1b3320' }}>
-                      {days! <= 3 ? 'usa subito' : 'ok'}
-                    </Text>
-                  </View>
-                ) : (
-                  <TouchableOpacity style={styles.addToListBtn}>
-                    <Text style={styles.addToListText}>+ Lista</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            );
-          })}
-        </View>
-
-        {/* Steps */}
-        <Text style={styles.sectionTitle}>Procedimento</Text>
-        <View style={styles.section}>
-          {recipe.steps.map((step, i) => (
-            <View key={i} style={styles.stepCard}>
-              <View style={styles.stepNum}>
-                <Text style={styles.stepNumText}>{i + 1}</Text>
-              </View>
-              <Text style={styles.stepText}>{step}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* CTA */}
-        <View style={styles.section}>
-          <Pill
-            variant={isCompleted ? 'ghost' : 'primary'}
-            size="lg"
-            style={{ justifyContent: 'center' }}
-            disabled={isCompleted}
-            onPress={() => markCompleted(recipe.id)}
-          >
-            <Text style={{
-              fontFamily: FONTS.sansSemiBold, fontSize: 16,
-              color: isCompleted ? T.primary : '#fbfaf3',
-            }}>
-              {isCompleted ? '✓ Già cucinata' : '✓ Segna come cucinata'}
+        </>
+      }
+      beforeIngredients={
+        <View style={styles.ratingCard}>
+          <View>
+            <Text style={styles.ratingAvg}>{avg ? `⭐ ${avg}` : 'Nessun voto ancora'}</Text>
+            <Text style={styles.ratingCountText}>
+              {recipe.ratingCount} vot{recipe.ratingCount === 1 ? 'o' : 'i'}
             </Text>
-          </Pill>
+          </View>
+          <View style={styles.starsRow}>
+            {STARS.map((s) => (
+              <TouchableOpacity key={s} onPress={() => handleRate(s)} disabled={rating} activeOpacity={0.7}>
+                <Text style={[styles.star, myRating !== null && s <= myRating && styles.starActive]}>★</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-
-        <View style={{ height: 32 }} />
-      </ScrollView>
-    </View>
+      }
+      actions={
+        <>
+          <View style={styles.actionSection}>
+            <Pill
+              variant={isCompleted ? 'ghost' : 'primary'}
+              size="lg"
+              style={{ justifyContent: 'center' }}
+              disabled={isCompleted}
+              onPress={saved ? () => markCompleted(recipe.id) : handleSave}
+            >
+              <Text style={{
+                fontFamily: FONTS.sansSemiBold, fontSize: 16,
+                color: isCompleted ? T.primary : '#fbfaf3',
+              }}>
+                {isCompleted ? '✓ Già cucinata' : saved ? '✓ Segna come cucinata' : '☆ Salva ricetta'}
+              </Text>
+            </Pill>
+          </View>
+          {isAuthor && (
+            <View style={styles.actionSection}>
+              <TouchableOpacity onPress={handleDelete} disabled={deleting} activeOpacity={0.85} style={styles.deleteBtn}>
+                <Text style={styles.deleteBtnText}>{deleting ? 'Eliminazione…' : 'Elimina ricetta'}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </>
+      }
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: T.bg },
-  scroll: { paddingBottom: 32 },
-
-  hero: {
-    height: 240, position: 'relative', justifyContent: 'flex-end', padding: 24,
-  },
-  backBtn: {
-    position: 'absolute', top: Platform.OS === 'ios' ? 60 : 40, left: 16,
-    width: 40, height: 40, borderRadius: 100, backgroundColor: T.surface,
-    alignItems: 'center', justifyContent: 'center', ...SHADOW.card,
-  },
-  backBtnText: { fontSize: 24, color: T.ink, lineHeight: 28 },
-  heroTitle: {
-    fontFamily: FONTS.serifItalic, fontSize: 36, color: '#1a2018',
-    letterSpacing: -0.6, lineHeight: 40,
-  },
-
-  metaRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 20, paddingTop: 16, marginBottom: 8,
-  },
+  center: { flex: 1, backgroundColor: T.bg, justifyContent: 'center', alignItems: 'center' },
   metaItem: { fontSize: 13, color: T.ink2, fontFamily: FONTS.sans },
   metaDot: { color: T.mute, fontSize: 13 },
-  desc: { fontSize: 14, color: T.ink2, lineHeight: 20, paddingHorizontal: 20, marginBottom: 20, fontFamily: FONTS.sans },
 
-  sectionTitle: {
-    fontFamily: FONTS.serifItalic, fontSize: 22, color: T.ink, letterSpacing: -0.3,
-    paddingHorizontal: 20, marginBottom: 12,
+  ratingCard: {
+    marginHorizontal: 20, marginBottom: 20, backgroundColor: T.surface, borderRadius: RADIUS.lg,
+    padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', ...SHADOW.card,
   },
-  section: { paddingHorizontal: 20, gap: 8, marginBottom: 20 },
+  ratingAvg: { fontFamily: FONTS.sansBold, fontSize: 16, color: T.ink },
+  ratingCountText: { fontSize: 12, color: T.mute, fontFamily: FONTS.sans, marginTop: 2 },
+  starsRow: { flexDirection: 'row', gap: 4 },
+  star: { fontSize: 24, color: T.line },
+  starActive: { color: '#d9822b' },
 
-  ingredientCard: {
-    backgroundColor: T.surface, borderRadius: RADIUS.lg, padding: 12,
-    flexDirection: 'row', alignItems: 'center', gap: 12, ...SHADOW.card,
-  },
-  ingredientName: { fontSize: 14, fontFamily: FONTS.sansSemiBold, color: T.ink },
-  ingredientSub: { fontSize: 11, color: T.mute, marginTop: 2, fontFamily: FONTS.sans },
-  statusBadge: { borderRadius: RADIUS.pill, paddingVertical: 4, paddingHorizontal: 9 },
-  addToListBtn: {
-    backgroundColor: T.primarySoft, borderRadius: RADIUS.pill,
-    paddingVertical: 5, paddingHorizontal: 10,
-  },
-  addToListText: { fontSize: 11, fontFamily: FONTS.sansBold, color: T.primaryInk },
-
-  stepCard: {
-    backgroundColor: T.surface, borderRadius: RADIUS.lg, padding: 14,
-    flexDirection: 'row', gap: 14, alignItems: 'flex-start', ...SHADOW.card,
-  },
-  stepNum: {
-    width: 30, height: 30, borderRadius: 100, backgroundColor: T.primary,
-    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-  },
-  stepNumText: { fontFamily: FONTS.serifItalic, fontSize: 17, color: '#fbfaf3' },
-  stepText: { fontSize: 14, color: T.ink, lineHeight: 20, flex: 1, fontFamily: FONTS.sans },
+  actionSection: { paddingHorizontal: 20, marginBottom: 12 },
+  deleteBtn: { alignItems: 'center', paddingVertical: 10 },
+  deleteBtnText: { color: T.warn, fontFamily: FONTS.sansSemiBold, fontSize: 14 },
 });

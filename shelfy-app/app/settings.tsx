@@ -199,16 +199,6 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </Section>
 
-          {/* Admin */}
-          {user?.isAdmin && (
-            <Section title="Amministrazione">
-              <TouchableOpacity style={styles.linkRow} onPress={() => router.push('/admin')} activeOpacity={0.8}>
-                <Text style={styles.rowLabel}>⚙  Dashboard admin</Text>
-                <Text style={styles.chevron}>›</Text>
-              </TouchableOpacity>
-            </Section>
-          )}
-
           {/* Logout */}
           <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.85}>
             <Text style={styles.logoutText}>Esci dall'account</Text>

@@ -17,7 +17,8 @@ export interface Product {
   id: string;
   name: string;
   brand: string;
-  qty: string;
+  qty: string;           // formato della confezione, testo libero ("1 L")
+  count: number;         // unità identiche con la stessa scadenza
   zone: Zone;
   category: string;
   expiry: string;      // ISO date string YYYY-MM-DD
@@ -36,22 +37,73 @@ export interface Product {
   ecoscore?: ScoreGrade;
 }
 
-export interface Recipe {
-  id: string;
-  title: string;
-  time: string;
-  difficulty: string;
-  tint: string;
-  uses: string[];
-  tag: string;
-  desc: string;
-  steps: string[];
+export interface RecipeIngredient {
+  name: string;
+  qty: string;
 }
 
-export interface SavedRecipe extends Recipe {
+export interface CommunityRecipe {
+  id: string;
+  authorId: string;
+  authorName: string;
+  title: string;
+  desc: string;
+  time: string;
+  difficulty: string;
+  tag: string;
+  tint: string;
+  ingredients: RecipeIngredient[];
+  steps: string[];
+  ratingSum: number;
+  ratingCount: number;
+  createdAt: string;
+}
+
+export interface SavedRecipe extends CommunityRecipe {
   completed: boolean;
   savedAt: string;
   completedAt?: string;
+}
+
+export type MyRecipeSource = 'ai' | 'manual';
+
+// Ricetta personale dell'utente: privata finché non viene pubblicata nella
+// community. Le ricette generate dall'AI nascono qui.
+export interface MyRecipe {
+  id: string;
+  title: string;
+  desc: string;
+  time: string;
+  difficulty: string;
+  tag: string;
+  tint: string;
+  ingredients: RecipeIngredient[];
+  steps: string[];
+  source: MyRecipeSource;
+  published: boolean;
+  publishedRecipeId?: string;
+  createdAt: string;
+}
+
+export type RecipeRequestStatus = 'open' | 'closed';
+
+export interface RecipeRequest {
+  id: string;
+  authorId: string;
+  authorName: string;
+  ingredients: string[];
+  note: string;
+  status: RecipeRequestStatus;
+  createdAt: string;
+}
+
+export interface RecipeProposal {
+  id: string;
+  requestId: string;
+  recipeId: string;
+  authorId: string;
+  authorName: string;
+  createdAt: string;
 }
 
 export type SubscriptionType = 'monthly' | 'annual';
@@ -68,6 +120,8 @@ export interface User {
   pushToken?: string;
   adminNotifNewUsers?: boolean;
   adminNotifFeedback?: boolean;
+  /** Blocco AI sul singolo account, impostabile solo dall'admin. */
+  aiDisabled?: boolean;
 }
 
 export type UrgencyKey = 'scaduto' | 'oggi' | 'domani' | 'urgente' | 'prossimo' | 'ok' | 'lungo';

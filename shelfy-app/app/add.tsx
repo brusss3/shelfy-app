@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProducts } from '@/context/ProductsContext';
 import { ScannedProduct, Zone, ScoreGrade } from '@/types';
 import FoodTile from '@/components/FoodTile';
+import QuantityStepper from '@/components/QuantityStepper';
 import DateScannerModal from '@/components/DateScannerModal';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 import { tintForCategory } from '@/lib/urgency';
@@ -50,6 +51,7 @@ export default function AddScreen() {
   const [name, setName] = useState(scanned?.name ?? '');
   const [brand, setBrand] = useState(scanned?.brand ?? '');
   const [qty, setQty] = useState(scanned?.qty ?? '');
+  const [count, setCount] = useState(1);
   // Zona e scadenza NON vengono precompilate dal barcode: non sono dati letti
   // dal codice a barre (solo un suggerimento euristico) e l'utente deve
   // sceglierle esplicitamente per non pensare che siano state "lette".
@@ -102,6 +104,7 @@ export default function AddScreen() {
         name: name.trim(),
         brand: brand.trim(),
         qty: qty.trim(),
+        count,
         zone,
         category: category || 'Altro',
         expiry,
@@ -185,6 +188,12 @@ export default function AddScreen() {
               placeholder="es. 1 L"
               placeholderTextColor={T.mute}
             />
+          </FieldRow>
+          <Divider />
+          <FieldRow label="Unità">
+            <View style={{ alignItems: 'flex-start' }}>
+              <QuantityStepper value={count} onChange={setCount} />
+            </View>
           </FieldRow>
           <Divider />
           <FieldRow label="Categoria">

@@ -10,6 +10,7 @@ import * as NavigationBar from 'expo-navigation-bar';
 import { AuthProvider } from '@/context/AuthContext';
 import { ProductsProvider } from '@/context/ProductsContext';
 import { RecipesProvider } from '@/context/RecipesContext';
+import { CommunityProvider } from '@/context/CommunityContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { setupNotificationHandler } from '@/lib/notifications';
 
@@ -44,18 +45,26 @@ export default function RootLayout() {
       <AuthProvider>
         <ProductsProvider>
           <RecipesProvider>
+          <CommunityProvider>
           <StatusBar style="dark" />
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal' }} />
+            <Stack.Screen name="receipt-scan" options={{ presentation: 'fullScreenModal' }} />
+            <Stack.Screen name="receipt-review" options={{ presentation: 'modal' }} />
             <Stack.Screen name="add" options={{ presentation: 'modal' }} />
             <Stack.Screen name="product/[id]" />
             <Stack.Screen name="recipe/[id]" />
+            <Stack.Screen name="recipe/mine/[id]" />
+            <Stack.Screen name="recipe/create" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="recipe/request-new" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="recipe/request/[id]" />
             <Stack.Screen name="settings" options={{ headerShown: false }} />
             <Stack.Screen name="admin" options={{ headerShown: false }} />
             <Stack.Screen name="labels" options={{ headerShown: false, presentation: 'modal' }} />
           </Stack>
+          </CommunityProvider>
           </RecipesProvider>
         </ProductsProvider>
       </AuthProvider>

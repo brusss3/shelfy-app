@@ -13,7 +13,7 @@ import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 import { Product } from '@/types';
 
 export default function NotificationsScreen() {
-  const { products, removeProduct, changeZone, markConsumed } = useProducts();
+  const { products, removeProduct, changeZone, consumeOne } = useProducts();
   const router = useRouter();
 
   const scaduti  = products.filter((p) => effectiveDays(p) < 0);
@@ -55,7 +55,7 @@ export default function NotificationsScreen() {
               <PriorityCard key={p.id} product={p} urgency="scaduto"
                 onOpen={() => router.push(`/product/${p.id}`)}
                 onRemove={() => removeProduct(p.id)}
-                onConsumed={() => markConsumed(p.id)}
+                onConsumed={() => consumeOne(p.id)}
               />
             ))}
           </Section>
@@ -66,7 +66,7 @@ export default function NotificationsScreen() {
               <PriorityCard key={p.id} product={p} urgency="oggi"
                 onOpen={() => router.push(`/product/${p.id}`)}
                 onFreeze={() => changeZone(p.id, 'freezer')}
-                onConsumed={() => markConsumed(p.id)}
+                onConsumed={() => consumeOne(p.id)}
                 onRecipe={() => router.push('/(tabs)/recipes')}
                 canFreeze={['Pesce','Carne','Pane','Verdura'].includes(p.category)}
               />
@@ -79,7 +79,7 @@ export default function NotificationsScreen() {
               <PriorityCard key={p.id} product={p} urgency="urgente"
                 onOpen={() => router.push(`/product/${p.id}`)}
                 onFreeze={() => changeZone(p.id, 'freezer')}
-                onConsumed={() => markConsumed(p.id)}
+                onConsumed={() => consumeOne(p.id)}
                 onRecipe={() => router.push('/(tabs)/recipes')}
                 canFreeze={['Pesce','Carne','Pane','Verdura'].includes(p.category)}
               />

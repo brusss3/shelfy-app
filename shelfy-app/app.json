@@ -60,9 +60,9 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash.png",
-          "resizeMode": "cover",
-          "backgroundColor": "#2f4a31"
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 260,
+          "backgroundColor": "#e0cdae"
         }
       ],
       "react-native-edge-to-edge",

@@ -84,11 +84,25 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="💡" />,
         }}
       />
-      {/* Scheda ricette nascosta dalla barra utente, pronta per essere riattivata successivamente */}
       <Tabs.Screen
         name="recipes"
         options={{
-          href: null,
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="🍳" />,
+        }}
+      />
+      {/* Scorciatoia alla dashboard admin, visibile solo agli admin. Il tap
+          non cambia tab: apre /admin (fuori dal gruppo tabs) e resta lì. */}
+      <Tabs.Screen
+        name="admin-link"
+        options={{
+          href: user?.isAdmin ? undefined : null,
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="🛡️" />,
+        }}
+        listeners={{
+          tabPress: (e) => {
+            e.preventDefault();
+            router.push('/admin');
+          },
         }}
       />
     </Tabs>

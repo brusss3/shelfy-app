@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { initializeAuth, getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getFunctions } from 'firebase/functions';
 import { Platform } from 'react-native';
 
 const firebaseConfig = {
@@ -27,4 +28,6 @@ function buildAuth() {
 
 export const auth = buildAuth();
 export const db = getFirestore(app);
+// Stessa region delle Cloud Functions (vicina a Firestore eur3).
+export const functions = getFunctions(app, 'europe-west1');
 export default app;

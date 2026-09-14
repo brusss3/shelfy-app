@@ -49,6 +49,31 @@ firebase deploy --only firestore:rules
 1. Scarica `google-services.json` da Firebase Console → Impostazioni progetto → Android
 2. Mettilo nella root di `shelfy-app/`
 
+### 2e. Ricetta AI giornaliera (Cloud Functions + Groq)
+
+La chiave Groq **non** va mai nel codice dell'app: sarebbe leggibile nel bundle
+web e chiunque potrebbe consumare il credito. Vive solo in Secret Manager, letta
+dalla Cloud Function `generateDailyRecipe`.
+
+Richiede il piano **Blaze** sul progetto Firebase (il free tier delle Functions
+resta incluso; con 1 generazione al giorno per utente la spesa è ~0).
+
+```bash
+cd functions && npm install && cd ..
+
+# Salva la chiave (la trovi su console.groq.com → API Keys)
+firebase functions:secrets:set GROQ_API_KEY
+
+firebase deploy --only functions
+```
+
+Per provare in locale senza deployare, metti la chiave in `functions/.env.local`
+(`GROQ_API_KEY=...`, già ignorato da git) e avvia:
+
+```bash
+firebase emulators:start --only functions,firestore
+```
+
 ## 3. Avvia in sviluppo
 
 ```bash
@@ -162,15 +187,26 @@ users/
       {productId}/
         name: string
         brand: string
-        qty: string
+        qty: string     (formato confezione, es. "1 L")
+        count: number   (unità identiche con la stessa scadenza)
         zone: 'frigo' | 'freezer' | 'dispensa'
         category: string
         expiry: string  (YYYY-MM-DD)
         added: string   (YYYY-MM-DD)
+        openedAt?: string / openExpiry?: string
         barcode: string
         tint: string    (hex color)
         cal: number
         userId: string
+    savedRecipes/{recipeId}   ricette community messe da parte
+    myRecipes/{recipeId}      ricette personali (source: 'ai' | 'manual')
+    aiUsage/{YYYY-MM-DD}      credito AI del giorno (scrive solo la Function)
+
+communityRecipes/{recipeId}
+  ratings/{userId}            un voto per utente (1-5)
+recipeRequests/{requestId}
+  proposals/{proposalId}      ricette proposte in risposta
+feedback/{docId}              status: 'nuovo' | 'letto' | 'risolto'
 ```
 
 ## 7. Scanner barcode

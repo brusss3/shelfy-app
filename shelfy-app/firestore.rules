@@ -13,9 +13,28 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Ricette community salvate dall'utente per cucinarle dopo
+    match /users/{userId}/savedRecipes/{recipeId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Ricette personali (generate dall'AI o scritte dall'utente): private
+    // finché non vengono pubblicate nella community.
+    match /users/{userId}/myRecipes/{recipeId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Contatore delle generazioni AI giornaliere: l'utente lo legge per sapere
+    // se ha già usato la ricetta di oggi, ma ci scrive solo la Cloud Function
+    // (Admin SDK, che bypassa queste regole).
+    match /users/{userId}/aiUsage/{day} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+
     // Helper per verificare che l'utente non modifichi campi riservati (ruoli/abbonamento)
     function notUpdatingProtectedFields() {
-      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'isPremium', 'subscriptionType', 'subscriptionExpiresAt']);
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'isPremium', 'subscriptionType', 'subscriptionExpiresAt', 'aiDisabled']);
     }
 
     // Documento utente: l'utente legge il proprio; l'admin può leggere tutti.
@@ -32,10 +51,53 @@ service cloud.firestore {
       allow delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
     }
 
-    // Feedback: ogni utente autenticato può inviarlo; solo l'admin può leggerlo.
+    // Interruttori globali (es. config/ai { enabled }): tutti li leggono per
+    // sapere se una feature è attiva, solo l'admin li cambia.
+    match /config/{docId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    // Feedback: ogni utente autenticato può inviarlo; solo l'admin può leggerlo
+    // e aggiornarne lo stato (nuovo/letto/risolto).
     match /feedback/{docId} {
       allow create: if request.auth != null;
-      allow read: if isAdmin();
+      allow read, update: if isAdmin();
+    }
+
+    // Ricette community: lettura per ogni utente autenticato, scrittura piena
+    // solo per l'autore. Eccezione: chiunque può aggiornare SOLO ratingSum/
+    // ratingCount (il voto), mai gli altri campi della ricetta.
+    match /communityRecipes/{recipeId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.authorId == request.auth.uid;
+      allow update: if request.auth != null && (
+        resource.data.authorId == request.auth.uid ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratingSum', 'ratingCount'])
+      );
+      allow delete: if request.auth != null && resource.data.authorId == request.auth.uid;
+
+      // Un voto per utente: id documento = uid di chi vota.
+      match /ratings/{uid} {
+        allow read: if request.auth != null;
+        allow create, update, delete: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    // Richieste d'aiuto ("mi scadono questi ingredienti"): lettura pubblica,
+    // solo l'autore può modificarle/chiuderle/cancellarle.
+    match /recipeRequests/{requestId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.authorId == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.authorId == request.auth.uid;
+
+      // Proposte di ricetta a una richiesta: chiunque può proporre, solo chi
+      // ha proposto può ritirare la propria proposta.
+      match /proposals/{proposalId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null && request.resource.data.authorId == request.auth.uid;
+        allow delete: if request.auth != null && resource.data.authorId == request.auth.uid;
+      }
     }
 
     // Tutto il resto è bloccato

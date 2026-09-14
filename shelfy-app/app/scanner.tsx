@@ -203,6 +203,7 @@ export default function ScannerScreen() {
         name: found.name,
         brand: found.brand,
         qty: found.qty,
+        count: 1,
         zone: selectedZone,
         category: found.category || 'Altro',
         expiry: selectedExpiry,

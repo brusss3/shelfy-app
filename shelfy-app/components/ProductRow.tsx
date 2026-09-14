@@ -27,6 +27,11 @@ export default function ProductRow({ product, onPress }: Props) {
       <View style={styles.info}>
         <View style={styles.nameRow}>
           <Text style={styles.name} numberOfLines={1}>{product.name}</Text>
+          {product.count > 1 && (
+            <View style={styles.countBadge}>
+              <Text style={styles.countBadgeText}>×{product.count}</Text>
+            </View>
+          )}
           {isOpened && (
             <View style={styles.openedBadge}>
               <Text style={styles.openedBadgeText}>Aperto</Text>
@@ -62,6 +67,18 @@ const styles = StyleSheet.create({
     color: T.ink,
     letterSpacing: -0.1,
     flexShrink: 1,
+  },
+  countBadge: {
+    backgroundColor: T.primarySoft,
+    borderRadius: 100,
+    paddingVertical: 2,
+    paddingHorizontal: 7,
+  },
+  countBadgeText: {
+    fontSize: 10,
+    fontFamily: FONTS.sansBold,
+    color: T.primaryInk,
+    letterSpacing: 0.2,
   },
   openedBadge: {
     backgroundColor: '#e8f0e8',

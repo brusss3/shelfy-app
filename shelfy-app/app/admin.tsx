@@ -8,15 +8,17 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import {
   getAllUsers, adminSetPremium, adminSetAdmin, AdminUserRecord,
-  getAllFeedback, FeedbackRecord, saveUserPushToken,
+  getAllFeedback, FeedbackRecord, FeedbackStatus, updateFeedbackStatus, saveUserPushToken,
+  subscribeToAiEnabled, adminSetAiEnabled, adminSetUserAiDisabled,
 } from '@/lib/firestore';
 import { registerForPushNotifications, sendAdminTestPushNotification } from '@/lib/notifications';
 import { showAlert } from '@/lib/alert';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 
-type Tab = 'users' | 'feedback' | 'notifiche';
+type Tab = 'users' | 'feedback' | 'notifiche' | 'ai';
 type SortMode = 'newest' | 'oldest' | 'az' | 'za';
 type FilterChip = 'all' | 'new' | 'premium' | 'admin';
+type FeedbackFilterChip = 'all' | FeedbackStatus;
 
 const NEW_USER_DAYS = 7;
 
@@ -61,9 +63,13 @@ export default function AdminScreen() {
   const [search, setSearch] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('newest');
   const [filterChip, setFilterChip] = useState<FilterChip>('all');
+  const [feedbackFilter, setFeedbackFilter] = useState<FeedbackFilterChip>('all');
+  const [updatingFeedback, setUpdatingFeedback] = useState<string | null>(null);
 
   const [registeringPush, setRegisteringPush] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState(true);
+  const [togglingAi, setTogglingAi] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -87,7 +93,40 @@ export default function AdminScreen() {
     load();
   }, [user, load]);
 
+  useEffect(() => subscribeToAiEnabled(setAiEnabled, () => {}), []);
+
   const onRefresh = () => { setRefreshing(true); load(); };
+
+  const toggleGlobalAi = (next: boolean) => {
+    confirm(
+      next ? 'Riattiva ricette AI' : 'Disattiva ricette AI',
+      next
+        ? 'Tutti gli utenti potranno di nuovo generare la ricetta del giorno.'
+        : 'Nessun utente potrà generare ricette AI finché non riattivi. Le chiamate a Groq si fermano subito.',
+      async () => {
+        setTogglingAi(true);
+        try {
+          await adminSetAiEnabled(next);
+        } catch (e: any) {
+          showAlert('Errore', e?.message ?? 'Aggiornamento fallito.');
+        } finally { setTogglingAi(false); }
+      },
+      !next,
+    );
+  };
+
+  const toggleUserAi = (u: AdminUserRecord) => {
+    const next = !u.aiDisabled;
+    confirm(next ? 'Blocca AI per questo utente' : 'Sblocca AI', u.email, async () => {
+      setUpdating(u.uid);
+      try {
+        await adminSetUserAiDisabled(u.uid, next);
+        setUsers((prev) => prev.map((x) => x.uid === u.uid ? { ...x, aiDisabled: next } : x));
+      } catch (e: any) {
+        showAlert('Errore', e?.message ?? 'Aggiornamento fallito.');
+      } finally { setUpdating(null); }
+    }, next);
+  };
 
   const togglePremium = (u: AdminUserRecord) => {
     const next = !u.isPremium;
@@ -147,6 +186,23 @@ export default function AdminScreen() {
     return sorted;
   }, [users, search, sortMode, filterChip]);
 
+  const visibleFeedback = useMemo(() => {
+    if (feedbackFilter === 'all') return feedback;
+    return feedback.filter((f) => f.status === feedbackFilter);
+  }, [feedback, feedbackFilter]);
+
+  const setFeedbackStatus = async (f: FeedbackRecord, status: FeedbackStatus) => {
+    setUpdatingFeedback(f.id);
+    try {
+      await updateFeedbackStatus(f.id, status);
+      setFeedback((prev) => prev.map((x) => x.id === f.id ? { ...x, status } : x));
+    } catch (e: any) {
+      showAlert('Errore', e?.message ?? 'Aggiornamento fallito.');
+    } finally {
+      setUpdatingFeedback(null);
+    }
+  };
+
   const handleRegisterPush = async () => {
     if (!user) return;
     setRegisteringPush(true);
@@ -184,6 +240,7 @@ export default function AdminScreen() {
   if (!user?.isAdmin) return null;
 
   const premiumCount = users.filter((u) => u.isPremium).length;
+  const newFeedbackCount = feedback.filter((f) => f.status === 'nuovo').length;
 
   return (
     <SafeAreaView style={styles.root}>
@@ -193,12 +250,16 @@ export default function AdminScreen() {
             <Text style={styles.backText}>← Indietro</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Dashboard admin</Text>
-          <Text style={styles.subtitle}>{users.length} utenti · {premiumCount} premium · {feedback.length} segnalazioni</Text>
+          <Text style={styles.subtitle}>
+            {users.length} utenti · {premiumCount} premium · {feedback.length} segnalazioni
+            {newFeedbackCount > 0 ? ` (${newFeedbackCount} nuove)` : ''}
+          </Text>
 
           <View style={styles.tabs}>
             <TabBtn label="Utenti" active={tab === 'users'} onPress={() => setTab('users')} />
             <TabBtn label="Feedback" active={tab === 'feedback'} onPress={() => setTab('feedback')} />
             <TabBtn label="Notifiche" active={tab === 'notifiche'} onPress={() => setTab('notifiche')} />
+            <TabBtn label={aiEnabled ? 'AI' : 'AI ⛔'} active={tab === 'ai'} onPress={() => setTab('ai')} />
           </View>
         </View>
       </View>
@@ -269,6 +330,7 @@ export default function AdminScreen() {
                           <View style={styles.badges}>
                             {u.isPremium && <View style={[styles.badge, styles.badgePremium]}><Text style={styles.badgeText}>Premium</Text></View>}
                             {u.isAdmin && <View style={[styles.badge, styles.badgeAdmin]}><Text style={styles.badgeText}>Admin</Text></View>}
+                            {u.aiDisabled && <View style={[styles.badge, styles.badgeAiOff]}><Text style={[styles.badgeText, { color: T.urgent }]}>AI bloccata</Text></View>}
                           </View>
                         </View>
 
@@ -292,6 +354,14 @@ export default function AdminScreen() {
                                 {u.isAdmin ? 'Rimuovi Admin' : 'Rendi Admin'}
                               </Text>
                             </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[styles.btn, u.aiDisabled ? styles.btnSecondary : styles.btnDestructive]}
+                              onPress={() => toggleUserAi(u)}
+                            >
+                              <Text style={[styles.btnText, u.aiDisabled ? styles.btnTextSecondary : styles.btnTextDanger]}>
+                                {u.aiDisabled ? 'Sblocca AI' : 'Blocca AI'}
+                              </Text>
+                            </TouchableOpacity>
                           </View>
                         )}
                       </View>
@@ -302,26 +372,97 @@ export default function AdminScreen() {
             )}
 
             {tab === 'feedback' && (
-              feedback.length === 0 ? <Text style={styles.empty}>Nessuna segnalazione.</Text> :
-              feedback.map((f) => (
-                <View key={f.id} style={styles.card}>
-                  <View style={styles.fbHeader}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <View style={[styles.fbTag, fbTagStyle(f.category)]}>
-                        <Text style={styles.fbTagText}>{fbLabel(f.category)}</Text>
-                      </View>
-                      {f.rating ? (
-                        <Text style={{ fontSize: 12, color: '#f59e0b', fontFamily: FONTS.sansSemiBold }}>
-                          {'★'.repeat(f.rating)}
-                        </Text>
-                      ) : null}
-                    </View>
-                    {f.createdAt ? <Text style={styles.date}>{formatDate(f.createdAt)}</Text> : null}
-                  </View>
-                  <Text style={styles.fbMessage}>{f.message}</Text>
-                  <Text style={styles.fbFrom}>{f.displayName || 'Anonimo'} · {f.email}</Text>
+              <>
+                <View style={styles.chipsRow}>
+                  <Chip label="Tutti" active={feedbackFilter === 'all'} onPress={() => setFeedbackFilter('all')} />
+                  <Chip label="Nuovi" active={feedbackFilter === 'nuovo'} onPress={() => setFeedbackFilter('nuovo')} />
+                  <Chip label="Letti" active={feedbackFilter === 'letto'} onPress={() => setFeedbackFilter('letto')} />
+                  <Chip label="Risolti" active={feedbackFilter === 'risolto'} onPress={() => setFeedbackFilter('risolto')} />
                 </View>
-              ))
+
+                {visibleFeedback.length === 0 ? <Text style={styles.empty}>Nessuna segnalazione.</Text> :
+                  visibleFeedback.map((f) => (
+                    <View key={f.id} style={styles.card}>
+                      <View style={styles.fbHeader}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <View style={[styles.fbTag, fbTagStyle(f.category)]}>
+                            <Text style={styles.fbTagText}>{fbLabel(f.category)}</Text>
+                          </View>
+                          <View style={[styles.fbStatusTag, fbStatusStyle(f.status)]}>
+                            <Text style={styles.fbStatusText}>{fbStatusLabel(f.status)}</Text>
+                          </View>
+                          {f.rating ? (
+                            <Text style={{ fontSize: 12, color: '#f59e0b', fontFamily: FONTS.sansSemiBold }}>
+                              {'★'.repeat(f.rating)}
+                            </Text>
+                          ) : null}
+                        </View>
+                        {f.createdAt ? <Text style={styles.date}>{formatDate(f.createdAt)}</Text> : null}
+                      </View>
+                      <Text style={styles.fbMessage}>{f.message}</Text>
+                      <Text style={styles.fbFrom}>{f.displayName || 'Anonimo'} · {f.email}</Text>
+
+                      {updatingFeedback === f.id ? (
+                        <ActivityIndicator color={T.primary} style={{ marginTop: 10 }} />
+                      ) : (
+                        <View style={styles.actions}>
+                          {f.status !== 'nuovo' && (
+                            <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={() => setFeedbackStatus(f, 'nuovo')}>
+                              <Text style={[styles.btnText, styles.btnTextSecondary]}>Riapri</Text>
+                            </TouchableOpacity>
+                          )}
+                          {f.status === 'nuovo' && (
+                            <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={() => setFeedbackStatus(f, 'letto')}>
+                              <Text style={[styles.btnText, styles.btnTextSecondary]}>Segna come letto</Text>
+                            </TouchableOpacity>
+                          )}
+                          {f.status !== 'risolto' && (
+                            <TouchableOpacity style={[styles.btn, styles.btnPrimary]} onPress={() => setFeedbackStatus(f, 'risolto')}>
+                              <Text style={styles.btnText}>✓ Segna come risolto</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      )}
+                    </View>
+                  ))
+                }
+              </>
+            )}
+
+            {tab === 'ai' && (
+              <View style={{ gap: 12 }}>
+                <View style={styles.card}>
+                  <View style={styles.switchRow}>
+                    <View style={{ flex: 1, marginRight: 12 }}>
+                      <Text style={styles.notifSectionTitle}>Ricette AI (tutti gli utenti)</Text>
+                      <Text style={styles.notifSectionDesc}>
+                        Interruttore globale: da spento nessuno può generare ricette e le chiamate a Groq
+                        si fermano subito. Il blocco è applicato lato server, non solo nell'app.
+                      </Text>
+                    </View>
+                    <Switch
+                      value={aiEnabled}
+                      onValueChange={toggleGlobalAi}
+                      disabled={togglingAi}
+                      trackColor={{ false: T.line, true: T.primary }}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.card}>
+                  <Text style={styles.notifSectionTitle}>Stato attuale</Text>
+                  <Text style={styles.notifSectionDesc}>
+                    {aiEnabled
+                      ? 'Attive · 1 generazione al giorno per utente (reset a mezzanotte, ora italiana).'
+                      : 'Disattivate · gli utenti vedono "Momentaneamente non disponibile".'}
+                  </Text>
+                  <Text style={[styles.notifSectionDesc, { marginTop: 10 }]}>
+                    {users.filter((u) => u.aiDisabled).length} utent
+                    {users.filter((u) => u.aiDisabled).length === 1 ? 'e bloccato' : 'i bloccati'} singolarmente
+                    (dalla scheda Utenti, pulsante “Blocca AI”).
+                  </Text>
+                </View>
+              </View>
             )}
 
             {tab === 'notifiche' && (
@@ -429,6 +570,17 @@ function fbTagStyle(c: string) {
   return { backgroundColor: T.primarySoft };
 }
 
+function fbStatusLabel(s: FeedbackStatus) {
+  if (s === 'letto') return 'Letto';
+  if (s === 'risolto') return '✓ Risolto';
+  return 'Nuovo';
+}
+function fbStatusStyle(s: FeedbackStatus) {
+  if (s === 'letto') return { backgroundColor: T.line };
+  if (s === 'risolto') return { backgroundColor: T.okSoft };
+  return { backgroundColor: T.urgentSoft };
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -484,6 +636,7 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill },
   badgePremium: { backgroundColor: T.warnSoft },
   badgeAdmin: { backgroundColor: T.primarySoft },
+  badgeAiOff: { backgroundColor: T.urgentSoft },
   badgeText: { fontFamily: FONTS.sansSemiBold, fontSize: 11, color: T.primaryInk },
 
   actions: { flexDirection: 'row', gap: 8, marginTop: 14 },
@@ -498,6 +651,8 @@ const styles = StyleSheet.create({
   fbHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   fbTag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill },
   fbTagText: { fontFamily: FONTS.sansSemiBold, fontSize: 12, color: T.ink },
+  fbStatusTag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill },
+  fbStatusText: { fontFamily: FONTS.sansSemiBold, fontSize: 12, color: T.ink },
   fbMessage: { fontFamily: FONTS.sans, fontSize: 14, color: T.ink, lineHeight: 20 },
   fbFrom: { fontFamily: FONTS.sans, fontSize: 12, color: T.mute, marginTop: 8 },
 

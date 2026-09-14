@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { Product, Zone } from '@/types';
 import {
-  subscribeToProducts, addProduct, updateProduct,
-  deleteProduct, moveProductZone,
+  subscribeToProducts, addProduct, addProductsBulk, updateProduct,
+  deleteProduct, moveProductZone, consumeOneUnit, openOneUnit,
 } from '@/lib/firestore';
-import { scheduleExpiryNotifications } from '@/lib/notifications';
+import { scheduleExpiryNotifications, subscribeToConsumedAction } from '@/lib/notifications';
 import { daysTo } from '@/lib/urgency';
 import { useAuth } from './AuthContext';
 
@@ -12,10 +12,12 @@ interface ProductsContextType {
   products: Product[];
   loading: boolean;
   addNewProduct: (data: Omit<Product, 'id' | 'userId'>) => Promise<void>;
+  addNewProducts: (data: Omit<Product, 'id' | 'userId'>[]) => Promise<void>;
   removeProduct: (id: string) => Promise<void>;
   changeZone: (id: string, zone: Zone) => Promise<void>;
   editProduct: (id: string, data: Partial<Product>) => Promise<void>;
-  markConsumed: (id: string) => Promise<void>;
+  consumeOne: (id: string) => Promise<void>;
+  consumeAll: (id: string) => Promise<void>;
   markOpened: (id: string, openExpiry: string) => Promise<void>;
   daysTo: (iso: string) => number;
 }
@@ -50,10 +52,28 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
     return unsub;
   }, [user]);
 
+  // Pulsante "Consumato" sulla notifica di sistema: scala una unità appena
+  // l'utente tocca l'azione (l'app si apre in foreground). L'ultima unità
+  // cancella il prodotto.
+  useEffect(() => {
+    if (!user) return;
+    return subscribeToConsumedAction((productId) => {
+      consumeOneUnit(user.uid, productId).catch(console.warn);
+    });
+  }, [user]);
+
   const addNewProduct = useCallback(
     async (data: Omit<Product, 'id' | 'userId'>) => {
       if (!user) return;
       await addProduct(user.uid, data);
+    },
+    [user],
+  );
+
+  const addNewProducts = useCallback(
+    async (data: Omit<Product, 'id' | 'userId'>[]) => {
+      if (!user || data.length === 0) return;
+      await addProductsBulk(user.uid, data);
     },
     [user],
   );
@@ -82,7 +102,15 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
     [user],
   );
 
-  const markConsumed = useCallback(
+  const consumeOne = useCallback(
+    async (id: string) => {
+      if (!user) return;
+      await consumeOneUnit(user.uid, id);
+    },
+    [user],
+  );
+
+  const consumeAll = useCallback(
     async (id: string) => {
       if (!user) return;
       await deleteProduct(user.uid, id);
@@ -93,17 +121,14 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
   const markOpened = useCallback(
     async (id: string, openExpiry: string) => {
       if (!user) return;
-      await updateProduct(user.uid, id, {
-        openedAt: new Date().toISOString().slice(0, 10),
-        openExpiry,
-      });
+      await openOneUnit(user.uid, id, openExpiry);
     },
     [user],
   );
 
   return (
     <ProductsContext.Provider
-      value={{ products, loading, addNewProduct, removeProduct, changeZone, editProduct, markConsumed, markOpened, daysTo }}
+      value={{ products, loading, addNewProduct, addNewProducts, removeProduct, changeZone, editProduct, consumeOne, consumeAll, markOpened, daysTo }}
     >
       {children}
     </ProductsContext.Provider>
