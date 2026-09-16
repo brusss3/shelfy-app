@@ -39,7 +39,7 @@ export default function QuantityStepper({ value, onChange, min = 1, max = 99 }: 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   btn: {
-    width: 32, height: 32, borderRadius: RADIUS.pill, backgroundColor: T.primarySoft,
+    width: 32, height: 32, borderRadius: RADIUS.sm, backgroundColor: T.primarySoft,
     alignItems: 'center', justifyContent: 'center',
   },
   btnDisabled: { opacity: 0.4 },

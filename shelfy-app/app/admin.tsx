@@ -418,7 +418,7 @@ export default function AdminScreen() {
                           )}
                           {f.status !== 'risolto' && (
                             <TouchableOpacity style={[styles.btn, styles.btnPrimary]} onPress={() => setFeedbackStatus(f, 'risolto')}>
-                              <Text style={styles.btnText}>✓ Segna come risolto</Text>
+                              <Text style={styles.btnText}>Segna come risolto</Text>
                             </TouchableOpacity>
                           )}
                         </View>
@@ -608,7 +608,7 @@ const styles = StyleSheet.create({
   clearBtnText: { color: T.mute, fontSize: 14, fontFamily: FONTS.sansSemiBold },
 
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingVertical: 7, paddingHorizontal: 14, borderRadius: RADIUS.pill, backgroundColor: T.surface, borderWidth: 1, borderColor: T.line },
+  chip: { paddingVertical: 7, paddingHorizontal: 14, borderRadius: RADIUS.md, backgroundColor: T.surface, borderWidth: 1, borderColor: T.line },
   chipActive: { backgroundColor: T.primary, borderColor: T.primary },
   chipText: { fontFamily: FONTS.sansMedium, fontSize: 13, color: T.ink2 },
   chipTextActive: { color: '#fbfaf3' },
@@ -629,11 +629,11 @@ const styles = StyleSheet.create({
   date: { fontFamily: FONTS.sans, fontSize: 12, color: T.mute, marginTop: 4 },
   subInfo: { fontFamily: FONTS.sansMedium, fontSize: 12, color: T.primary, marginTop: 4 },
 
-  newBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: RADIUS.pill, backgroundColor: T.okSoft },
+  newBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: RADIUS.tag, backgroundColor: T.okSoft },
   newBadgeText: { fontFamily: FONTS.sansSemiBold, fontSize: 10, color: T.ok },
 
   badges: { flexDirection: 'column', gap: 4, alignItems: 'flex-end' },
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill },
+  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.tag },
   badgePremium: { backgroundColor: T.warnSoft },
   badgeAdmin: { backgroundColor: T.primarySoft },
   badgeAiOff: { backgroundColor: T.urgentSoft },
@@ -649,9 +649,9 @@ const styles = StyleSheet.create({
   btnTextDanger: { color: T.urgent },
 
   fbHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  fbTag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill },
+  fbTag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.tag },
   fbTagText: { fontFamily: FONTS.sansSemiBold, fontSize: 12, color: T.ink },
-  fbStatusTag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill },
+  fbStatusTag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.tag },
   fbStatusText: { fontFamily: FONTS.sansSemiBold, fontSize: 12, color: T.ink },
   fbMessage: { fontFamily: FONTS.sans, fontSize: 14, color: T.ink, lineHeight: 20 },
   fbFrom: { fontFamily: FONTS.sans, fontSize: 12, color: T.mute, marginTop: 8 },

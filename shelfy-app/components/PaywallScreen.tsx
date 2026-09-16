@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { getOfferings, purchasePackage, restorePurchases, getActiveSubscriptionInfo } from '@/lib/purchases';
 import { showAlert } from '@/lib/alert';
 import { SubscriptionType } from '@/types';
+import PrimaryButton from '@/components/PrimaryButton';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 
 const isExpoGo = Constants.executionEnvironment === 'storeClient';
@@ -193,16 +194,14 @@ export default function PaywallScreen() {
         )}
 
         {!isExpoGo && !isWeb && offerings.length > 0 && (
-          <TouchableOpacity
-            style={[styles.ctaBtn, (purchasing || !selectedPkg) && { opacity: 0.55 }]}
+          <PrimaryButton
             onPress={handlePurchase}
-            disabled={purchasing || !selectedPkg}
-            activeOpacity={0.85}
-          >
-            {purchasing
-              ? <ActivityIndicator color="#fbfaf3" />
-              : <Text style={styles.ctaBtnText}>Sblocca Premium</Text>}
-          </TouchableOpacity>
+            disabled={!selectedPkg}
+            loading={purchasing}
+            label="Sblocca Premium"
+            fullWidth
+            containerStyle={{ marginBottom: 16 }}
+          />
         )}
 
         <TouchableOpacity
@@ -231,7 +230,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', marginBottom: 16,
   },
   premiumBadge: {
-    backgroundColor: T.primary, borderRadius: RADIUS.pill,
+    backgroundColor: T.primary, borderRadius: RADIUS.tag,
     paddingVertical: 5, paddingHorizontal: 14, marginBottom: 14,
   },
   premiumBadgeText: { color: '#fbfaf3', fontSize: 11, fontFamily: FONTS.sansBold, letterSpacing: 1.2 },
@@ -265,19 +264,13 @@ const styles = StyleSheet.create({
   packageCardSelected: { backgroundColor: T.primary, borderColor: T.primary },
   bestValueBadge: {
     position: 'absolute', top: -10, alignSelf: 'center',
-    backgroundColor: T.warn, borderRadius: RADIUS.pill,
+    backgroundColor: T.warn, borderRadius: RADIUS.tag,
     paddingVertical: 3, paddingHorizontal: 10,
   },
   bestValueText: { fontSize: 10, color: '#fff', fontFamily: FONTS.sansBold },
   packagePeriod: { fontSize: 13, fontFamily: FONTS.sansSemiBold, color: T.ink, marginTop: 8 },
   packagePrice: { fontSize: 22, fontFamily: FONTS.serifItalic, color: T.ink, marginTop: 4 },
   packageSub: { fontSize: 11, color: T.mute, fontFamily: FONTS.sans, marginTop: 2 },
-
-  ctaBtn: {
-    backgroundColor: T.primary, borderRadius: RADIUS.pill,
-    paddingVertical: 16, width: '100%', alignItems: 'center', ...SHADOW.fab, marginBottom: 16,
-  },
-  ctaBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 16, color: '#fbfaf3' },
 
   restoreBtn: { paddingVertical: 10, marginBottom: 16 },
   restoreText: { fontSize: 13, color: T.primary, fontFamily: FONTS.sansSemiBold, textAlign: 'center' },

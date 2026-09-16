@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { T, FONTS, SHADOW } from '@/constants/theme';
+import { Text, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { T, FONTS, RADIUS, CLAY, SURFACE } from '@/constants/theme';
 
 interface Props {
   value: number;
@@ -10,20 +11,23 @@ interface Props {
 
 export default function StatCard({ value, label, color }: Props) {
   return (
-    <View style={styles.card}>
+    <LinearGradient colors={SURFACE.card} style={styles.card}>
       <Text style={[styles.value, { color }]}>{value}</Text>
       <Text style={styles.label}>{label}</Text>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  // Rilievo più contenuto delle righe prodotto: sono numeri di contorno, non
+  // il contenuto principale della schermata, e con lo stesso peso delle righe
+  // la pagina "grida" tutta uguale.
   card: {
-    backgroundColor: T.surface,
-    borderRadius: 18,
+    flex: 1,
+    borderRadius: RADIUS.lg,
     padding: 14,
     paddingHorizontal: 12,
-    ...SHADOW.card,
+    boxShadow: CLAY.chip,
   },
   value: {
     fontFamily: FONTS.serifItalic,

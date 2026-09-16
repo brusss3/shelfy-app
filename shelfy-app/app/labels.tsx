@@ -7,7 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Print from 'expo-print';
 import { showAlert } from '@/lib/alert';
 import { buildLabelsHtml } from '@/lib/labels';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import PrimaryButton from '@/components/PrimaryButton';
+import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
 
 const DURATIONS = [
   { h: 24, l: '24 ore' },
@@ -162,18 +163,13 @@ export default function LabelsScreen() {
       </View>
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        <TouchableOpacity
-          style={[styles.generateBtn, generating && { opacity: 0.7 }]}
+        <PrimaryButton
           onPress={handleGenerate}
-          disabled={generating}
-          activeOpacity={0.85}
-        >
-          {generating ? (
-            <ActivityIndicator color="#fbfaf3" />
-          ) : (
-            <Text style={styles.generateBtnText}>🖨️ Genera e stampa</Text>
-          )}
-        </TouchableOpacity>
+          loading={generating}
+          icon="print-outline"
+          label="Genera e stampa"
+          fullWidth
+        />
       </View>
 
       <Modal visible={showTimePicker} transparent animationType="fade" onRequestClose={() => setShowTimePicker(false)}>
@@ -193,9 +189,7 @@ export default function LabelsScreen() {
               <TouchableOpacity style={styles.modalCancel} onPress={() => setShowTimePicker(false)} activeOpacity={0.85}>
                 <Text style={styles.modalCancelText}>Annulla</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modalConfirm} onPress={confirmTimePicker} activeOpacity={0.85}>
-                <Text style={styles.modalConfirmText}>Conferma</Text>
-              </TouchableOpacity>
+              <PrimaryButton onPress={confirmTimePicker} label="Conferma" containerStyle={{ flex: 1.5 }} />
             </View>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -250,7 +244,7 @@ const styles = StyleSheet.create({
 
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
   chip: {
-    backgroundColor: T.surface, borderRadius: RADIUS.pill,
+    backgroundColor: T.surface, borderRadius: RADIUS.md,
     paddingVertical: 8, paddingHorizontal: 14,
     borderWidth: 1, borderColor: T.line,
   },
@@ -276,12 +270,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingTop: 12,
     borderTopWidth: 0.5, borderTopColor: T.line, backgroundColor: T.bg,
   },
-  generateBtn: {
-    borderRadius: RADIUS.pill, paddingVertical: 16,
-    alignItems: 'center', backgroundColor: T.primary, ...SHADOW.fab,
-  },
-  generateBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 16, color: '#fbfaf3' },
-
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center', alignItems: 'center',
@@ -296,19 +284,14 @@ const styles = StyleSheet.create({
   pickerLabel: { fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.4 },
   pickerInput: {
     width: '100%', textAlign: 'center',
-    backgroundColor: T.bg, borderRadius: RADIUS.md,
+    backgroundColor: '#ece8de', borderRadius: RADIUS.input,
     paddingVertical: 12, fontSize: 20, fontFamily: FONTS.sansBold, color: T.ink,
-    borderWidth: 1, borderColor: T.line,
+    boxShadow: CLAY.inset,
   },
   modalBtns: { flexDirection: 'row', gap: 10, marginTop: 4 },
   modalCancel: {
-    flex: 1, borderRadius: RADIUS.pill, paddingVertical: 14,
+    flex: 1, borderRadius: RADIUS.lg, paddingVertical: 14,
     alignItems: 'center', borderWidth: 1, borderColor: T.line,
   },
   modalCancelText: { fontFamily: FONTS.sansSemiBold, fontSize: 15, color: T.mute },
-  modalConfirm: {
-    flex: 1.5, borderRadius: RADIUS.pill, paddingVertical: 14,
-    alignItems: 'center', backgroundColor: T.primary, ...SHADOW.fab,
-  },
-  modalConfirmText: { fontFamily: FONTS.sansSemiBold, fontSize: 15, color: '#fbfaf3' },
 });

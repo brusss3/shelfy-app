@@ -10,7 +10,8 @@ import { ScannedProduct, Zone, ScoreGrade } from '@/types';
 import FoodTile from '@/components/FoodTile';
 import QuantityStepper from '@/components/QuantityStepper';
 import DateScannerModal from '@/components/DateScannerModal';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import PrimaryButton from '@/components/PrimaryButton';
+import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
 import { tintForCategory } from '@/lib/urgency';
 import { ocrAvailable } from '@/lib/ocr';
 import { showAlert } from '@/lib/alert';
@@ -399,9 +400,7 @@ export default function AddScreen() {
               <TouchableOpacity style={styles.modalCancel} onPress={() => setShowDatePicker(false)} activeOpacity={0.85}>
                 <Text style={styles.modalCancelText}>Annulla</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modalConfirm} onPress={confirmDate} activeOpacity={0.85}>
-                <Text style={styles.modalConfirmText}>Conferma</Text>
-              </TouchableOpacity>
+              <PrimaryButton onPress={confirmDate} label="Conferma" containerStyle={{ flex: 1.5 }} />
             </View>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -423,18 +422,13 @@ export default function AddScreen() {
         >
           <Text style={styles.cancelBtnText}>Annulla</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.saveBtn, saving && { opacity: 0.7 }]}
+        <PrimaryButton
           onPress={handleSave}
-          disabled={saving}
-          activeOpacity={0.85}
-        >
-          {saving ? (
-            <ActivityIndicator color="#fbfaf3" />
-          ) : (
-            <Text style={styles.saveBtnText}>✓ Salva nel diario</Text>
-          )}
-        </TouchableOpacity>
+          loading={saving}
+          icon="checkmark"
+          label="Salva nel diario"
+          containerStyle={{ flex: 1.8 }}
+        />
       </View>
     </View>
   );
@@ -500,7 +494,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4, textAlign: 'center',
   },
   barcodePill: {
-    backgroundColor: T.surface, borderRadius: RADIUS.pill,
+    backgroundColor: T.surface, borderRadius: RADIUS.tag,
     paddingVertical: 6, paddingHorizontal: 12, ...SHADOW.card,
   },
   barcodeText: { fontSize: 11, fontFamily: FONTS.sansSemiBold, color: T.mute, letterSpacing: 0.3 },
@@ -550,7 +544,7 @@ const styles = StyleSheet.create({
   allergensBlock: {},
   allergensRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   allergenPill: {
-    backgroundColor: T.warnSoft, borderRadius: RADIUS.pill,
+    backgroundColor: T.warnSoft, borderRadius: RADIUS.tag,
     paddingVertical: 5, paddingHorizontal: 10,
   },
   allergenPillText: { fontSize: 12, fontFamily: FONTS.sansMedium, color: T.warn },
@@ -573,7 +567,7 @@ const styles = StyleSheet.create({
 
   presets: { paddingHorizontal: 16, gap: 6, marginBottom: 12 },
   preset: {
-    backgroundColor: T.surface, borderRadius: RADIUS.pill,
+    backgroundColor: T.surface, borderRadius: RADIUS.md,
     paddingVertical: 6, paddingHorizontal: 12, ...SHADOW.card,
   },
   presetText: { fontSize: 12, fontFamily: FONTS.sansSemiBold, color: T.ink2 },
@@ -585,19 +579,13 @@ const styles = StyleSheet.create({
     borderTopWidth: 0.5, borderTopColor: T.line,
   },
   cancelBtn: {
-    flex: 1, borderRadius: RADIUS.pill, paddingVertical: 16,
+    flex: 1, borderRadius: RADIUS.lg, paddingVertical: 16,
     alignItems: 'center', borderWidth: 1, borderColor: T.line,
   },
   cancelBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 16, color: T.primary },
-  saveBtn: {
-    flex: 1.8, borderRadius: RADIUS.pill, paddingVertical: 16,
-    alignItems: 'center', backgroundColor: T.primary, ...SHADOW.fab,
-  },
-  saveBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 16, color: '#fbfaf3' },
-
   ocrBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: T.primarySoft, borderRadius: RADIUS.pill,
+    backgroundColor: T.primarySoft, borderRadius: RADIUS.lg,
     marginHorizontal: 16, marginBottom: 12, paddingVertical: 14,
   },
   ocrBtnIcon: { fontSize: 18 },
@@ -624,19 +612,14 @@ const styles = StyleSheet.create({
   pickerLabel: { fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.4 },
   pickerInput: {
     width: '100%', textAlign: 'center',
-    backgroundColor: T.bg, borderRadius: RADIUS.md,
+    backgroundColor: '#ece8de', borderRadius: RADIUS.input,
     paddingVertical: 12, fontSize: 20, fontFamily: FONTS.sansBold, color: T.ink,
-    borderWidth: 1, borderColor: T.line,
+    boxShadow: CLAY.inset,
   },
   modalBtns: { flexDirection: 'row', gap: 10, marginTop: 4 },
   modalCancel: {
-    flex: 1, borderRadius: RADIUS.pill, paddingVertical: 14,
+    flex: 1, borderRadius: RADIUS.lg, paddingVertical: 14,
     alignItems: 'center', borderWidth: 1, borderColor: T.line,
   },
   modalCancelText: { fontFamily: FONTS.sansSemiBold, fontSize: 15, color: T.mute },
-  modalConfirm: {
-    flex: 1.5, borderRadius: RADIUS.pill, paddingVertical: 14,
-    alignItems: 'center', backgroundColor: T.primary, ...SHADOW.fab,
-  },
-  modalConfirmText: { fontFamily: FONTS.sansSemiBold, fontSize: 15, color: '#fbfaf3' },
 });

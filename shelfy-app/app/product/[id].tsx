@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform, Modal, TextInput,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useProducts } from '@/context/ProductsContext';
 import { urgencyOf, shortDate, daysTo } from '@/lib/urgency';
@@ -11,7 +12,9 @@ import QuantityStepper from '@/components/QuantityStepper';
 import DateScannerModal from '@/components/DateScannerModal';
 import { ocrAvailable } from '@/lib/ocr';
 import { showAlert } from '@/lib/alert';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import PrimaryButton from '@/components/PrimaryButton';
+import { getInitials } from '@/lib/text';
+import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
 import { Zone, ScoreGrade } from '@/types';
 
 const GRADE_COLORS: Record<ScoreGrade, string> = {
@@ -243,7 +246,7 @@ export default function ProductDetailScreen() {
             onPress={() => (editing ? cancelEdit() : router.back())}
             style={styles.navBtn}
           >
-            <Text style={styles.navBtnText}>{editing ? '✕' : '‹'}</Text>
+            <Ionicons name={editing ? 'close' : 'chevron-back'} size={20} color={T.ink} />
           </TouchableOpacity>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             {editing ? (
@@ -255,12 +258,12 @@ export default function ProductDetailScreen() {
                 {saving ? (
                   <ActivityIndicator color="#fbfaf3" size="small" />
                 ) : (
-                  <Text style={[styles.navBtnText, { color: '#fbfaf3' }]}>✓</Text>
+                  <Ionicons name="checkmark" size={20} color="#fbfaf3" />
                 )}
               </TouchableOpacity>
             ) : (
               <TouchableOpacity style={styles.navBtn} onPress={startEdit}>
-                <Text style={styles.navBtnText}>✎</Text>
+                <Ionicons name="create-outline" size={19} color={T.ink} />
               </TouchableOpacity>
             )}
           </View>
@@ -269,7 +272,7 @@ export default function ProductDetailScreen() {
         {/* Hero */}
         <View style={[styles.hero, { backgroundColor: product.tint || T.primarySoft }]}>
           <Text style={styles.heroInitials}>
-            {(editing ? eName : product.name).split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()}
+            {getInitials(editing ? eName : product.name)}
           </Text>
           <Text style={styles.heroBrand}>{(editing ? eBrand : product.brand).toUpperCase()}</Text>
           <Text style={styles.heroName}>{editing ? (eName || 'Senza nome') : product.name}</Text>
@@ -383,11 +386,13 @@ export default function ProductDetailScreen() {
           <View style={styles.section}>
             <View style={styles.editExpiryActions}>
               <TouchableOpacity style={styles.editDateBtn} onPress={openExpiryPicker} activeOpacity={0.85}>
-                <Text style={styles.editDateBtnText}>📅 Cambia data</Text>
+                <Ionicons name="calendar-outline" size={17} color={T.ink} />
+                <Text style={styles.editDateBtnText}>Cambia data</Text>
               </TouchableOpacity>
               {ocrAvailable && (
                 <TouchableOpacity style={styles.editOcrBtn} onPress={() => setShowOcr(true)} activeOpacity={0.85}>
-                  <Text style={styles.editOcrBtnText}>📷 Scansiona</Text>
+                  <Ionicons name="camera-outline" size={17} color={T.primaryInk} />
+                  <Text style={styles.editOcrBtnText}>Scansiona</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -399,7 +404,7 @@ export default function ProductDetailScreen() {
         <View style={styles.section}>
           {!product.openedAt ? (
             <TouchableOpacity style={styles.openBtn} onPress={openOpenModal} activeOpacity={0.85}>
-              <Text style={styles.openBtnIcon}>🔓</Text>
+              <Ionicons name="lock-open-outline" size={22} color={T.primaryInk} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.openBtnTitle}>
                   {product.count > 1 ? 'Apri una unità' : 'Segna come aperto'}
@@ -416,7 +421,7 @@ export default function ProductDetailScreen() {
             </TouchableOpacity>
           ) : (
             <TouchableOpacity style={styles.openBtnActive} onPress={openOpenModal} activeOpacity={0.85}>
-              <Text style={styles.openBtnIcon}>🔓</Text>
+              <Ionicons name="lock-open-outline" size={22} color={T.primaryInk} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.openBtnTitleActive}>Prodotto aperto</Text>
                 <Text style={styles.openBtnSubActive}>
@@ -584,8 +589,9 @@ export default function ProductDetailScreen() {
             onPress={handleDelete}
             style={{ borderColor: 'rgba(189,74,48,0.2)', justifyContent: 'center' }}
           >
+            <Ionicons name="trash-outline" size={17} color={T.urgent} />
             <Text style={{ fontFamily: FONTS.sansSemiBold, color: T.urgent, fontSize: 16 }}>
-              🗑 Rimuovi dalla dispensa
+              Rimuovi dalla dispensa
             </Text>
           </Pill>
         </View>
@@ -691,13 +697,7 @@ export default function ProductDetailScreen() {
               >
                 <Text style={styles.modalCancelText}>Annulla</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalConfirm}
-                onPress={confirmOpen}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.modalConfirmText}>🔓 Conferma apertura</Text>
-              </TouchableOpacity>
+              <PrimaryButton onPress={confirmOpen} icon="lock-open-outline" label="Conferma apertura" containerStyle={{ flex: 2 }} />
             </View>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -751,9 +751,7 @@ export default function ProductDetailScreen() {
               <TouchableOpacity style={styles.modalCancel} onPress={() => setShowExpiryPicker(false)} activeOpacity={0.85}>
                 <Text style={styles.modalCancelText}>Annulla</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modalConfirm} onPress={confirmExpiry} activeOpacity={0.85}>
-                <Text style={styles.modalConfirmText}>Conferma</Text>
-              </TouchableOpacity>
+              <PrimaryButton onPress={confirmExpiry} label="Conferma" containerStyle={{ flex: 2 }} />
             </View>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -781,7 +779,6 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: 100, backgroundColor: T.surface,
     alignItems: 'center', justifyContent: 'center', ...SHADOW.card,
   },
-  navBtnText: { fontSize: 24, color: T.ink, lineHeight: 28 },
   navBtnSave: { backgroundColor: T.primary },
 
   editCard: {
@@ -794,14 +791,14 @@ const styles = StyleSheet.create({
 
   editExpiryActions: { flexDirection: 'row', gap: 10 },
   editDateBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: T.surface, borderRadius: RADIUS.pill, paddingVertical: 14,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: T.surface, borderRadius: RADIUS.lg, paddingVertical: 14,
     borderWidth: 1, borderColor: T.line, ...SHADOW.card,
   },
   editDateBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.ink },
   editOcrBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: T.primarySoft, borderRadius: RADIUS.pill, paddingVertical: 14,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: T.primarySoft, borderRadius: RADIUS.lg, paddingVertical: 14,
   },
   editOcrBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.primaryInk },
 
@@ -853,7 +850,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#e8f0e8', borderRadius: RADIUS.lg, padding: 16,
     borderWidth: 1, borderColor: 'rgba(58,107,58,0.2)',
   },
-  openBtnIcon: { fontSize: 22 },
   openBtnTitle: { fontSize: 14, fontFamily: FONTS.sansSemiBold, color: T.ink },
   openBtnSub: { fontSize: 12, color: T.mute, marginTop: 1, fontFamily: FONTS.sans },
   openBtnTitleActive: { fontSize: 14, fontFamily: FONTS.sansSemiBold, color: '#2d5c2d' },
@@ -913,7 +909,7 @@ const styles = StyleSheet.create({
   consumeAllBtn: { alignItems: 'center', paddingVertical: 12 },
   consumeAllText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.mute },
   allergenPill: {
-    backgroundColor: T.warnSoft, borderRadius: RADIUS.pill,
+    backgroundColor: T.warnSoft, borderRadius: RADIUS.tag,
     paddingVertical: 5, paddingHorizontal: 10,
   },
   allergenPillText: { fontSize: 12, fontFamily: FONTS.sansMedium, color: T.warn },
@@ -933,7 +929,7 @@ const styles = StyleSheet.create({
     textAlign: 'center', paddingVertical: 4,
   },
   preset: {
-    backgroundColor: T.bg, borderRadius: RADIUS.pill,
+    backgroundColor: T.bg, borderRadius: RADIUS.md,
     paddingVertical: 6, paddingHorizontal: 12,
     borderWidth: 1, borderColor: T.line,
   },
@@ -943,19 +939,14 @@ const styles = StyleSheet.create({
   pickerLabel: { fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.4 },
   pickerInput: {
     width: '100%', textAlign: 'center',
-    backgroundColor: T.bg, borderRadius: RADIUS.md,
+    backgroundColor: '#ece8de', borderRadius: RADIUS.input,
     paddingVertical: 12, fontSize: 20, fontFamily: FONTS.sansBold, color: T.ink,
-    borderWidth: 1, borderColor: T.line,
+    boxShadow: CLAY.inset,
   },
   modalBtns: { flexDirection: 'row', gap: 10, marginTop: 4 },
   modalCancel: {
-    flex: 1, borderRadius: RADIUS.pill, paddingVertical: 14,
+    flex: 1, borderRadius: RADIUS.lg, paddingVertical: 14,
     alignItems: 'center', borderWidth: 1, borderColor: T.line,
   },
   modalCancelText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.mute },
-  modalConfirm: {
-    flex: 2, borderRadius: RADIUS.pill, paddingVertical: 14,
-    alignItems: 'center', backgroundColor: T.primary, ...SHADOW.fab,
-  },
-  modalConfirmText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: '#fbfaf3' },
 });

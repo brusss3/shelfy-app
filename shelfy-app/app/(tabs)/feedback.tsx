@@ -15,6 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 import { submitFeedback, FeedbackCategory } from '@/lib/firestore';
 import ProfileButton from '@/components/ProfileButton';
 import { showAlert } from '@/lib/alert';
+import PrimaryButton from '@/components/PrimaryButton';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 
 interface CategoryOption {
@@ -57,11 +58,9 @@ const CATEGORIES: CategoryOption[] = [
 ];
 
 const QUICK_TAGS = [
-  'Scansione scontrini 🧾',
   'Widget per schermata home 📱',
   'Condivisione dispensa in famiglia 👨‍👩‍👧',
   'Filtro allergeni & bio 🌿',
-  'Ricette AI salva-cibo 🍳',
   'Esportazione lista spesa 🛒',
 ];
 
@@ -280,21 +279,14 @@ export default function FeedbackScreen() {
             </View>
 
             {/* Pulsante Invia */}
-            <TouchableOpacity
-              style={[
-                styles.submitBtn,
-                (!message.trim() || submitting) && styles.submitBtnDisabled,
-              ]}
+            <PrimaryButton
               onPress={handleSubmit}
-              disabled={!message.trim() || submitting}
-              activeOpacity={0.85}
-            >
-              {submitting ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.submitBtnText}>Invia suggerimento 🚀</Text>
-              )}
-            </TouchableOpacity>
+              disabled={!message.trim()}
+              loading={submitting}
+              icon="send-outline"
+              label="Invia suggerimento"
+              fullWidth
+            />
 
             {/* Roadmap / Prossime novità */}
             <View style={styles.roadmapCard}>
@@ -306,13 +298,19 @@ export default function FeedbackScreen() {
                 <View style={styles.roadmapItem}>
                   <Text style={styles.roadmapStatusTag}>In arrivo</Text>
                   <Text style={styles.roadmapText}>
-                    🍳 <Text style={styles.roadmapBold}>Ricette con Intelligenza Artificiale</Text> basate sugli ingredienti in scadenza
+                    👨‍👩‍👧 <Text style={styles.roadmapBold}>Condivisione della dispensa</Text> tra più account (famiglia, coinquilini)
                   </Text>
                 </View>
                 <View style={styles.roadmapItem}>
-                  <Text style={[styles.roadmapStatusTag, { backgroundColor: T.primarySoft }]}>In sviluppo</Text>
+                  <Text style={[styles.roadmapStatusTag, { backgroundColor: T.okSoft }]}>Attivo</Text>
                   <Text style={styles.roadmapText}>
-                    ⚡ <Text style={styles.roadmapBold}>Scansione scontrino & date</Text> ancora più veloce e precisa
+                    🍳 <Text style={styles.roadmapBold}>Ricetta del giorno con AI</Text> basata sugli ingredienti in scadenza
+                  </Text>
+                </View>
+                <View style={styles.roadmapItem}>
+                  <Text style={[styles.roadmapStatusTag, { backgroundColor: T.okSoft }]}>Attivo</Text>
+                  <Text style={styles.roadmapText}>
+                    🧾 <Text style={styles.roadmapBold}>Scansione scontrino & data di scadenza</Text> dalla fotocamera
                   </Text>
                 </View>
                 <View style={styles.roadmapItem}>
@@ -548,7 +546,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.surface,
     borderWidth: 1,
     borderColor: T.line,
-    borderRadius: RADIUS.pill,
+    borderRadius: RADIUS.md,
     paddingVertical: 7,
     paddingHorizontal: 12,
   },
@@ -598,23 +596,6 @@ const styles = StyleSheet.create({
     color: T.urgent,
   },
 
-  submitBtn: {
-    backgroundColor: T.primary,
-    borderRadius: RADIUS.pill,
-    paddingVertical: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...SHADOW.card,
-  },
-  submitBtnDisabled: {
-    opacity: 0.5,
-  },
-  submitBtnText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 16,
-    color: '#fff',
-    letterSpacing: 0.3,
-  },
 
   roadmapCard: {
     backgroundColor: T.surface,

@@ -34,7 +34,7 @@ export default function GoogleButtonUI({ onPress, loading, disabled }: Props) {
 const styles = StyleSheet.create({
   btn: {
     backgroundColor: T.surface,
-    borderRadius: RADIUS.pill,
+    borderRadius: RADIUS.lg,
     paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 1,

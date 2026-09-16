@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { Image, Platform, StyleSheet, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts,
@@ -13,6 +13,7 @@ import { RecipesProvider } from '@/context/RecipesContext';
 import { CommunityProvider } from '@/context/CommunityContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { setupNotificationHandler } from '@/lib/notifications';
+import { T } from '@/constants/theme';
 
 SplashScreen.preventAutoHideAsync();
 setupNotificationHandler();
@@ -38,7 +39,22 @@ export default function RootLayout() {
     }
   }, []);
 
-  if (!fontsLoaded && !fontError) return null;
+  // Lo splash nativo Android 12+ mostra solo un'icona centrata su sfondo
+  // colorato (vincolo della Splash Screen API di sistema, non aggirabile via
+  // config): per un vero splash a tutto schermo, dopo il breve lampo nativo
+  // mostriamo qui la stessa immagine a piena pagina finché i font non sono
+  // pronti, poi passiamo alla UI reale.
+  if (!fontsLoaded && !fontError) {
+    return (
+      <View style={styles.splash}>
+        <Image
+          source={require('@/assets/splashScreenNew.png')}
+          resizeMode="cover"
+          style={StyleSheet.absoluteFillObject}
+        />
+      </View>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -71,3 +87,7 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  splash: { flex: 1, backgroundColor: T.bg },
+});

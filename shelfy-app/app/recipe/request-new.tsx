@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProducts } from '@/context/ProductsContext';
 import { useCommunity } from '@/context/CommunityContext';
 import { showAlert } from '@/lib/alert';
+import PrimaryButton from '@/components/PrimaryButton';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 
 // Richiesta d'aiuto: l'utente seleziona ingredienti dalla propria dispensa
@@ -117,14 +118,14 @@ export default function RequestNewScreen() {
         <TouchableOpacity style={styles.cancelBtn} onPress={() => router.back()} activeOpacity={0.85}>
           <Text style={styles.cancelBtnText}>Annulla</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.saveBtn, (!canSave || saving) && { opacity: 0.6 }]}
+        <PrimaryButton
           onPress={handleSave}
-          disabled={!canSave || saving}
-          activeOpacity={0.85}
-        >
-          {saving ? <ActivityIndicator color="#fbfaf3" /> : <Text style={styles.saveBtnText}>🙋 Pubblica richiesta</Text>}
-        </TouchableOpacity>
+          disabled={!canSave}
+          loading={saving}
+          icon="help-buoy-outline"
+          label="Pubblica richiesta"
+          containerStyle={{ flex: 1.8 }}
+        />
       </View>
     </View>
   );
@@ -158,7 +159,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, marginBottom: 20,
   },
   chip: {
-    backgroundColor: T.surface, borderRadius: RADIUS.pill, paddingVertical: 8, paddingHorizontal: 14,
+    backgroundColor: T.surface, borderRadius: RADIUS.md, paddingVertical: 8, paddingHorizontal: 14,
     borderWidth: 1, borderColor: T.line,
   },
   chipActive: { backgroundColor: T.primary, borderColor: T.primary },
@@ -182,13 +183,8 @@ const styles = StyleSheet.create({
     backgroundColor: T.bg, borderTopWidth: 0.5, borderTopColor: T.line,
   },
   cancelBtn: {
-    flex: 1, borderRadius: RADIUS.pill, paddingVertical: 16,
+    flex: 1, borderRadius: RADIUS.lg, paddingVertical: 16,
     alignItems: 'center', borderWidth: 1, borderColor: T.line,
   },
   cancelBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 16, color: T.primary },
-  saveBtn: {
-    flex: 1.8, borderRadius: RADIUS.pill, paddingVertical: 16,
-    alignItems: 'center', backgroundColor: T.primary, ...SHADOW.fab,
-  },
-  saveBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 15, color: '#fbfaf3' },
 });

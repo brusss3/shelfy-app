@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useCommunity } from '@/context/CommunityContext';
@@ -9,6 +10,7 @@ import {
   getRecipeRequest, subscribeToProposals, createProposal, getCommunityRecipe,
 } from '@/lib/firestore';
 import { showAlert } from '@/lib/alert';
+import PrimaryButton from '@/components/PrimaryButton';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 import { CommunityRecipe, RecipeProposal, RecipeRequest } from '@/types';
 
@@ -164,24 +166,24 @@ export default function RequestDetailScreen() {
 
         {!isAuthor && (
           <View style={styles.section}>
-            <TouchableOpacity
-              style={styles.primaryBtn}
+            <PrimaryButton
               onPress={() => router.push({
                 pathname: '/recipe/create',
                 params: { requestId: request.id, prefillIngredients: JSON.stringify(request.ingredients) },
               })}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.primaryBtnText}>✎ Scrivi una ricetta nuova</Text>
-            </TouchableOpacity>
+              icon="create-outline"
+              label="Scrivi una ricetta nuova"
+              fullWidth
+            />
             <TouchableOpacity
               style={styles.secondaryBtn}
               onPress={() => setPickerVisible(true)}
               activeOpacity={0.85}
               disabled={myRecipes.length === 0}
             >
+              <Ionicons name="book-outline" size={17} color={T.primary} style={myRecipes.length === 0 ? { opacity: 0.5 } : undefined} />
               <Text style={[styles.secondaryBtnText, myRecipes.length === 0 && { opacity: 0.5 }]}>
-                📖 Proponi una mia ricetta
+                Proponi una mia ricetta
               </Text>
             </TouchableOpacity>
           </View>
@@ -190,7 +192,8 @@ export default function RequestDetailScreen() {
         {isAuthor && request.status === 'open' && (
           <View style={styles.section}>
             <TouchableOpacity style={styles.secondaryBtn} onPress={handleClose} disabled={closing} activeOpacity={0.85}>
-              <Text style={styles.secondaryBtnText}>{closing ? 'Attendere…' : '✓ Segna come risolta'}</Text>
+              {!closing && <Ionicons name="checkmark" size={17} color={T.primary} />}
+              <Text style={styles.secondaryBtnText}>{closing ? 'Attendere…' : 'Segna come risolta'}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -242,7 +245,7 @@ const styles = StyleSheet.create({
   },
   backBtnText: { fontSize: 24, color: T.ink, lineHeight: 28 },
 
-  statusPill: { borderRadius: RADIUS.pill, paddingVertical: 6, paddingHorizontal: 12 },
+  statusPill: { borderRadius: RADIUS.tag, paddingVertical: 6, paddingHorizontal: 12 },
   statusOpen: { backgroundColor: T.primarySoft },
   statusClosed: { backgroundColor: T.line },
   statusPillText: { fontSize: 11, fontFamily: FONTS.sansBold, textTransform: 'uppercase' },
@@ -253,7 +256,7 @@ const styles = StyleSheet.create({
   author: { fontSize: 15, fontFamily: FONTS.sansBold, color: T.ink },
   ingredientChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   ingredientChip: {
-    backgroundColor: T.surface, borderRadius: RADIUS.pill, paddingVertical: 5, paddingHorizontal: 12,
+    backgroundColor: T.surface, borderRadius: RADIUS.md, paddingVertical: 5, paddingHorizontal: 12,
     borderWidth: 1, borderColor: T.line,
   },
   ingredientChipText: { fontSize: 12, fontFamily: FONTS.sansMedium, color: T.ink2 },
@@ -274,13 +277,9 @@ const styles = StyleSheet.create({
   proposalTitle: { fontFamily: FONTS.sansBold, fontSize: 14, color: T.ink },
   proposalSub: { fontSize: 12, color: T.mute, fontFamily: FONTS.sans, marginTop: 2 },
 
-  primaryBtn: {
-    backgroundColor: T.primary, borderRadius: RADIUS.pill, paddingVertical: 15,
-    alignItems: 'center', ...SHADOW.fab,
-  },
-  primaryBtnText: { color: '#fbfaf3', fontFamily: FONTS.sansBold, fontSize: 15 },
   secondaryBtn: {
-    borderRadius: RADIUS.pill, paddingVertical: 15, alignItems: 'center',
+    borderRadius: RADIUS.lg, paddingVertical: 15,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     borderWidth: 1, borderColor: T.line, marginTop: 10,
   },
   secondaryBtnText: { color: T.primary, fontFamily: FONTS.sansBold, fontSize: 15 },

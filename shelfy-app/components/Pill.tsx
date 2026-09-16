@@ -61,7 +61,7 @@ export default function Pill({ children, onPress, variant = 'primary', size = 'm
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 100,
+    borderRadius: 9,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

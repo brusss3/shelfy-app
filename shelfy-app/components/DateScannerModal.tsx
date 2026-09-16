@@ -1,12 +1,77 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator, Modal,
+  View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator, Modal, Dimensions,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { T, FONTS, RADIUS } from '@/constants/theme';
 import { showAlert } from '@/lib/alert';
 import { recognizeText } from '@/lib/ocr';
 import { parseExpiry, type DateFormat } from '@/lib/parseExpiry';
+
+// Dimensioni del mirino (vedi styles.reticle/reticleRow più sotto): usate per
+// ritagliare lo scatto alla sola area inquadrata invece di passare l'intera
+// foto all'OCR, che altrimenti legge anche ingredienti/prezzo/barcode intorno
+// alla data e sceglie la scadenza sbagliata.
+const RETICLE_W = 280;
+const RETICLE_H = 150;
+
+interface CapturedPhoto {
+  uri: string;
+  width: number;
+  height: number;
+  base64?: string | null;
+}
+
+// Ritaglia lo scatto all'area del mirino (più un margine di sicurezza, per
+// compensare il fatto che l'anteprima camera è in "cover" mentre la foto
+// scattata può avere un aspect ratio leggermente diverso da quello schermo)
+// e la ingrandisce se il ritaglio risulta piccolo, per aiutare l'OCR a
+// leggere caratteri piccoli/incisi. In caso di errore ritorna la foto intera
+// (comportamento precedente) invece di far fallire lo scatto.
+async function cropToReticle(photo: CapturedPhoto): Promise<string> {
+  const fallback = photo.base64 ?? photo.uri;
+  try {
+    const screen = Dimensions.get('window');
+    if (!photo.width || !photo.height || !screen.width || !screen.height) return fallback;
+
+    const scaleX = photo.width / screen.width;
+    const scaleY = photo.height / screen.height;
+
+    // Layout del mirino in DateScannerModal: riga fissa RETICLE_H centrata,
+    // spazio restante diviso flex 1 (sopra) / 2 (sotto) — vedi styles.overlay.
+    const sideW = (screen.width - RETICLE_W) / 2;
+    const topH = (screen.height - RETICLE_H) / 3;
+
+    const marginX = RETICLE_W * 0.15;
+    const marginY = RETICLE_H * 0.35;
+
+    const boxX = Math.max(0, sideW - marginX);
+    const boxY = Math.max(0, topH - marginY);
+    const boxW = Math.min(screen.width - boxX, RETICLE_W + marginX * 2);
+    const boxH = Math.min(screen.height - boxY, RETICLE_H + marginY * 2);
+
+    const originX = Math.round(boxX * scaleX);
+    const originY = Math.round(boxY * scaleY);
+    const width = Math.min(photo.width - originX, Math.round(boxW * scaleX));
+    const height = Math.min(photo.height - originY, Math.round(boxH * scaleY));
+    if (width < 20 || height < 20) return fallback;
+
+    const actions: ImageManipulator.Action[] = [{ crop: { originX, originY, width, height } }];
+    // Ingrandisce i ritagli piccoli: aiuta l'OCR su testo minuto/inciso senza
+    // appesantire inutilmente i ritagli già ad alta risoluzione.
+    if (width < 900) actions.push({ resize: { width: 900 } });
+
+    const result = await ImageManipulator.manipulateAsync(photo.uri, actions, {
+      compress: 0.92,
+      format: ImageManipulator.SaveFormat.JPEG,
+      base64: Platform.OS === 'web',
+    });
+    return result.base64 ? `data:image/jpeg;base64,${result.base64}` : result.uri;
+  } catch {
+    return fallback;
+  }
+}
 
 interface Props {
   visible: boolean;
@@ -70,12 +135,7 @@ export default function DateScannerModal({ visible, onClose, onResult }: Props) 
       });
       if (!photo) throw new Error('Scatto non riuscito');
 
-      // Su web expo-camera restituisce già una data URL completa
-      // ("data:image/png;base64,...") sia in `uri` che in `base64`: non va
-      // ri-prefissata, altrimenti la stringa risultante non è più base64
-      // valido e il decoder (atob) lancia un errore.
-      const src = photo.base64 ?? photo.uri;
-
+      const src = await cropToReticle(photo);
       const text = await recognizeText(src);
       const iso = parseExpiry(text, format);
 

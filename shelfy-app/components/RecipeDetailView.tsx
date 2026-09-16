@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   },
   ingredientName: { fontSize: 14, fontFamily: FONTS.sansSemiBold, color: T.ink },
   ingredientSub: { fontSize: 11, color: T.mute, marginTop: 2, fontFamily: FONTS.sans },
-  statusBadge: { borderRadius: RADIUS.pill, paddingVertical: 4, paddingHorizontal: 9 },
+  statusBadge: { borderRadius: RADIUS.tag, paddingVertical: 4, paddingHorizontal: 9 },
 
   stepCard: {
     backgroundColor: T.surface, borderRadius: RADIUS.lg, padding: 14,

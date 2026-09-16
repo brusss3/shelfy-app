@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
+  View, Text, Image, TextInput, TouchableOpacity, StyleSheet,
+  KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { authErrorMessage } from '@/lib/authErrors';
+import PrimaryButton from '@/components/PrimaryButton';
 import { showAlert } from '@/lib/alert';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -41,9 +42,7 @@ export default function ForgotPasswordScreen() {
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <View style={styles.logoTile}>
-            <Text style={styles.logoText}>Sf</Text>
-          </View>
+          <Image source={require('@/assets/icon.png')} style={styles.logoTile} resizeMode="contain" />
           <Text style={styles.appName}>Shelfy</Text>
           <Text style={styles.tagline}>Recupera l'accesso al tuo account</Text>
         </View>
@@ -56,13 +55,12 @@ export default function ForgotPasswordScreen() {
                 Se esiste un account associato a <Text style={{ fontFamily: FONTS.sansSemiBold }}>{email.trim()}</Text>,
                 {' '}riceverai a breve un'email con le istruzioni per reimpostare la password.
               </Text>
-              <TouchableOpacity
-                style={styles.btn}
+              <PrimaryButton
                 onPress={() => router.replace('/(auth)/login')}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.btnText}>Torna al login</Text>
-              </TouchableOpacity>
+                label="Torna al login"
+                fullWidth
+                containerStyle={{ marginTop: 20 }}
+              />
             </>
           ) : (
             <>
@@ -85,18 +83,13 @@ export default function ForgotPasswordScreen() {
                 />
               </View>
 
-              <TouchableOpacity
-                style={[styles.btn, loading && { opacity: 0.7 }]}
+              <PrimaryButton
                 onPress={handleReset}
-                disabled={loading}
-                activeOpacity={0.85}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.btnText}>Invia link di reset</Text>
-                )}
-              </TouchableOpacity>
+                loading={loading}
+                label="Invia link di reset"
+                fullWidth
+                containerStyle={{ marginTop: 20 }}
+              />
             </>
           )}
         </View>
@@ -115,13 +108,12 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, justifyContent: 'center', padding: 24, paddingBottom: 48 },
   header: { alignItems: 'center', marginBottom: 32 },
   logoTile: {
-    width: 80, height: 80, borderRadius: 24, backgroundColor: T.primary,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 14, ...SHADOW.fab,
+    width: 84, height: 102, marginBottom: 10,
+    boxShadow: SHADOW.fab.boxShadow,
   },
-  logoText: { fontFamily: FONTS.serifItalic, fontSize: 36, color: '#fbfaf3' },
   appName: { fontFamily: FONTS.serifItalic, fontSize: 36, color: T.ink, letterSpacing: -1 },
   tagline: { fontSize: 14, color: T.mute, marginTop: 4, fontFamily: FONTS.sans, textAlign: 'center' },
-  card: { backgroundColor: T.surface, borderRadius: RADIUS.xl, padding: 20, ...SHADOW.card },
+  card: { backgroundColor: T.surface, borderRadius: RADIUS.clay, padding: 20, ...SHADOW.card },
   formTitle: {
     fontFamily: FONTS.serifItalic, fontSize: 26, color: T.ink,
     marginBottom: 10, letterSpacing: -0.4,
@@ -133,16 +125,11 @@ const styles = StyleSheet.create({
     marginBottom: 6, letterSpacing: 0.1,
   },
   input: {
-    backgroundColor: T.bg, borderRadius: RADIUS.md,
-    paddingHorizontal: 16, paddingVertical: 12,
+    backgroundColor: '#ece8de', borderRadius: RADIUS.input,
+    paddingHorizontal: 16, paddingVertical: 13,
     fontFamily: FONTS.sans, fontSize: 15, color: T.ink,
-    borderWidth: 1, borderColor: T.line,
+    boxShadow: CLAY.inset,
   },
-  btn: {
-    backgroundColor: T.primary, borderRadius: RADIUS.pill,
-    paddingVertical: 16, alignItems: 'center', marginTop: 20, ...SHADOW.fab,
-  },
-  btnText: { fontFamily: FONTS.sansSemiBold, fontSize: 16, color: '#fbfaf3' },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
   footerText: { fontFamily: FONTS.sans, fontSize: 14, color: T.mute },
   footerLink: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.primary },

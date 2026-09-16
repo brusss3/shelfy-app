@@ -7,9 +7,10 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProducts } from '@/context/ProductsContext';
 import { Zone } from '@/types';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
 import { tintForCategory } from '@/lib/urgency';
 import { showAlert } from '@/lib/alert';
+import PrimaryButton from '@/components/PrimaryButton';
 
 const ZONES: { id: Zone; label: string; icon: string }[] = [
   { id: 'frigo', label: 'Frigo', icon: '❄️' },
@@ -294,9 +295,7 @@ export default function ReceiptReviewScreen() {
               <TouchableOpacity style={styles.modalCancel} onPress={() => setShowDatePicker(false)} activeOpacity={0.85}>
                 <Text style={styles.modalCancelText}>Annulla</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modalConfirm} onPress={confirmDate} activeOpacity={0.85}>
-                <Text style={styles.modalConfirmText}>Conferma</Text>
-              </TouchableOpacity>
+              <PrimaryButton onPress={confirmDate} label="Conferma" containerStyle={{ flex: 1.5 }} />
             </View>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -307,18 +306,14 @@ export default function ReceiptReviewScreen() {
         <TouchableOpacity style={styles.cancelBtn} onPress={() => router.back()} activeOpacity={0.85}>
           <Text style={styles.cancelBtnText}>Annulla</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.saveBtn, (!canSave || saving) && { opacity: 0.6 }]}
+        <PrimaryButton
           onPress={handleSave}
-          disabled={!canSave || saving}
-          activeOpacity={0.85}
-        >
-          {saving ? (
-            <ActivityIndicator color="#fbfaf3" />
-          ) : (
-            <Text style={styles.saveBtnText}>✓ Aggiungi {validRows.length} prodott{validRows.length === 1 ? 'o' : 'i'}</Text>
-          )}
-        </TouchableOpacity>
+          disabled={!canSave}
+          loading={saving}
+          icon="checkmark"
+          label={`Aggiungi ${validRows.length} prodott${validRows.length === 1 ? 'o' : 'i'}`}
+          containerStyle={{ flex: 1.8 }}
+        />
       </View>
     </View>
   );
@@ -361,7 +356,7 @@ const styles = StyleSheet.create({
 
   presets: { paddingHorizontal: 16, gap: 6, marginBottom: 20 },
   preset: {
-    backgroundColor: T.surface, borderRadius: RADIUS.pill,
+    backgroundColor: T.surface, borderRadius: RADIUS.md,
     paddingVertical: 6, paddingHorizontal: 12, ...SHADOW.card,
   },
   presetText: { fontSize: 12, fontFamily: FONTS.sansSemiBold, color: T.ink2 },
@@ -397,16 +392,10 @@ const styles = StyleSheet.create({
     backgroundColor: T.bg, borderTopWidth: 0.5, borderTopColor: T.line,
   },
   cancelBtn: {
-    flex: 1, borderRadius: RADIUS.pill, paddingVertical: 16,
+    flex: 1, borderRadius: RADIUS.lg, paddingVertical: 16,
     alignItems: 'center', borderWidth: 1, borderColor: T.line,
   },
   cancelBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 16, color: T.primary },
-  saveBtn: {
-    flex: 1.8, borderRadius: RADIUS.pill, paddingVertical: 16,
-    alignItems: 'center', backgroundColor: T.primary, ...SHADOW.fab,
-  },
-  saveBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 15, color: '#fbfaf3' },
-
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center',
   },
@@ -418,19 +407,14 @@ const styles = StyleSheet.create({
   pickerCol: { flex: 1, alignItems: 'center', gap: 6 },
   pickerLabel: { fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.4 },
   pickerInput: {
-    width: '100%', textAlign: 'center', backgroundColor: T.bg, borderRadius: RADIUS.md,
+    width: '100%', textAlign: 'center', backgroundColor: '#ece8de', borderRadius: RADIUS.input,
     paddingVertical: 12, fontSize: 20, fontFamily: FONTS.sansBold, color: T.ink,
-    borderWidth: 1, borderColor: T.line,
+    boxShadow: CLAY.inset,
   },
   modalBtns: { flexDirection: 'row', gap: 10, marginTop: 4 },
   modalCancel: {
-    flex: 1, borderRadius: RADIUS.pill, paddingVertical: 14,
+    flex: 1, borderRadius: RADIUS.lg, paddingVertical: 14,
     alignItems: 'center', borderWidth: 1, borderColor: T.line,
   },
   modalCancelText: { fontFamily: FONTS.sansSemiBold, fontSize: 15, color: T.mute },
-  modalConfirm: {
-    flex: 1.5, borderRadius: RADIUS.pill, paddingVertical: 14,
-    alignItems: 'center', backgroundColor: T.primary, ...SHADOW.fab,
-  },
-  modalConfirmText: { fontFamily: FONTS.sansSemiBold, fontSize: 15, color: '#fbfaf3' },
 });

@@ -10,7 +10,8 @@ import { useAuth } from '@/context/AuthContext';
 import { submitFeedback, FeedbackCategory } from '@/lib/firestore';
 import { openSubscriptionManagement } from '@/lib/purchases';
 import { showAlert } from '@/lib/alert';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import PrimaryButton from '@/components/PrimaryButton';
+import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return '';
@@ -181,14 +182,14 @@ export default function SettingsScreen() {
               numberOfLines={4}
               textAlignVertical="top"
             />
-            <TouchableOpacity
-              style={[styles.sendBtn, (!fbMessage.trim() || sendingFb) && { opacity: 0.5 }]}
+            <PrimaryButton
               onPress={handleSendFeedback}
-              disabled={!fbMessage.trim() || sendingFb}
-              activeOpacity={0.85}
-            >
-              {sendingFb ? <ActivityIndicator color="#fff" /> : <Text style={styles.sendBtnText}>Invia segnalazione</Text>}
-            </TouchableOpacity>
+              disabled={!fbMessage.trim()}
+              loading={sendingFb}
+              label="Invia segnalazione"
+              fullWidth
+              style={{ marginTop: 12 }}
+            />
           </Section>
 
           {/* Strumenti ristorazione */}
@@ -247,7 +248,7 @@ const styles = StyleSheet.create({
   name: { fontFamily: FONTS.sansBold, fontSize: 18, color: T.ink },
   email: { fontFamily: FONTS.sans, fontSize: 13, color: T.mute, marginTop: 2 },
   premiumBadge: {
-    backgroundColor: T.primary, borderRadius: RADIUS.pill, paddingVertical: 4, paddingHorizontal: 10,
+    backgroundColor: T.primary, borderRadius: RADIUS.tag, paddingVertical: 4, paddingHorizontal: 10,
   },
   premiumBadgeText: { fontFamily: FONTS.sansBold, fontSize: 10, color: '#fbfaf3', letterSpacing: 0.6 },
 
@@ -274,15 +275,9 @@ const styles = StyleSheet.create({
   fbCatText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: T.ink2 },
   fbCatTextActive: { color: T.primaryInk },
   fbInput: {
-    backgroundColor: T.bg, borderRadius: RADIUS.md, borderWidth: 1, borderColor: T.line,
+    backgroundColor: '#ece8de', borderRadius: RADIUS.input, boxShadow: CLAY.inset,
     padding: 12, fontFamily: FONTS.sans, fontSize: 14, color: T.ink, minHeight: 96,
   },
-  sendBtn: {
-    backgroundColor: T.primary, borderRadius: RADIUS.pill, paddingVertical: 13,
-    alignItems: 'center', marginTop: 12,
-  },
-  sendBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 15, color: '#fbfaf3' },
-
   logoutBtn: {
     backgroundColor: T.urgentSoft, borderRadius: RADIUS.md, paddingVertical: 14, alignItems: 'center',
   },

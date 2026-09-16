@@ -31,27 +31,98 @@ export const FONTS = {
   sansBold: 'DMSans_700Bold',
 };
 
+// Famiglia di raggi: ogni elemento sta intorno a un terzo della propria
+// altezza, così la curvatura è la stessa ovunque invece di alternare capsule
+// e spigoli. Il "pill" resta solo per ciò che è davvero un disco (avatar,
+// controlli della fotocamera), non per bottoni e campi.
 export const RADIUS = {
   sm: 10,
-  md: 14,
-  lg: 18,
-  xl: 24,
-  pill: 100,
+  tag: 9,      // badge, etichette di stato
+  md: 14,      // chip, filtri, tile piccole
+  input: 16,   // campi di testo e ricerca
+  lg: 18,      // bottoni
+  clay: 20,    // card in rilievo
+  xl: 24,      // fogli modali
+  pill: 100,   // solo cerchi veri
 };
 
+// "Plastilina": la luce arriva sempre dall'alto — bordo interno chiaro in
+// cima, velatura interna in basso, ombra esterna corta sotto — così ogni
+// superficie legge come un oggetto appoggiato sul fondo crema invece che come
+// un rettangolo disegnato. Il rilievo va SOLO su ciò che è un oggetto (card,
+// tile, chip, pulsanti): testo, liste e intestazioni restano piatti,
+// altrimenti l'interfaccia diventa un giocattolo.
+//
+// Nota tecnica: `boxShadow` (RN 0.78+) al posto delle vecchie shadow*/
+// elevation separate, che su react-native-web non producono alcuna ombra
+// (prop deprecata) e lasciavano il web completamente piatto. `elevation`
+// resta solo come rete di sicurezza per Android su old architecture.
+export const CLAY = {
+  // Ombra corta e un po' più densa invece che larga e tenue: sul fondo crema
+  // un blur ampio legge come alone sporco, non come distacco.
+  surface:
+    '0px 8px 16px rgba(40,50,35,0.09), ' +
+    '0px 1px 0px rgba(255,255,255,0.95) inset, ' +
+    '0px -3px 6px rgba(40,50,35,0.05) inset',
+  chip:
+    '0px 4px 10px rgba(40,50,35,0.10), ' +
+    '0px 1px 0px rgba(255,255,255,0.85) inset, ' +
+    '0px -2px 4px rgba(40,50,35,0.06) inset',
+  // Incavo: i campi di input sembrano scavati nella superficie invece che
+  // sollevati, così si distingue a colpo d'occhio cosa si preme e cosa si
+  // riempie.
+  inset:
+    '0px 2px 5px rgba(40,50,35,0.12) inset, ' +
+    '0px -1px 0px rgba(255,255,255,0.9) inset',
+};
+
+// `SHADOW.card` è usato da tutte le schermate: ridefinirlo qui porta il
+// rilievo ovunque senza toccare ogni singolo file.
 export const SHADOW = {
   card: {
-    shadowColor: 'rgba(40,50,35,1)',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    boxShadow: CLAY.surface,
     elevation: 3,
   },
   fab: {
-    shadowColor: 'rgba(20,40,18,1)',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.45,
-    shadowRadius: 14,
+    boxShadow: '0px 8px 14px rgba(20,40,18,0.45)',
     elevation: 10,
   },
+};
+
+// Sfumatura + ombra a più livelli per i pulsanti d'azione primari: luce
+// implicita dall'alto (gradiente più chiaro in cima), bordo superiore
+// lucido (inset chiaro) e leggero scurimento sul bordo inferiore (inset
+// scuro) danno la sensazione di superficie premibile in rilievo, sopra
+// l'ombra esterna che la stacca dallo sfondo.
+export const GRADIENT = {
+  primary: ['#3c5e40', '#2f4a31'] as const,
+};
+
+export const DEPTH = {
+  button:
+    '0px 6px 14px rgba(20,40,18,0.32), ' +
+    '0px 1px 0px rgba(255,255,255,0.22) inset, ' +
+    '0px -3px 5px rgba(13,31,16,0.20) inset',
+  // Stessa idea per i pulsanti secondari chiari (icona su sfondo bianco):
+  // bordo interno chiaro più leggero, ombra esterna più contenuta.
+  buttonLight:
+    '0px 6px 12px rgba(20,40,18,0.16), ' +
+    '0px 1px 0px rgba(255,255,255,0.9) inset, ' +
+    '0px -2px 4px rgba(20,40,18,0.08) inset',
+};
+
+
+// Sfumature delle superfici chiare: quasi impercettibili, servono solo a dare
+// la direzione della luce (più chiaro in alto).
+export const SURFACE = {
+  card: ['#ffffff', '#f6f4ee'] as const,
+  warm: ['#faeacd', '#f2dcb4'] as const,
+};
+
+// Materiale delle tre zone: il freddo è vetro/ghiaccio, la dispensa è carta.
+// Usato solo dove la zona è il soggetto (chip attivo, etichette), non ovunque.
+export const ZONE_MATERIAL = {
+  frigo: { surface: ['#e6f0f2', '#d2e2e7'] as const, ink: '#23505b' },
+  freezer: { surface: ['#e9f1fa', '#d7e5f4'] as const, ink: '#2a4566' },
+  dispensa: { surface: ['#f3e8d6', '#e7d8bf'] as const, ink: '#5a4227' },
 };

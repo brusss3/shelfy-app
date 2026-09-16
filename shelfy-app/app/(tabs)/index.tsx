@@ -4,6 +4,7 @@ import {
   StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useProducts } from '@/context/ProductsContext';
 import { useAuth } from '@/context/AuthContext';
@@ -12,7 +13,11 @@ import { ocrAvailable } from '@/lib/ocr';
 import ProductRow from '@/components/ProductRow';
 import StatCard from '@/components/StatCard';
 import ProfileButton from '@/components/ProfileButton';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import PrimaryButton from '@/components/PrimaryButton';
+import { LinearGradient } from 'expo-linear-gradient';
+import {
+  T, FONTS, RADIUS, DEPTH, CLAY, SURFACE, GRADIENT, ZONE_MATERIAL,
+} from '@/constants/theme';
 
 type Zone = 'all' | 'frigo' | 'freezer' | 'dispensa';
 
@@ -29,7 +34,6 @@ export default function HomeScreen() {
   const router = useRouter();
   const [zone, setZone] = useState<Zone>('all');
   const [query, setQuery] = useState('');
-  const [fabOpen, setFabOpen] = useState(false);
 
   const firstName = user?.displayName?.split(' ')[0] ?? 'ciao';
   const hour = new Date().getHours();
@@ -74,7 +78,7 @@ export default function HomeScreen() {
                 onPress={() => router.push('/admin')}
                 style={styles.adminBtn}
               >
-                <Text style={styles.adminBtnText}>⚙</Text>
+                <Ionicons name="shield-outline" size={19} color={T.primaryInk} />
               </TouchableOpacity>
             )}
             <ProfileButton />
@@ -90,7 +94,7 @@ export default function HomeScreen() {
 
         {/* Search */}
         <View style={styles.searchBox}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Ionicons name="search-outline" size={17} color={T.mute} />
           <TextInput
             value={query}
             onChangeText={setQuery}
@@ -108,19 +112,22 @@ export default function HomeScreen() {
         >
           {ZONES.map((z) => {
             const active = zone === z.id;
+            // Ogni zona ha il suo materiale: freddo per frigo e freezer, carta
+            // per la dispensa. "Tutto" non è una zona, quindi resta il verde
+            // del marchio.
+            const material = z.id === 'all' ? null : ZONE_MATERIAL[z.id];
+            const surface = active ? (material?.surface ?? GRADIENT.primary) : SURFACE.card;
+            const labelColor = active ? (material?.ink ?? '#fbfaf3') : T.ink;
             return (
-              <TouchableOpacity
-                key={z.id}
-                onPress={() => setZone(z.id)}
-                activeOpacity={0.85}
-                style={[styles.chip, active && styles.chipActive]}
-              >
-                {z.icon ? (
-                  <Text style={styles.chipIcon}>{z.icon}</Text>
-                ) : null}
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                  {z.label}
-                </Text>
+              <TouchableOpacity key={z.id} onPress={() => setZone(z.id)} activeOpacity={0.9}>
+                <LinearGradient colors={surface} style={styles.chip}>
+                  {z.icon ? (
+                    <Text style={styles.chipIcon}>{z.icon}</Text>
+                  ) : null}
+                  <Text style={[styles.chipText, { color: labelColor }]}>
+                    {z.label}
+                  </Text>
+                </LinearGradient>
               </TouchableOpacity>
             );
           })}
@@ -129,20 +136,22 @@ export default function HomeScreen() {
         {/* Alert banner */}
         {urgentCount + expiredCount > 0 && (
           <TouchableOpacity
-            style={styles.alertBanner}
             onPress={() => router.push('/(tabs)/notifications')}
-            activeOpacity={0.88}
+            activeOpacity={0.9}
+            style={styles.alertWrap}
           >
-            <View style={styles.alertIcon}>
-              <Text style={{ fontSize: 22 }}>🔥</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.alertTitle}>
-                {urgentCount + expiredCount} prodotti richiedono attenzione
-              </Text>
-              <Text style={styles.alertSub}>Tocca per vedere i suggerimenti</Text>
-            </View>
-            <Text style={{ color: '#a86322', fontSize: 18 }}>›</Text>
+            <LinearGradient colors={SURFACE.warm} style={styles.alertBanner}>
+              <View style={styles.alertIcon}>
+                <Text style={{ fontSize: 22 }}>🔥</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.alertTitle}>
+                  {urgentCount + expiredCount} prodotti richiedono attenzione
+                </Text>
+                <Text style={styles.alertSub}>Tocca per vedere i suggerimenti</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#a86322" />
+            </LinearGradient>
           </TouchableOpacity>
         )}
 
@@ -168,54 +177,43 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      {/* FAB backdrop */}
-      {fabOpen && (
+      {/* Barra azione: lo scan è il gesto primario (come lo scatto di una
+          fotocamera), non una voce in un menu da aprire prima. Manuale e
+          scontrino restano a un tocco, ma con peso visivo minore. */}
+      <View style={styles.actionBar}>
         <TouchableOpacity
-          style={StyleSheet.absoluteFillObject}
-          onPress={() => setFabOpen(false)}
-          activeOpacity={1}
-        />
-      )}
-
-      {/* FAB speed dial */}
-      <View style={[styles.fabContainer, { bottom: 8 }]}>
-        {fabOpen && (
-          <>
-            <TouchableOpacity
-              style={styles.fabOption}
-              onPress={() => { setFabOpen(false); router.push('/add'); }}
-              activeOpacity={0.9}
-            >
-              <Text style={styles.fabOptionText}>Manuale</Text>
-              <View style={styles.fabOptionBadge}><Text style={{ fontSize: 18 }}>✏️</Text></View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.fabOption}
-              onPress={() => { setFabOpen(false); router.push('/scanner'); }}
-              activeOpacity={0.9}
-            >
-              <Text style={styles.fabOptionText}>Scansiona</Text>
-              <View style={styles.fabOptionBadge}><Text style={{ fontSize: 18 }}>📷</Text></View>
-            </TouchableOpacity>
-            {ocrAvailable && (
-              <TouchableOpacity
-                style={styles.fabOption}
-                onPress={() => { setFabOpen(false); router.push('/receipt-scan'); }}
-                activeOpacity={0.9}
-              >
-                <Text style={styles.fabOptionText}>Scontrino</Text>
-                <View style={styles.fabOptionBadge}><Text style={{ fontSize: 18 }}>🧾</Text></View>
-              </TouchableOpacity>
-            )}
-          </>
-        )}
-        <TouchableOpacity
-          style={[styles.fabMain, fabOpen && styles.fabMainOpen]}
-          onPress={() => setFabOpen(v => !v)}
+          style={styles.actionSide}
+          onPress={() => router.push('/add')}
           activeOpacity={0.85}
+          accessibilityLabel="Aggiungi manualmente"
         >
-          <Text style={styles.fabMainText}>{fabOpen ? '✕' : '+'}</Text>
+          <Ionicons name="pencil-outline" size={19} color={T.primary} />
         </TouchableOpacity>
+
+        <PrimaryButton
+          onPress={() => router.push('/scanner')}
+          icon="camera-outline"
+          iconVariant="shutter"
+          label="Scansiona"
+          subLabel="Aggiungi un prodotto"
+          compactOnNative
+          containerStyle={styles.scanCta}
+          style={styles.scanCtaSurface}
+          accessibilityLabel="Scansiona un prodotto"
+        />
+
+        {ocrAvailable ? (
+          <TouchableOpacity
+            style={styles.actionSide}
+            onPress={() => router.push('/receipt-scan')}
+            activeOpacity={0.85}
+            accessibilityLabel="Scansiona uno scontrino"
+          >
+            <Ionicons name="receipt-outline" size={19} color={T.primary} />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.actionSide} />
+        )}
       </View>
     </SafeAreaView>
   );
@@ -245,37 +243,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginBottom: 14,
   },
 
+  // Il campo di ricerca è l'unico elemento "scavato" della schermata: si
+  // riempie, non si preme, e l'incavo lo distingue dalle superfici sollevate.
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: T.surface, borderRadius: RADIUS.pill,
-    paddingHorizontal: 16, paddingVertical: 10,
-    marginHorizontal: 20, marginBottom: 12, ...SHADOW.card,
+    backgroundColor: '#ece8de', borderRadius: RADIUS.input,
+    paddingHorizontal: 16, paddingVertical: 12,
+    marginHorizontal: 20, marginBottom: 12,
+    boxShadow: CLAY.inset,
   },
-  searchIcon: { fontSize: 16 },
   searchInput: {
     flex: 1, fontFamily: FONTS.sans, fontSize: 14, color: T.ink,
   },
 
-  chips: { paddingHorizontal: 20, gap: 8, paddingBottom: 12 },
+  chips: { paddingHorizontal: 20, gap: 8, paddingTop: 2, paddingBottom: 14 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: T.surface, borderRadius: RADIUS.pill,
-    paddingVertical: 8, paddingHorizontal: 14, ...SHADOW.card,
+    borderRadius: RADIUS.md,
+    paddingVertical: 9, paddingHorizontal: 15,
+    boxShadow: CLAY.chip,
   },
-  chipActive: { backgroundColor: T.primary },
   chipIcon: { fontSize: 15 },
-  chipText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: T.ink },
-  chipTextActive: { color: '#fbfaf3' },
+  chipText: { fontFamily: FONTS.sansSemiBold, fontSize: 13 },
 
+  alertWrap: { marginHorizontal: 20, marginBottom: 14 },
   alertBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    marginHorizontal: 20, marginBottom: 14,
-    backgroundColor: '#f9e6c8', borderRadius: RADIUS.lg,
-    padding: 14, borderWidth: 0.5, borderColor: 'rgba(140,90,30,0.15)',
+    borderRadius: RADIUS.clay, padding: 14,
+    boxShadow: CLAY.surface,
   },
   alertIcon: {
     width: 44, height: 44, borderRadius: 100,
-    backgroundColor: 'rgba(255,255,255,0.6)', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.7)', alignItems: 'center', justifyContent: 'center',
+    boxShadow: '0px 2px 4px rgba(120,80,20,0.12)',
   },
   alertTitle: { fontSize: 13, fontFamily: FONTS.sansBold, color: '#4a3414' },
   alertSub: { fontSize: 12, color: '#7a5a26', marginTop: 2, fontFamily: FONTS.sans },
@@ -292,30 +292,15 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: 20, gap: 8 },
   empty: { textAlign: 'center', color: T.mute, fontSize: 14, paddingVertical: 32, fontFamily: FONTS.sans },
 
-  fabContainer: {
-    position: 'absolute', right: 20,
-    alignItems: 'flex-end', gap: 12,
-  },
-  fabMain: {
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: T.primary,
-    alignItems: 'center', justifyContent: 'center',
-    ...SHADOW.fab,
-  },
-  fabMainOpen: { backgroundColor: T.ink },
-  fabMainText: {
-    fontSize: 30, color: '#fbfaf3',
-    fontFamily: FONTS.sansMedium, lineHeight: 34, textAlign: 'center',
-  },
-  fabOption: {
+  actionBar: {
+    position: 'absolute', left: 20, right: 20, bottom: 8,
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: T.surface, borderRadius: RADIUS.pill,
-    paddingVertical: 10, paddingHorizontal: 14,
-    ...SHADOW.fab,
   },
-  fabOptionText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.ink },
-  fabOptionBadge: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: T.primarySoft, alignItems: 'center', justifyContent: 'center',
+  actionSide: {
+    width: 50, height: 50, borderRadius: RADIUS.input,
+    backgroundColor: T.surface, alignItems: 'center', justifyContent: 'center',
+    boxShadow: DEPTH.buttonLight,
   },
+  scanCta: { flex: 1 },
+  scanCtaSurface: { paddingLeft: 6 },
 });

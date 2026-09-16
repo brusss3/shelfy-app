@@ -179,7 +179,7 @@ function PriorityCard({ product, urgency, onOpen, onRemove, onConsumed, onFreeze
         <View style={styles.actions}>
           {urgency === 'scaduto' ? (
             <>
-              {onRemove && <Pill variant="danger" size="sm" onPress={onRemove}>🗑 Rimuovi</Pill>}
+              {onRemove && <Pill variant="danger" size="sm" onPress={onRemove}>Rimuovi</Pill>}
             </>
           ) : (
             <>
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   summaryChip: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingVertical: 8, paddingHorizontal: 12, borderRadius: RADIUS.pill,
+    paddingVertical: 8, paddingHorizontal: 12, borderRadius: RADIUS.md,
   },
   dot: { width: 6, height: 6, borderRadius: 3 },
   summaryText: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   urgencyStrip: { height: 4 },
   productRow: { flexDirection: 'row', gap: 12, alignItems: 'center', marginBottom: 10 },
   badgeRow: { flexDirection: 'row', gap: 8, alignItems: 'center', marginBottom: 4 },
-  urgencyBadge: { borderRadius: RADIUS.pill, paddingVertical: 3, paddingHorizontal: 8 },
+  urgencyBadge: { borderRadius: RADIUS.tag, paddingVertical: 3, paddingHorizontal: 8 },
   urgencyBadgeText: { fontSize: 10, fontFamily: FONTS.sansBold, letterSpacing: 0.3 },
   zoneText: { fontSize: 11, color: T.mute, fontFamily: FONTS.sans },
   productName: { fontSize: 16, fontFamily: FONTS.sansBold, color: T.ink, letterSpacing: -0.2 },

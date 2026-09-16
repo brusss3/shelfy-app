@@ -1,9 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import FoodTile from './FoodTile';
 import { Product } from '@/types';
 import { urgencyOf, effectiveDays } from '@/lib/urgency';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import { T, FONTS, RADIUS, CLAY, SURFACE } from '@/constants/theme';
 
 interface Props {
   product: Product;
@@ -22,42 +23,43 @@ export default function ProductRow({ product, onPress }: Props) {
   const isOpened = !!product.openedAt;
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.card}>
-      <FoodTile product={product} size={52} radius={RADIUS.md} />
-      <View style={styles.info}>
-        <View style={styles.nameRow}>
-          <Text style={styles.name} numberOfLines={1}>{product.name}</Text>
-          {product.count > 1 && (
-            <View style={styles.countBadge}>
-              <Text style={styles.countBadgeText}>×{product.count}</Text>
-            </View>
-          )}
-          {isOpened && (
-            <View style={styles.openedBadge}>
-              <Text style={styles.openedBadgeText}>Aperto</Text>
-            </View>
-          )}
+    <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
+      <LinearGradient colors={SURFACE.card} style={styles.card}>
+        <FoodTile product={product} size={52} radius={RADIUS.md} />
+        <View style={styles.info}>
+          <View style={styles.nameRow}>
+            <Text style={styles.name} numberOfLines={1}>{product.name}</Text>
+            {product.count > 1 && (
+              <View style={styles.countBadge}>
+                <Text style={styles.countBadgeText}>×{product.count}</Text>
+              </View>
+            )}
+            {isOpened && (
+              <View style={styles.openedBadge}>
+                <Text style={styles.openedBadgeText}>Aperto</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.sub} numberOfLines={1}>
+            {ZONE_ICONS[product.zone]}  {product.qty} · {product.brand}
+          </Text>
         </View>
-        <Text style={styles.sub} numberOfLines={1}>
-          {ZONE_ICONS[product.zone]}  {product.qty} · {product.brand}
-        </Text>
-      </View>
-      <View style={[styles.badge, { backgroundColor: u.soft }]}>
-        <Text style={[styles.badgeText, { color: u.ink }]}>{u.label}</Text>
-      </View>
+        <View style={[styles.badge, { backgroundColor: u.soft }]}>
+          <Text style={[styles.badgeText, { color: u.ink }]}>{u.label}</Text>
+        </View>
+      </LinearGradient>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: T.surface,
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.clay,
     padding: 12,
     flexDirection: 'row',
     gap: 12,
     alignItems: 'center',
-    ...SHADOW.card,
+    boxShadow: CLAY.surface,
   },
   info: { flex: 1, minWidth: 0 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -70,7 +72,7 @@ const styles = StyleSheet.create({
   },
   countBadge: {
     backgroundColor: T.primarySoft,
-    borderRadius: 100,
+    borderRadius: 9,
     paddingVertical: 2,
     paddingHorizontal: 7,
   },
@@ -82,7 +84,7 @@ const styles = StyleSheet.create({
   },
   openedBadge: {
     backgroundColor: '#e8f0e8',
-    borderRadius: 100,
+    borderRadius: 9,
     paddingVertical: 2,
     paddingHorizontal: 7,
   },
@@ -99,7 +101,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.sans,
   },
   badge: {
-    borderRadius: 100,
+    borderRadius: 9,
     paddingVertical: 6,
     paddingHorizontal: 10,
   },

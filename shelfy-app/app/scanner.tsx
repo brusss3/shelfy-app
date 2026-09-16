@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
@@ -10,6 +11,10 @@ import { ScannedProduct, Zone, NutritionInfo, ScoreGrade } from '@/types';
 import { tintForCategory } from '@/lib/urgency';
 import { useProducts } from '@/context/ProductsContext';
 import { showAlert } from '@/lib/alert';
+import { ocrAvailable } from '@/lib/ocr';
+import DateScannerModal from '@/components/DateScannerModal';
+import PrimaryButton from '@/components/PrimaryButton';
+import { getInitials } from '@/lib/text';
 
 const ZONES: { id: Zone; label: string; icon: string }[] = [
   { id: 'frigo',    label: 'Frigo',    icon: '❄️' },
@@ -101,6 +106,7 @@ export default function ScannerScreen() {
   const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
   const [selectedExpiry, setSelectedExpiry] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showDateScanner, setShowDateScanner] = useState(false);
   const [zoom, setZoom] = useState(0);
   const [camKey, setCamKey] = useState(0);
   const [mountError, setMountError] = useState<string | null>(null);
@@ -143,6 +149,7 @@ export default function ScannerScreen() {
       setFound(null);
       setSelectedZone(null);
       setSelectedExpiry(null);
+      setShowDateScanner(false);
       setMountError(null);
       setZoom(0);
       lastScan.current = '';
@@ -179,6 +186,10 @@ export default function ScannerScreen() {
         suggestExpiry: 30,
       });
     }
+    // Barcode letto: passiamo subito alla fotocamera per la data di scadenza,
+    // invece di far scegliere manualmente una preset. Se l'OCR non è
+    // disponibile (Expo Go) restano le preset nella scheda sottostante.
+    if (ocrAvailable) setShowDateScanner(true);
     setTimeout(() => { cooldown.current = false; }, 2000);
   };
 
@@ -191,6 +202,7 @@ export default function ScannerScreen() {
     setFound(null);
     setSelectedZone(null);
     setSelectedExpiry(null);
+    setShowDateScanner(false);
     setScanning(true);
     lastScan.current = '';
   };
@@ -321,7 +333,7 @@ export default function ScannerScreen() {
           <View style={styles.sheetProduct}>
             <View style={[styles.sheetTile, { backgroundColor: found.tint }]}>
               <Text style={styles.sheetTileText}>
-                {found.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()}
+                {getInitials(found.name)}
               </Text>
             </View>
             <View style={{ flex: 1 }}>
@@ -349,7 +361,16 @@ export default function ScannerScreen() {
             })}
           </View>
 
-          <Text style={styles.sheetSectionLabel}>QUANDO SCADE?</Text>
+          <View style={styles.sheetExpiryHeader}>
+            <Text style={styles.sheetSectionLabel}>QUANDO SCADE?</Text>
+            {ocrAvailable && (
+              <TouchableOpacity onPress={() => setShowDateScanner(true)} activeOpacity={0.85}>
+                <Text style={styles.sheetRescanLink}>
+                  {selectedExpiry ? '↻ Rileggi data' : '📷 Inquadra data'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
           <View style={styles.sheetPresetsRow}>
             {PRESETS.map((p) => {
               const iso = addDays(p.d);
@@ -376,18 +397,14 @@ export default function ScannerScreen() {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            style={[styles.sheetSaveBtn, (!selectedZone || !selectedExpiry || saving) && styles.sheetSaveBtnDisabled]}
+          <PrimaryButton
             onPress={handleQuickSave}
-            disabled={!selectedZone || !selectedExpiry || saving}
-            activeOpacity={0.85}
-          >
-            {saving ? (
-              <ActivityIndicator color="#fbfaf3" />
-            ) : (
-              <Text style={styles.sheetSaveBtnText}>✓ Salva nel diario</Text>
-            )}
-          </TouchableOpacity>
+            disabled={!selectedZone || !selectedExpiry}
+            loading={saving}
+            icon="checkmark"
+            label="Salva nel diario"
+            fullWidth
+          />
         </View>
       )}
 
@@ -419,9 +436,16 @@ export default function ScannerScreen() {
           onPress={() => router.push('/add')}
           activeOpacity={0.85}
         >
-          <Text style={styles.manualBtnText}>✏️ Inserisci manualmente</Text>
+          <Ionicons name="pencil-outline" size={16} color="#fbfaf3" />
+          <Text style={styles.manualBtnText}>Inserisci manualmente</Text>
         </TouchableOpacity>
       )}
+
+      <DateScannerModal
+        visible={showDateScanner}
+        onClose={() => setShowDateScanner(false)}
+        onResult={(iso) => setSelectedExpiry(iso)}
+      />
     </View>
   );
 }
@@ -490,6 +514,12 @@ const styles = StyleSheet.create({
     fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.6,
     marginBottom: 8, marginTop: 4,
   },
+  sheetExpiryHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
+  sheetRescanLink: {
+    fontSize: 12, fontFamily: FONTS.sansSemiBold, color: T.primary, marginBottom: 8,
+  },
   sheetZoneRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
   sheetZoneBtn: {
     flex: 1, backgroundColor: T.surface, borderRadius: RADIUS.md,
@@ -503,7 +533,7 @@ const styles = StyleSheet.create({
 
   sheetPresetsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
   sheetPreset: {
-    backgroundColor: T.surface, borderRadius: RADIUS.pill,
+    backgroundColor: T.surface, borderRadius: RADIUS.md,
     paddingVertical: 8, paddingHorizontal: 14,
     borderWidth: 1, borderColor: T.line,
   },
@@ -513,21 +543,16 @@ const styles = StyleSheet.create({
 
   sheetActions: { flexDirection: 'row', gap: 10, marginBottom: 10 },
   sheetGhostBtn: {
-    flex: 1, borderRadius: RADIUS.pill, paddingVertical: 14, alignItems: 'center',
+    flex: 1, borderRadius: RADIUS.lg, paddingVertical: 14, alignItems: 'center',
     borderWidth: 1, borderColor: T.line,
   },
   sheetGhostBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.primary },
 
-  sheetSaveBtn: {
-    borderRadius: RADIUS.pill, paddingVertical: 16,
-    alignItems: 'center', backgroundColor: T.primary,
-  },
-  sheetSaveBtnDisabled: { backgroundColor: T.sage },
-  sheetSaveBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 16, color: '#fbfaf3' },
 
   manualBtn: {
     position: 'absolute', bottom: 50, alignSelf: 'center', zIndex: 10,
-    backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: RADIUS.pill,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: RADIUS.lg,
     paddingVertical: 12, paddingHorizontal: 22,
   },
   manualBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: '#fbfaf3' },

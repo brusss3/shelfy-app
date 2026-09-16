@@ -11,6 +11,7 @@ import { generateDailyRecipe, AiRecipeError } from '@/lib/aiRecipe';
 import { effectiveDays } from '@/lib/urgency';
 import { showAlert } from '@/lib/alert';
 import ProfileButton from '@/components/ProfileButton';
+import PrimaryButton from '@/components/PrimaryButton';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 import { CommunityRecipe, RecipeRequest } from '@/types';
 
@@ -129,13 +130,12 @@ export default function RecipesScreen() {
 
         {view === 'recipes' && (
           <>
-            <TouchableOpacity
-              style={styles.primaryBtn}
+            <PrimaryButton
               onPress={() => router.push('/recipe/create')}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.primaryBtnText}>+ Nuova ricetta</Text>
-            </TouchableOpacity>
+              icon="add-outline"
+              label="Nuova ricetta"
+              containerStyle={styles.primaryBtn}
+            />
 
             {!loading && recipes.length === 0 && (
               <Text style={styles.emptyText}>
@@ -185,13 +185,12 @@ export default function RecipesScreen() {
 
         {view === 'requests' && (
           <>
-            <TouchableOpacity
-              style={styles.primaryBtn}
+            <PrimaryButton
               onPress={() => router.push('/recipe/request-new')}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.primaryBtnText}>🙋 Chiedi aiuto</Text>
-            </TouchableOpacity>
+              icon="help-buoy-outline"
+              label="Chiedi aiuto"
+              containerStyle={styles.primaryBtn}
+            />
 
             <Text style={styles.introRequests}>
               Seleziona gli ingredienti in scadenza e chiedi alla community un'idea per usarli.
@@ -396,18 +395,14 @@ const styles = StyleSheet.create({
 
   toggleRow: {
     flexDirection: 'row', gap: 8, marginHorizontal: 20, marginTop: 18, marginBottom: 16,
-    backgroundColor: T.surface, borderRadius: RADIUS.pill, padding: 4, ...SHADOW.card,
+    backgroundColor: T.surface, borderRadius: RADIUS.md, padding: 4, ...SHADOW.card,
   },
-  toggleBtn: { flex: 1, borderRadius: RADIUS.pill, paddingVertical: 10, alignItems: 'center' },
+  toggleBtn: { flex: 1, borderRadius: RADIUS.sm, paddingVertical: 10, alignItems: 'center' },
   toggleBtnActive: { backgroundColor: T.primary },
   toggleText: { fontSize: 13, fontFamily: FONTS.sansSemiBold, color: T.ink2 },
   toggleTextActive: { color: '#fbfaf3' },
 
-  primaryBtn: {
-    backgroundColor: T.primary, borderRadius: RADIUS.pill, paddingVertical: 15,
-    alignItems: 'center', marginHorizontal: 20, marginBottom: 16, ...SHADOW.fab,
-  },
-  primaryBtnText: { color: '#fbfaf3', fontFamily: FONTS.sansBold, fontSize: 15 },
+  primaryBtn: { marginHorizontal: 20, marginBottom: 16 },
 
   introRequests: {
     fontSize: 13, color: T.ink2, paddingHorizontal: 20, marginBottom: 16,
@@ -430,14 +425,14 @@ const styles = StyleSheet.create({
   },
   aiBadge: {
     alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.18)',
-    borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 10,
+    borderRadius: RADIUS.tag, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 10,
   },
   aiBadgeText: { color: '#fbfaf3', fontSize: 10, fontFamily: FONTS.sansBold, letterSpacing: 0.8 },
   aiTitle: { fontFamily: FONTS.serifItalic, fontSize: 26, color: '#fbfaf3', letterSpacing: -0.4 },
   aiDesc: { color: 'rgba(255,255,255,0.75)', fontSize: 13, marginTop: 6, lineHeight: 18, fontFamily: FONTS.sans },
   aiChips: { gap: 8, paddingVertical: 14 },
   aiChip: {
-    backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: RADIUS.pill,
+    backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: RADIUS.md,
     paddingVertical: 6, paddingHorizontal: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
   },
   aiChipActive: { backgroundColor: '#fbfaf3', borderColor: '#fbfaf3' },
@@ -445,13 +440,13 @@ const styles = StyleSheet.create({
   aiChipTextActive: { color: '#1a2018', fontFamily: FONTS.sansBold },
   aiEmpty: { color: 'rgba(255,255,255,0.6)', fontSize: 12, fontFamily: FONTS.sans, marginTop: 12 },
   aiBtn: {
-    backgroundColor: '#fbfaf3', borderRadius: RADIUS.pill, paddingVertical: 14,
+    backgroundColor: '#fbfaf3', borderRadius: RADIUS.lg, paddingVertical: 14,
     alignItems: 'center', marginTop: 12,
   },
   aiBtnText: { color: '#1a2018', fontFamily: FONTS.sansBold, fontSize: 15 },
 
   publishedBadge: {
-    backgroundColor: T.okSoft, borderRadius: RADIUS.pill, paddingVertical: 4, paddingHorizontal: 8,
+    backgroundColor: T.okSoft, borderRadius: RADIUS.tag, paddingVertical: 4, paddingHorizontal: 8,
   },
   publishedBadgeText: { fontSize: 10, fontFamily: FONTS.sansBold, color: '#1b3320', textTransform: 'uppercase' },
 
@@ -471,7 +466,7 @@ const styles = StyleSheet.create({
   metaSub: { fontSize: 12, color: T.mute, fontFamily: FONTS.sans },
   metaDot: { color: T.mute, fontSize: 12 },
   urgentBadge: {
-    backgroundColor: T.warnSoft, borderRadius: RADIUS.pill,
+    backgroundColor: T.warnSoft, borderRadius: RADIUS.tag,
     paddingVertical: 4, paddingHorizontal: 8,
   },
   urgentBadgeText: { fontSize: 10, fontFamily: FONTS.sansBold, color: '#4a3414', textTransform: 'uppercase' },
@@ -481,7 +476,7 @@ const styles = StyleSheet.create({
   },
   requestTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   requestAuthor: { fontFamily: FONTS.sansBold, fontSize: 14, color: T.ink },
-  statusPill: { borderRadius: RADIUS.pill, paddingVertical: 4, paddingHorizontal: 10 },
+  statusPill: { borderRadius: RADIUS.tag, paddingVertical: 4, paddingHorizontal: 10 },
   statusOpen: { backgroundColor: T.primarySoft },
   statusClosed: { backgroundColor: T.line },
   statusPillText: { fontSize: 10, fontFamily: FONTS.sansBold, textTransform: 'uppercase' },
@@ -489,7 +484,7 @@ const styles = StyleSheet.create({
   statusClosedText: { color: T.mute },
   ingredientChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   ingredientChip: {
-    backgroundColor: T.bg, borderRadius: RADIUS.pill, paddingVertical: 4, paddingHorizontal: 10,
+    backgroundColor: T.bg, borderRadius: RADIUS.tag, paddingVertical: 4, paddingHorizontal: 10,
     borderWidth: 1, borderColor: T.line,
   },
   ingredientChipText: { fontSize: 12, fontFamily: FONTS.sansMedium, color: T.ink2 },

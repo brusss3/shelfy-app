@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
+  View, Text, Image, TextInput, TouchableOpacity, StyleSheet,
+  KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { authErrorMessage } from '@/lib/authErrors';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
+import PrimaryButton from '@/components/PrimaryButton';
 import { showAlert } from '@/lib/alert';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -41,9 +42,7 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         {/* Logo / header */}
         <View style={styles.header}>
-          <View style={styles.logoTile}>
-            <Text style={styles.logoText}>Sf</Text>
-          </View>
+          <Image source={require('@/assets/icon.png')} style={styles.logoTile} resizeMode="contain" />
           <Text style={styles.appName}>Shelfy</Text>
           <Text style={styles.tagline}>La tua dispensa intelligente</Text>
         </View>
@@ -83,18 +82,13 @@ export default function LoginScreen() {
             Password dimenticata?
           </Link>
 
-          <TouchableOpacity
-            style={[styles.btn, loading && { opacity: 0.7 }]}
+          <PrimaryButton
             onPress={handleLogin}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.btnText}>Accedi</Text>
-            )}
-          </TouchableOpacity>
+            loading={loading}
+            label="Accedi"
+            fullWidth
+            containerStyle={{ marginTop: 20 }}
+          />
 
           <View style={styles.dividerRow}>
             <View style={styles.dividerLine} />
@@ -121,12 +115,8 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, justifyContent: 'center', padding: 24, paddingBottom: 48 },
   header: { alignItems: 'center', marginBottom: 32 },
   logoTile: {
-    width: 80, height: 80, borderRadius: 24, backgroundColor: T.primary,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 14,
-    ...SHADOW.fab,
-  },
-  logoText: {
-    fontFamily: FONTS.serifItalic, fontSize: 36, color: '#fbfaf3',
+    width: 84, height: 102, marginBottom: 10,
+    boxShadow: SHADOW.fab.boxShadow,
   },
   appName: {
     fontFamily: FONTS.serifItalic, fontSize: 36, color: T.ink,
@@ -136,7 +126,7 @@ const styles = StyleSheet.create({
     fontSize: 14, color: T.mute, marginTop: 4, fontFamily: FONTS.sans,
   },
   card: {
-    backgroundColor: T.surface, borderRadius: RADIUS.xl, padding: 20, ...SHADOW.card,
+    backgroundColor: T.surface, borderRadius: RADIUS.clay, padding: 20, ...SHADOW.card,
   },
   formTitle: {
     fontFamily: FONTS.serifItalic, fontSize: 26, color: T.ink,
@@ -148,16 +138,11 @@ const styles = StyleSheet.create({
     marginBottom: 6, letterSpacing: 0.1,
   },
   input: {
-    backgroundColor: T.bg, borderRadius: RADIUS.md,
-    paddingHorizontal: 16, paddingVertical: 12,
+    backgroundColor: '#ece8de', borderRadius: RADIUS.input,
+    paddingHorizontal: 16, paddingVertical: 13,
     fontFamily: FONTS.sans, fontSize: 15, color: T.ink,
-    borderWidth: 1, borderColor: T.line,
+    boxShadow: CLAY.inset,
   },
-  btn: {
-    backgroundColor: T.primary, borderRadius: RADIUS.pill,
-    paddingVertical: 16, alignItems: 'center', marginTop: 20, ...SHADOW.fab,
-  },
-  btnText: { fontFamily: FONTS.sansSemiBold, fontSize: 16, color: '#fbfaf3' },
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 16 },
   dividerLine: { flex: 1, height: 1, backgroundColor: T.line },
   dividerText: { fontFamily: FONTS.sans, fontSize: 12, color: T.mute },
