@@ -6,6 +6,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useProducts } from '@/context/ProductsContext';
+import { useAuth } from '@/context/AuthContext';
+import { usePantry } from '@/context/PantryContext';
 import { urgencyOf, shortDate, daysTo } from '@/lib/urgency';
 import Pill from '@/components/Pill';
 import QuantityStepper from '@/components/QuantityStepper';
@@ -48,6 +50,8 @@ function addDays(n: number): string {
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { products, removeProduct, changeZone, editProduct, markOpened, consumeOne, consumeAll } = useProducts();
+  const { user } = useAuth();
+  const { activePantry } = usePantry();
   const router = useRouter();
 
   const [showOpenModal, setShowOpenModal] = useState(false);
@@ -81,6 +85,12 @@ export default function ProductDetailScreen() {
       </View>
     );
   }
+
+  // Ha senso solo in una casa condivisa: nella dispensa personale sei
+  // sempre e solo tu, dirlo sarebbe rumore.
+  const addedByName = activePantry && product.addedBy
+    ? (product.addedBy === user?.uid ? 'Tu' : activePantry.members[product.addedBy]?.name ?? 'Qualcuno')
+    : null;
 
   const effectiveExpiry = product.openExpiry
     ? daysTo(product.openExpiry) < daysTo(product.expiry) ? product.openExpiry : product.expiry
@@ -362,7 +372,7 @@ export default function ProductDetailScreen() {
                 )}
                 {!(product.openedAt && product.openExpiry) && (
                   <Text style={[styles.expiryAdded, { color: u.ink, opacity: 0.7 }]}>
-                    Aggiunto il {shortDate(product.added)}
+                    Aggiunto il {shortDate(product.added)}{addedByName ? ` da ${addedByName}` : ''}
                   </Text>
                 )}
                 {product.openedAt && product.openExpiry && daysTo(product.expiry) > daysTo(product.openExpiry) && (

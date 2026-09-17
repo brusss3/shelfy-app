@@ -32,6 +32,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Limite ai tentativi di unirsi a una dispensa con un codice (contatore
+    // orario): solo lettura per l'utente, la Cloud Function lo incrementa con
+    // l'Admin SDK. Serve a rendere impraticabile un brute-force sul codice.
+    match /users/{userId}/joinAttempts/{hour} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+
     // Helper per verificare che l'utente non modifichi campi riservati (ruoli/abbonamento)
     function notUpdatingProtectedFields() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'isPremium', 'subscriptionType', 'subscriptionExpiresAt', 'aiDisabled']);
@@ -98,6 +106,55 @@ service cloud.firestore {
         allow create: if request.auth != null && request.resource.data.authorId == request.auth.uid;
         allow delete: if request.auth != null && resource.data.authorId == request.auth.uid;
       }
+    }
+
+    // ---------------------------------------------------------------------
+    // Dispensa condivisa
+    // ---------------------------------------------------------------------
+    // Si entra SOLO tramite la Cloud Function joinPantry (Admin SDK, bypassa
+    // queste regole): verifica il codice invito lato server, applica un
+    // limite di tentativi e un tetto massimo di membri. Dal client non è mai
+    // possibile scrivere memberIds/members — questa è la garanzia che nessuno
+    // possa aggiungersi da solo o essere aggiunto senza un codice valido.
+    match /pantries/{pantryId} {
+      allow read: if request.auth != null && request.auth.uid in resource.data.memberIds;
+
+      // L'unica scrittura permessa dal client è rinominare la propria
+      // dispensa (solo il creatore, solo il campo `name`). Creazione,
+      // ingresso, uscita, rimozione membri, rotazione/disattivazione del
+      // codice ed eliminazione passano tutte da Cloud Function dedicate.
+      allow update: if request.auth != null
+                    && resource.data.ownerId == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() > 0
+                    && request.resource.data.name.size() <= 60;
+      allow create, delete: if false;
+
+      // Codice invito attivo: leggibile SOLO dal creatore, mai dagli altri
+      // membri — è il requisito esplicito "pin visibile da chi crea la
+      // dispensa". Per questo vive qui e non su un campo del documento
+      // principale (che tutti i membri possono leggere).
+      match /private/{docId} {
+        allow read: if request.auth != null
+          && get(/databases/$(database)/documents/pantries/$(pantryId)).data.ownerId == request.auth.uid;
+        allow write: if false;
+      }
+
+      // Prodotti della dispensa condivisa: chiunque sia membro ORA (verifica
+      // in tempo reale sul documento dispensa, non su un campo duplicato sul
+      // prodotto) può leggere e gestire tutto — è il senso di "condivisa".
+      match /products/{productId} {
+        allow read, write: if request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/pantries/$(pantryId)).data.memberIds;
+      }
+    }
+
+    // Codici invito: risolvono codice -> dispensa. Mai leggibili/scrivibili
+    // dal client (altrimenti chiunque potrebbe elencare o indovinare codici
+    // altrui) — solo la Cloud Function li usa con l'Admin SDK.
+    match /inviteCodes/{code} {
+      allow read, write: if false;
     }
 
     // Tutto il resto è bloccato

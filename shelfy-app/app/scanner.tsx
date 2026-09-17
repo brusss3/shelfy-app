@@ -164,6 +164,17 @@ export default function ScannerScreen() {
     const code = result.data;
     if (code === lastScan.current) return;
     lastScan.current = code;
+
+    // Questo scanner legge anche i QR (serve per i barcode EAN/UPC dei
+    // prodotti, ma barcodeTypes include 'qr'): un QR d'invito a una casa
+    // condivisa ci può finire per sbaglio, e va smistato al join invece che
+    // cercato come se fosse un codice a barre di un prodotto.
+    const inviteMatch = code.match(/^shelfy:\/\/join\/([A-Z0-9]{6})$/i);
+    if (inviteMatch) {
+      router.replace(`/join/${inviteMatch[1].toUpperCase()}`);
+      return;
+    }
+
     cooldown.current = true;
     setScanning(false);
     setLoading(true);

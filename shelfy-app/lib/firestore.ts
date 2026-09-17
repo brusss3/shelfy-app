@@ -122,16 +122,25 @@ export async function adminSetAdmin(uid: string, value: boolean): Promise<void> 
   await setDoc(doc(db, 'users', uid), { isAdmin: value }, { merge: true });
 }
 
-function productsRef(userId: string) {
-  return collection(db, 'users', userId, 'products');
+// `pantryId` nullo/assente = dispensa personale dell'utente; altrimenti la
+// casa condivisa con quell'id ("dispensa" nell'app indica già la zona
+// Frigo/Freezer/Dispensa, quindi il contenitore condiviso si chiama "casa").
+// Stesso `userId` in entrambi i casi: per la casa condivisa serve solo a
+// etichettare `addedBy` (chi ha agito), non per il percorso — il documento
+// vive sotto pantries/{pantryId}/products, visibile a tutti i membri.
+function productsRef(userId: string, pantryId?: string | null) {
+  return pantryId
+    ? collection(db, 'pantries', pantryId, 'products')
+    : collection(db, 'users', userId, 'products');
 }
 
 export function subscribeToProducts(
   userId: string,
+  pantryId: string | null,
   onData: (products: Product[]) => void,
   onError?: (err: Error) => void,
 ) {
-  const q = query(productsRef(userId), orderBy('expiry', 'asc'));
+  const q = query(productsRef(userId, pantryId), orderBy('expiry', 'asc'));
   return onSnapshot(
     q,
     (snap) => {
@@ -149,11 +158,13 @@ export function subscribeToProducts(
 
 export async function addProduct(
   userId: string,
-  data: Omit<Product, 'id' | 'userId'>,
+  pantryId: string | null,
+  data: Omit<Product, 'id' | 'userId' | 'addedBy'>,
 ): Promise<string> {
-  const ref = await addDoc(productsRef(userId), {
+  const stamp = pantryId ? { addedBy: userId } : { userId };
+  const ref = await addDoc(productsRef(userId, pantryId), {
     ...removeUndefinedDeep(data),
-    userId,
+    ...stamp,
     createdAt: serverTimestamp(),
   });
   return ref.id;
@@ -161,29 +172,33 @@ export async function addProduct(
 
 export async function updateProduct(
   userId: string,
+  pantryId: string | null,
   productId: string,
   data: Partial<Product>,
 ): Promise<void> {
-  await updateDoc(doc(productsRef(userId), productId), removeUndefinedDeep(data));
+  await updateDoc(doc(productsRef(userId, pantryId), productId), removeUndefinedDeep(data));
 }
 
 export async function deleteProduct(
   userId: string,
+  pantryId: string | null,
   productId: string,
 ): Promise<void> {
-  await deleteDoc(doc(productsRef(userId), productId));
+  await deleteDoc(doc(productsRef(userId, pantryId), productId));
 }
 
 export async function addProductsBulk(
   userId: string,
-  items: Omit<Product, 'id' | 'userId'>[],
+  pantryId: string | null,
+  items: Omit<Product, 'id' | 'userId' | 'addedBy'>[],
 ): Promise<void> {
+  const stamp = pantryId ? { addedBy: userId } : { userId };
   const batch = writeBatch(db);
   for (const item of items) {
-    const ref = doc(productsRef(userId));
+    const ref = doc(productsRef(userId, pantryId));
     batch.set(ref, {
       ...removeUndefinedDeep(item),
-      userId,
+      ...stamp,
       createdAt: serverTimestamp(),
     });
   }
@@ -192,17 +207,18 @@ export async function addProductsBulk(
 
 export async function moveProductZone(
   userId: string,
+  pantryId: string | null,
   productId: string,
   zone: Zone,
 ): Promise<void> {
-  await updateDoc(doc(productsRef(userId), productId), { zone });
+  await updateDoc(doc(productsRef(userId, pantryId), productId), { zone });
 }
 
 // Consuma una singola unità: scala il contatore, e cancella il prodotto
 // quando finisce l'ultima. In transazione perché lo stesso prodotto può
 // essere consumato da due punti diversi (schermata e azione della notifica).
-export async function consumeOneUnit(userId: string, productId: string): Promise<void> {
-  const ref = doc(productsRef(userId), productId);
+export async function consumeOneUnit(userId: string, pantryId: string | null, productId: string): Promise<void> {
+  const ref = doc(productsRef(userId, pantryId), productId);
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists()) return;
@@ -220,10 +236,11 @@ export async function consumeOneUnit(userId: string, productId: string): Promise
 // sigillate con la scadenza originale.
 export async function openOneUnit(
   userId: string,
+  pantryId: string | null,
   productId: string,
   openExpiry: string,
 ): Promise<void> {
-  const ref = doc(productsRef(userId), productId);
+  const ref = doc(productsRef(userId, pantryId), productId);
   const snap = await getDoc(ref);
   if (!snap.exists()) return;
 
@@ -236,14 +253,15 @@ export async function openOneUnit(
     return;
   }
 
+  const stamp = pantryId ? { addedBy: userId } : { userId };
   const batch = writeBatch(db);
   batch.update(ref, { count: count - 1 });
-  batch.set(doc(productsRef(userId)), {
+  batch.set(doc(productsRef(userId, pantryId)), {
     ...removeUndefinedDeep(data),
     count: 1,
     openedAt,
     openExpiry,
-    userId,
+    ...stamp,
     createdAt: serverTimestamp(),
   });
   await batch.commit();

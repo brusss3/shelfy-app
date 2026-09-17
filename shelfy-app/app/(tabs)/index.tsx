@@ -8,10 +8,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useProducts } from '@/context/ProductsContext';
 import { useAuth } from '@/context/AuthContext';
+import { usePantry } from '@/context/PantryContext';
 import { urgencyOf, effectiveDays } from '@/lib/urgency';
 import { ocrAvailable } from '@/lib/ocr';
 import ProductRow from '@/components/ProductRow';
-import StatCard from '@/components/StatCard';
 import ProfileButton from '@/components/ProfileButton';
 import PrimaryButton from '@/components/PrimaryButton';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -31,9 +31,11 @@ const ZONES: { id: Zone; label: string; icon: string }[] = [
 export default function HomeScreen() {
   const { products, loading } = useProducts();
   const { user } = useAuth();
+  const { activePantry } = usePantry();
   const router = useRouter();
   const [zone, setZone] = useState<Zone>('all');
   const [query, setQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const firstName = user?.displayName?.split(' ')[0] ?? 'ciao';
   const hour = new Date().getHours();
@@ -68,9 +70,18 @@ export default function HomeScreen() {
       >
         {/* Header */}
         <View style={styles.headerRow}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.greet}>{greet}, {firstName}</Text>
-            <Text style={styles.title}>La tua dispensa</Text>
+            <Text style={styles.title} numberOfLines={1}>{activePantry ? activePantry.name : 'La tua dispensa'}</Text>
+            <TouchableOpacity
+              onPress={() => router.push('/pantry')}
+              style={styles.scopeChip}
+              activeOpacity={0.8}
+            >
+              <Ionicons name={activePantry ? 'people-outline' : 'person-outline'} size={12} color={T.mute} />
+              <Text style={styles.scopeChipText}>{activePantry ? 'Condivisa' : 'Personale'}</Text>
+              <Ionicons name="chevron-down" size={12} color={T.mute} />
+            </TouchableOpacity>
           </View>
           <View style={styles.headerRight}>
             {user?.isAdmin && (
@@ -85,74 +96,90 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Stats */}
+        {/* Statistica compatta: il conteggio è un dato, le urgenze sono
+            un'azione — per quello c'è già la tab Notifiche (sezioni per
+            scaduti/oggi/entro 3 giorni, con azioni dirette). Ripeterle qui
+            come card e banner era la stessa informazione due volte: questa
+            riga rimanda invece di duplicare. */}
         <View style={styles.statsRow}>
-          <StatCard value={products.length} label="In dispensa" color={T.ink} />
-          <StatCard value={urgentCount} label="Urgenti" color={urgentCount > 0 ? T.warn : T.mute} />
-          <StatCard value={expiredCount} label="Scaduti" color={expiredCount > 0 ? T.urgent : T.mute} />
+          <Text style={styles.statsCount}>
+            {products.length} {products.length === 1 ? 'prodotto' : 'prodotti'}
+          </Text>
+          {urgentCount + expiredCount > 0 && (
+            <TouchableOpacity
+              onPress={() => router.push('/(tabs)/notifications')}
+              activeOpacity={0.85}
+              style={styles.urgentPill}
+            >
+              <Text style={styles.urgentPillIcon}>🔥</Text>
+              <Text style={styles.urgentPillText}>
+                {[
+                  expiredCount > 0 ? `${expiredCount} scadut${expiredCount === 1 ? 'o' : 'i'}` : null,
+                  urgentCount > 0 ? `${urgentCount} urgent${urgentCount === 1 ? 'e' : 'i'}` : null,
+                ].filter(Boolean).join(' · ')}
+              </Text>
+              <Ionicons name="chevron-forward" size={14} color="#a86322" />
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* Search */}
-        <View style={styles.searchBox}>
-          <Ionicons name="search-outline" size={17} color={T.mute} />
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Cerca un prodotto…"
-            placeholderTextColor={T.mute}
-            style={styles.searchInput}
-          />
-        </View>
-
-        {/* Zone chips */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chips}
-        >
-          {ZONES.map((z) => {
-            const active = zone === z.id;
-            // Ogni zona ha il suo materiale: freddo per frigo e freezer, carta
-            // per la dispensa. "Tutto" non è una zona, quindi resta il verde
-            // del marchio.
-            const material = z.id === 'all' ? null : ZONE_MATERIAL[z.id];
-            const surface = active ? (material?.surface ?? GRADIENT.primary) : SURFACE.card;
-            const labelColor = active ? (material?.ink ?? '#fbfaf3') : T.ink;
-            return (
-              <TouchableOpacity key={z.id} onPress={() => setZone(z.id)} activeOpacity={0.9}>
-                <LinearGradient colors={surface} style={styles.chip}>
-                  {z.icon ? (
-                    <Text style={styles.chipIcon}>{z.icon}</Text>
-                  ) : null}
-                  <Text style={[styles.chipText, { color: labelColor }]}>
-                    {z.label}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        {/* Alert banner */}
-        {urgentCount + expiredCount > 0 && (
-          <TouchableOpacity
-            onPress={() => router.push('/(tabs)/notifications')}
-            activeOpacity={0.9}
-            style={styles.alertWrap}
+        {/* Ricerca e filtri condividono la stessa riga invece di stare uno
+            sopra l'altro sempre visibili: di default sono le zone (l'uso più
+            frequente), un tocco sulla lente la trasforma in campo di testo. */}
+        {searchOpen ? (
+          <View style={styles.searchBox}>
+            <Ionicons name="search-outline" size={17} color={T.mute} />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Cerca un prodotto…"
+              placeholderTextColor={T.mute}
+              style={styles.searchInput}
+              autoFocus
+            />
+            <TouchableOpacity
+              onPress={() => { setSearchOpen(false); setQuery(''); }}
+              accessibilityLabel="Chiudi ricerca"
+            >
+              <Ionicons name="close-circle" size={19} color={T.mute} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chips}
           >
-            <LinearGradient colors={SURFACE.warm} style={styles.alertBanner}>
-              <View style={styles.alertIcon}>
-                <Text style={{ fontSize: 22 }}>🔥</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.alertTitle}>
-                  {urgentCount + expiredCount} prodotti richiedono attenzione
-                </Text>
-                <Text style={styles.alertSub}>Tocca per vedere i suggerimenti</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#a86322" />
-            </LinearGradient>
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setSearchOpen(true)}
+              activeOpacity={0.85}
+              style={[styles.chip, styles.searchToggleChip]}
+              accessibilityLabel="Cerca un prodotto"
+            >
+              <Ionicons name="search-outline" size={16} color={T.ink} />
+            </TouchableOpacity>
+            {ZONES.map((z) => {
+              const active = zone === z.id;
+              // Ogni zona ha il suo materiale: freddo per frigo e freezer, carta
+              // per la dispensa. "Tutto" non è una zona, quindi resta il verde
+              // del marchio.
+              const material = z.id === 'all' ? null : ZONE_MATERIAL[z.id];
+              const surface = active ? (material?.surface ?? GRADIENT.primary) : SURFACE.card;
+              const labelColor = active ? (material?.ink ?? '#fbfaf3') : T.ink;
+              return (
+                <TouchableOpacity key={z.id} onPress={() => setZone(z.id)} activeOpacity={0.9}>
+                  <LinearGradient colors={surface} style={styles.chip}>
+                    {z.icon ? (
+                      <Text style={styles.chipIcon}>{z.icon}</Text>
+                    ) : null}
+                    <Text style={[styles.chipText, { color: labelColor }]}>
+                      {z.label}
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         )}
 
         {/* Product list */}
@@ -232,6 +259,11 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.serifItalic, fontSize: 38, color: T.ink,
     letterSpacing: -1, lineHeight: 44, marginTop: 2,
   },
+  scopeChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  scopeChipText: { fontFamily: FONTS.sansMedium, fontSize: 12, color: T.mute },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   adminBtn: {
     width: 42, height: 42, borderRadius: 100, backgroundColor: T.primarySoft,
@@ -240,8 +272,19 @@ const styles = StyleSheet.create({
   adminBtnText: { fontSize: 20 },
 
   statsRow: {
-    flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginBottom: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, marginBottom: 14, gap: 10,
   },
+  statsCount: {
+    fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.ink2,
+  },
+  urgentPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#f6e7c6', borderRadius: RADIUS.md,
+    paddingVertical: 7, paddingHorizontal: 12,
+  },
+  urgentPillIcon: { fontSize: 13 },
+  urgentPillText: { fontFamily: FONTS.sansBold, fontSize: 12, color: '#7a5a26' },
 
   // Il campo di ricerca è l'unico elemento "scavato" della schermata: si
   // riempie, non si preme, e l'incavo lo distingue dalle superfici sollevate.
@@ -265,20 +308,7 @@ const styles = StyleSheet.create({
   },
   chipIcon: { fontSize: 15 },
   chipText: { fontFamily: FONTS.sansSemiBold, fontSize: 13 },
-
-  alertWrap: { marginHorizontal: 20, marginBottom: 14 },
-  alertBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    borderRadius: RADIUS.clay, padding: 14,
-    boxShadow: CLAY.surface,
-  },
-  alertIcon: {
-    width: 44, height: 44, borderRadius: 100,
-    backgroundColor: 'rgba(255,255,255,0.7)', alignItems: 'center', justifyContent: 'center',
-    boxShadow: '0px 2px 4px rgba(120,80,20,0.12)',
-  },
-  alertTitle: { fontSize: 13, fontFamily: FONTS.sansBold, color: '#4a3414' },
-  alertSub: { fontSize: 12, color: '#7a5a26', marginTop: 2, fontFamily: FONTS.sans },
+  searchToggleChip: { backgroundColor: T.surface, paddingHorizontal: 13 },
 
   sectionHeader: {
     flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between',

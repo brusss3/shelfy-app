@@ -5,6 +5,8 @@ import FoodTile from './FoodTile';
 import { Product } from '@/types';
 import { urgencyOf, effectiveDays } from '@/lib/urgency';
 import { T, FONTS, RADIUS, CLAY, SURFACE } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
+import { usePantry } from '@/context/PantryContext';
 
 interface Props {
   product: Product;
@@ -21,6 +23,14 @@ export default function ProductRow({ product, onPress }: Props) {
   const days = effectiveDays(product);
   const u = urgencyOf(days);
   const isOpened = !!product.openedAt;
+
+  // Chi ha aggiunto questo prodotto — ha senso solo in una casa condivisa:
+  // nella dispensa personale sei sempre e solo tu, dirlo sarebbe rumore.
+  const { user } = useAuth();
+  const { activePantry } = usePantry();
+  const addedByName = activePantry && product.addedBy
+    ? (product.addedBy === user?.uid ? 'Tu' : activePantry.members[product.addedBy]?.name ?? 'Qualcuno')
+    : null;
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
@@ -41,7 +51,7 @@ export default function ProductRow({ product, onPress }: Props) {
             )}
           </View>
           <Text style={styles.sub} numberOfLines={1}>
-            {ZONE_ICONS[product.zone]}  {product.qty} · {product.brand}
+            {ZONE_ICONS[product.zone]}  {product.qty} · {product.brand}{addedByName ? ` · ${addedByName}` : ''}
           </Text>
         </View>
         <View style={[styles.badge, { backgroundColor: u.soft }]}>

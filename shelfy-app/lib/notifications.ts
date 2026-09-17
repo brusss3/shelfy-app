@@ -43,15 +43,23 @@ export function setupNotificationHandler(): void {
 // Registra un listener che intercetta il tap sul pulsante "Consumato" della
 // notifica (anche quando l'app parte da chiusa). Chiama `onConsumed` con
 // l'id del prodotto. Ritorna la funzione di cleanup.
-export function subscribeToConsumedAction(onConsumed: (productId: string) => void): () => void {
+export function subscribeToConsumedAction(
+  onConsumed: (productId: string, pantryId: string | null) => void,
+): () => void {
   if (isExpoGo || Platform.OS === 'web') return () => {};
 
   const Notifications = N();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handle = (response: any) => {
     if (response?.actionIdentifier !== 'consumed') return;
-    const productId = response?.notification?.request?.content?.data?.productId;
-    if (typeof productId === 'string' && productId) onConsumed(productId);
+    const data = response?.notification?.request?.content?.data;
+    const productId = data?.productId;
+    // Il prodotto potrebbe appartenere a una casa condivisa diversa da
+    // quella attiva ora (o l'app potrebbe essere ripartita da zero): la
+    // notifica porta con sé lo scope in cui il prodotto viveva quando è
+    // stata schedulata, così il consumo va sempre nel posto giusto.
+    const pantryId = typeof data?.pantryId === 'string' ? data.pantryId : null;
+    if (typeof productId === 'string' && productId) onConsumed(productId, pantryId);
   };
 
   // Cold start: l'app è stata aperta proprio dal pulsante della notifica.
@@ -106,8 +114,49 @@ export async function registerForPushNotifications(): Promise<string | null> {
   return token.data;
 }
 
+// Un "gruppo" = i prodotti di una casa (personale o condivisa — "dispensa"
+// nell'app indica già la zona Frigo/Freezer/Dispensa, quindi qui si usa
+// "casa" per il contenitore per non sovrapporre i due significati). Le
+// notifiche si aggregano per casa, non più per singolo prodotto, per due
+// motivi. Primo, con più case una scadenza per prodotto esploderebbe in
+// una notifica a testa ("hai il latte in scadenza", "hai le uova in
+// scadenza", …) — qui invece diventa una sola per casa+giorno ("hai 3
+// prodotti in scadenza nella casa di Via Roma"). Secondo, iOS limita a 64 le
+// notifiche locali pendenti per app: pre-schedulare 2 notifiche per OGNI
+// prodotto di OGNI casa sfora quel tetto in fretta con una casa piena;
+// raggruppando per (casa, giorno di scadenza) restano poche.
+export interface NotificationPantryGroup {
+  /** `null` = casa personale. */
+  pantryId: string | null;
+  pantryName: string;
+  products: Product[];
+}
+
+function groupByExpiryDate(products: Product[]): Map<string, Product[]> {
+  const byDate = new Map<string, Product[]>();
+  for (const p of products) {
+    const iso = effectiveExpiry(p);
+    const bucket = byDate.get(iso);
+    if (bucket) bucket.push(p);
+    else byDate.set(iso, [p]);
+  }
+  return byDate;
+}
+
+function expiryBody(products: Product[], when: 'oggi' | 'domani', pantryId: string | null, pantryName: string): string {
+  const where = pantryId === null ? 'nella tua dispensa personale' : `nella casa "${pantryName}"`;
+  if (products.length === 1) {
+    return when === 'oggi'
+      ? `${products[0].name} scade oggi ${where}. Usalo subito o congelalo!`
+      : `${products[0].name} scade domani ${where}.`;
+  }
+  return when === 'oggi'
+    ? `Hai ${products.length} prodotti in scadenza oggi ${where}.`
+    : `Hai ${products.length} prodotti in scadenza domani ${where}.`;
+}
+
 export async function scheduleExpiryNotifications(
-  products: Product[],
+  groups: NotificationPantryGroup[],
   enabled = true,
 ): Promise<void> {
   if (isExpoGo || Platform.OS === 'web') return;
@@ -120,43 +169,47 @@ export async function scheduleExpiryNotifications(
 
   const now = new Date();
 
-  for (const product of products) {
-    const expiryIso = effectiveExpiry(product);
-    const expiryDate = new Date(expiryIso + 'T00:00:00');
+  for (const group of groups) {
+    const byDate = groupByExpiryDate(group.products);
 
-    // 1) Notifica il giorno stesso della scadenza alle 09:00
-    const triggerSameDay = new Date(expiryDate);
-    triggerSameDay.setHours(9, 0, 0, 0);
+    for (const [expiryIso, prods] of byDate) {
+      const expiryDate = new Date(expiryIso + 'T00:00:00');
+      // Un solo prodotto nel gruppo: il pulsante "Consumato" ha senso (si sa
+      // quale). Più di uno: niente azione diretta, ambigua su quale prodotto.
+      const singleProductId = prods.length === 1 ? prods[0].id : undefined;
 
-    if (triggerSameDay > now) {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: '⏰ Shelfy — Scade oggi',
-          body: `${product.name} scade oggi. Usalo subito o congelalo!`,
-          data: { productId: product.id },
-          categoryIdentifier: EXPIRY_CATEGORY,
-          sound: true,
-        },
-        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerSameDay },
-      });
-    }
+      // 1) Notifica il giorno stesso della scadenza alle 09:00
+      const triggerSameDay = new Date(expiryDate);
+      triggerSameDay.setHours(9, 0, 0, 0);
+      if (triggerSameDay > now) {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: '⏰ Shelfy — Scade oggi',
+            body: expiryBody(prods, 'oggi', group.pantryId, group.pantryName),
+            data: { productId: singleProductId, pantryId: group.pantryId },
+            categoryIdentifier: singleProductId ? EXPIRY_CATEGORY : undefined,
+            sound: true,
+          },
+          trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerSameDay },
+        });
+      }
 
-    // 2) Notifica preventiva 1 giorno prima della scadenza alle 09:00
-    const triggerDayBefore = new Date(expiryDate);
-    triggerDayBefore.setDate(triggerDayBefore.getDate() - 1);
-    triggerDayBefore.setHours(9, 0, 0, 0);
-
-    if (triggerDayBefore > now) {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: '⏰ Shelfy — Scadenza vicina',
-          body: `${product.name} scade domani.`,
-          data: { productId: product.id },
-          categoryIdentifier: EXPIRY_CATEGORY,
-          sound: true,
-        },
-        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDayBefore },
-      });
+      // 2) Notifica preventiva 1 giorno prima della scadenza alle 09:00
+      const triggerDayBefore = new Date(expiryDate);
+      triggerDayBefore.setDate(triggerDayBefore.getDate() - 1);
+      triggerDayBefore.setHours(9, 0, 0, 0);
+      if (triggerDayBefore > now) {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: '⏰ Shelfy — Scadenza vicina',
+            body: expiryBody(prods, 'domani', group.pantryId, group.pantryName),
+            data: { productId: singleProductId, pantryId: group.pantryId },
+            categoryIdentifier: singleProductId ? EXPIRY_CATEGORY : undefined,
+            sound: true,
+          },
+          trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDayBefore },
+        });
+      }
     }
   }
 }

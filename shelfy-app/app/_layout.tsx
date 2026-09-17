@@ -8,11 +8,13 @@ import { useFonts,
 import * as SplashScreen from 'expo-splash-screen';
 import * as NavigationBar from 'expo-navigation-bar';
 import { AuthProvider } from '@/context/AuthContext';
+import { PantryProvider } from '@/context/PantryContext';
 import { ProductsProvider } from '@/context/ProductsContext';
 import { RecipesProvider } from '@/context/RecipesContext';
 import { CommunityProvider } from '@/context/CommunityContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { setupNotificationHandler } from '@/lib/notifications';
+import NotificationsScheduler from '@/components/NotificationsScheduler';
 import { T } from '@/constants/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -59,6 +61,8 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
+        <PantryProvider>
+        <NotificationsScheduler />
         <ProductsProvider>
           <RecipesProvider>
           <CommunityProvider>
@@ -76,6 +80,10 @@ export default function RootLayout() {
             <Stack.Screen name="recipe/create" options={{ presentation: 'modal' }} />
             <Stack.Screen name="recipe/request-new" options={{ presentation: 'modal' }} />
             <Stack.Screen name="recipe/request/[id]" />
+            <Stack.Screen name="pantry/index" options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="pantry/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="pantry/join" options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="join/[code]" options={{ headerShown: false }} />
             <Stack.Screen name="settings" options={{ headerShown: false }} />
             <Stack.Screen name="admin" options={{ headerShown: false }} />
             <Stack.Screen name="labels" options={{ headerShown: false, presentation: 'modal' }} />
@@ -83,6 +91,7 @@ export default function RootLayout() {
           </CommunityProvider>
           </RecipesProvider>
         </ProductsProvider>
+        </PantryProvider>
       </AuthProvider>
     </GestureHandlerRootView>
   );

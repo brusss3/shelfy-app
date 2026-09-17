@@ -29,6 +29,8 @@ export interface Product {
   userId?: string;
   openedAt?: string;    // ISO date YYYY-MM-DD — when the product was opened
   openExpiry?: string;  // ISO date YYYY-MM-DD — consume-by after opening
+  // Presente solo sui prodotti di una dispensa condivisa: chi l'ha aggiunto.
+  addedBy?: string;
   // Dati facoltativi da Open Food Facts, presenti solo se il prodotto è
   // stato aggiunto tramite scanner barcode e la voce li aveva compilati.
   nutrition?: NutritionInfo;
@@ -147,4 +149,35 @@ export interface ScannedProduct {
   allergens?: string[];
   nutriscore?: ScoreGrade;
   ecoscore?: ScoreGrade;
+}
+
+// ---------------------------------------------------------------------------
+// Dispensa condivisa
+// ---------------------------------------------------------------------------
+
+export type PantryRole = 'owner' | 'member';
+
+export interface PantryMember {
+  name: string;
+  role: PantryRole;
+  joinedAt: string;
+}
+
+export interface Pantry {
+  id: string;
+  name: string;
+  ownerId: string;
+  /** Duplica le chiavi di `members` in un array: serve alla query
+   *  "a quali dispense appartengo" (array-contains), che su un oggetto
+   *  non sarebbe possibile. */
+  memberIds: string[];
+  members: Record<string, PantryMember>;
+  createdAt: string;
+}
+
+/** Vive in pantries/{id}/private/invite — leggibile SOLO dal creatore
+ *  (mai dagli altri membri): è il pin "visibile da chi crea la dispensa". */
+export interface PantryInvite {
+  code: string | null;
+  expiresAt: string | null;
 }

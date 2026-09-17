@@ -59,7 +59,6 @@ const CATEGORIES: CategoryOption[] = [
 
 const QUICK_TAGS = [
   'Widget per schermata home 📱',
-  'Condivisione dispensa in famiglia 👨‍👩‍👧',
   'Filtro allergeni & bio 🌿',
   'Esportazione lista spesa 🛒',
 ];
@@ -298,7 +297,7 @@ export default function FeedbackScreen() {
                 <View style={styles.roadmapItem}>
                   <Text style={styles.roadmapStatusTag}>In arrivo</Text>
                   <Text style={styles.roadmapText}>
-                    👨‍👩‍👧 <Text style={styles.roadmapBold}>Condivisione della dispensa</Text> tra più account (famiglia, coinquilini)
+                    👨‍👩‍👧 <Text style={styles.roadmapBold}>Case condivise</Text> per gestire la dispensa insieme a famiglia o coinquilini
                   </Text>
                 </View>
                 <View style={styles.roadmapItem}>
