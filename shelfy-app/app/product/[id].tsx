@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useProducts } from '@/context/ProductsContext';
 import { useAuth } from '@/context/AuthContext';
 import { usePantry } from '@/context/PantryContext';
@@ -23,10 +24,10 @@ const GRADE_COLORS: Record<ScoreGrade, string> = {
   a: '#038141', b: '#85bb2f', c: '#fecb02', d: '#ee8100', e: '#e63e11',
 };
 
-const ZONES: { id: Zone; label: string; icon: string; sub: string }[] = [
-  { id: 'frigo',    label: 'Frigo',    icon: '❄️', sub: '4 °C' },
-  { id: 'freezer',  label: 'Freezer',  icon: '🧊', sub: '-18 °C' },
-  { id: 'dispensa', label: 'Dispensa', icon: '📦', sub: 'Asciutto' },
+const ZONES: { id: Zone; labelKey: string; icon: string; subKey: string }[] = [
+  { id: 'frigo',    labelKey: 'common.zones.frigo',    icon: '❄️', subKey: 'product.zoneSub.frigo' },
+  { id: 'freezer',  labelKey: 'common.zones.freezer',  icon: '🧊', subKey: 'product.zoneSub.freezer' },
+  { id: 'dispensa', labelKey: 'common.zones.dispensa', icon: '📦', subKey: 'product.zoneSub.dispensa' },
 ];
 
 const OPEN_EXPIRY_DAYS: Record<Zone, number> = {
@@ -36,11 +37,11 @@ const OPEN_EXPIRY_DAYS: Record<Zone, number> = {
 };
 
 const PRESETS = [
-  { d: 1, l: '1 giorno' },
-  { d: 3, l: '3 giorni' },
-  { d: 7, l: '1 settimana' },
-  { d: 30, l: '1 mese' },
-  { d: 90, l: '3 mesi' },
+  { d: 1, labelKey: 'common.presets.d1' },
+  { d: 3, labelKey: 'common.presets.d3' },
+  { d: 7, labelKey: 'common.presets.d7' },
+  { d: 30, labelKey: 'common.presets.d30' },
+  { d: 90, labelKey: 'common.presets.d90' },
 ];
 
 function addDays(n: number): string {
@@ -53,6 +54,7 @@ export default function ProductDetailScreen() {
   const { user } = useAuth();
   const { activePantry } = usePantry();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const [showOpenModal, setShowOpenModal] = useState(false);
   const [openPickerDay, setOpenPickerDay] = useState('');
@@ -81,7 +83,7 @@ export default function ProductDetailScreen() {
   if (!product) {
     return (
       <View style={[styles.root, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: T.mute, fontFamily: FONTS.sans }}>Prodotto non trovato.</Text>
+        <Text style={{ color: T.mute, fontFamily: FONTS.sans }}>{t('product.notFound')}</Text>
       </View>
     );
   }
@@ -89,7 +91,7 @@ export default function ProductDetailScreen() {
   // Ha senso solo in una casa condivisa: nella dispensa personale sei
   // sempre e solo tu, dirlo sarebbe rumore.
   const addedByName = activePantry && product.addedBy
-    ? (product.addedBy === user?.uid ? 'Tu' : activePantry.members[product.addedBy]?.name ?? 'Qualcuno')
+    ? (product.addedBy === user?.uid ? t('product.addedByYou') : activePantry.members[product.addedBy]?.name ?? t('product.addedBySomeone'))
     : null;
 
   const effectiveExpiry = product.openExpiry
@@ -151,7 +153,7 @@ export default function ProductDetailScreen() {
 
   const handleSaveEdit = async () => {
     if (!eName.trim()) {
-      showAlert('Errore', 'Inserisci il nome del prodotto');
+      showAlert(t('common.error'), t('add.errors.missingName'));
       return;
     }
     setSaving(true);
@@ -167,7 +169,7 @@ export default function ProductDetailScreen() {
       });
       setEditing(false);
     } catch (e: any) {
-      showAlert('Errore', e?.message ?? 'Impossibile salvare le modifiche');
+      showAlert(t('common.error'), e?.message ?? t('product.saveEditFailed'));
     } finally {
       setSaving(false);
     }
@@ -197,12 +199,12 @@ export default function ProductDetailScreen() {
       return;
     }
     showAlert(
-      'Consumato',
-      `Hai finito "${product.name}"? Verrà rimosso dalla dispensa.`,
+      t('product.consumedWord'),
+      t('product.consumeOneConfirmBody', { name: product.name }),
       [
-        { text: 'Annulla', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Consumato',
+          text: t('product.consumedWord'),
           onPress: async () => {
             await consumeOne(product.id);
             router.back();
@@ -214,12 +216,12 @@ export default function ProductDetailScreen() {
 
   const handleConsumeAll = () => {
     showAlert(
-      'Consuma tutto',
-      `Hai consumato tutte le ${product.count} unità di "${product.name}"?`,
+      t('product.consumeAllTitle'),
+      t('product.consumeAllConfirmBody', { count: product.count, name: product.name }),
       [
-        { text: 'Annulla', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Consumato',
+          text: t('product.consumedWord'),
           onPress: async () => {
             await consumeAll(product.id);
             router.back();
@@ -231,12 +233,12 @@ export default function ProductDetailScreen() {
 
   const handleDelete = () => {
     showAlert(
-      'Rimuovi prodotto',
-      `Vuoi rimuovere "${product.name}" dalla dispensa?`,
+      t('product.removeTitle'),
+      t('product.removeConfirmBody', { name: product.name }),
       [
-        { text: 'Annulla', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Rimuovi',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             await removeProduct(product.id);
@@ -285,14 +287,14 @@ export default function ProductDetailScreen() {
             {getInitials(editing ? eName : product.name)}
           </Text>
           <Text style={styles.heroBrand}>{(editing ? eBrand : product.brand).toUpperCase()}</Text>
-          <Text style={styles.heroName}>{editing ? (eName || 'Senza nome') : product.name}</Text>
+          <Text style={styles.heroName}>{editing ? (eName || t('add.noNameFallback')) : product.name}</Text>
           <Text style={styles.heroSub}>
             {(editing ? eCount : product.count) > 1 ? `${editing ? eCount : product.count} × ` : ''}
             {(editing ? eQty : product.qty)} · {(editing ? (eCategory || 'Altro') : product.category)}
           </Text>
           {product.openedAt && (
             <View style={styles.openedHeroBadge}>
-              <Text style={styles.openedHeroBadgeText}>🔓 Aperto il {shortDate(product.openedAt)}</Text>
+              <Text style={styles.openedHeroBadgeText}>🔓 {t('product.openedOn', { date: shortDate(product.openedAt) })}</Text>
             </View>
           )}
         </View>
@@ -302,52 +304,52 @@ export default function ProductDetailScreen() {
           <View style={styles.section}>
             <View style={styles.editCard}>
               <View style={styles.fieldRow}>
-                <Text style={styles.fieldLabel}>Nome</Text>
+                <Text style={styles.fieldLabel}>{t('add.fields.name')}</Text>
                 <TextInput
                   style={styles.fieldInput}
                   value={eName}
                   onChangeText={setEName}
-                  placeholder="es. Latte intero"
+                  placeholder={t('add.fields.namePlaceholder')}
                   placeholderTextColor={T.mute}
                 />
               </View>
               <View style={styles.fieldDivider} />
               <View style={styles.fieldRow}>
-                <Text style={styles.fieldLabel}>Marca</Text>
+                <Text style={styles.fieldLabel}>{t('add.fields.brand')}</Text>
                 <TextInput
                   style={styles.fieldInput}
                   value={eBrand}
                   onChangeText={setEBrand}
-                  placeholder="es. Granarolo"
+                  placeholder={t('add.fields.brandPlaceholder')}
                   placeholderTextColor={T.mute}
                 />
               </View>
               <View style={styles.fieldDivider} />
               <View style={styles.fieldRow}>
-                <Text style={styles.fieldLabel}>Quantità</Text>
+                <Text style={styles.fieldLabel}>{t('add.fields.qty')}</Text>
                 <TextInput
                   style={styles.fieldInput}
                   value={eQty}
                   onChangeText={setEQty}
-                  placeholder="es. 1 L"
+                  placeholder={t('add.fields.qtyPlaceholder')}
                   placeholderTextColor={T.mute}
                 />
               </View>
               <View style={styles.fieldDivider} />
               <View style={styles.fieldRow}>
-                <Text style={styles.fieldLabel}>Unità</Text>
+                <Text style={styles.fieldLabel}>{t('add.fields.unit')}</Text>
                 <View style={{ flex: 1 }}>
                   <QuantityStepper value={eCount} onChange={setECount} />
                 </View>
               </View>
               <View style={styles.fieldDivider} />
               <View style={styles.fieldRow}>
-                <Text style={styles.fieldLabel}>Categoria</Text>
+                <Text style={styles.fieldLabel}>{t('add.fields.category')}</Text>
                 <TextInput
                   style={styles.fieldInput}
                   value={eCategory}
                   onChangeText={setECategory}
-                  placeholder="es. Latticini"
+                  placeholder={t('add.fields.categoryPlaceholder')}
                   placeholderTextColor={T.mute}
                 />
               </View>
@@ -367,17 +369,17 @@ export default function ProductDetailScreen() {
                 <Text style={[styles.expiryDate, { color: u.ink }]}>{shortDate(displayExpiry)}</Text>
                 {product.openedAt && product.openExpiry && (
                   <Text style={[styles.expiryAdded, { color: u.ink, opacity: 0.8 }]}>
-                    Da consumare entro dopo apertura
+                    {t('product.consumeByAfterOpen')}
                   </Text>
                 )}
                 {!(product.openedAt && product.openExpiry) && (
                   <Text style={[styles.expiryAdded, { color: u.ink, opacity: 0.7 }]}>
-                    Aggiunto il {shortDate(product.added)}{addedByName ? ` da ${addedByName}` : ''}
+                    {t('product.addedOn', { date: shortDate(product.added) })}{addedByName ? t('product.byName', { name: addedByName }) : ''}
                   </Text>
                 )}
                 {product.openedAt && product.openExpiry && daysTo(product.expiry) > daysTo(product.openExpiry) && (
                   <Text style={[styles.expiryOriginal, { color: u.ink }]}>
-                    Scad. originale: {shortDate(product.expiry)}
+                    {t('product.originalExpiry', { date: shortDate(product.expiry) })}
                   </Text>
                 )}
               </View>
@@ -397,12 +399,12 @@ export default function ProductDetailScreen() {
             <View style={styles.editExpiryActions}>
               <TouchableOpacity style={styles.editDateBtn} onPress={openExpiryPicker} activeOpacity={0.85}>
                 <Ionicons name="calendar-outline" size={17} color={T.ink} />
-                <Text style={styles.editDateBtnText}>Cambia data</Text>
+                <Text style={styles.editDateBtnText}>{t('product.changeDate')}</Text>
               </TouchableOpacity>
               {ocrAvailable && (
                 <TouchableOpacity style={styles.editOcrBtn} onPress={() => setShowOcr(true)} activeOpacity={0.85}>
                   <Ionicons name="camera-outline" size={17} color={T.primaryInk} />
-                  <Text style={styles.editOcrBtnText}>Scansiona</Text>
+                  <Text style={styles.editOcrBtnText}>{t('product.scan')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -417,14 +419,14 @@ export default function ProductDetailScreen() {
               <Ionicons name="lock-open-outline" size={22} color={T.primaryInk} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.openBtnTitle}>
-                  {product.count > 1 ? 'Apri una unità' : 'Segna come aperto'}
+                  {product.count > 1 ? t('product.openOneUnit') : t('product.markOpened')}
                 </Text>
                 <Text style={styles.openBtnSub}>
                   {product.count > 1
-                    ? `Le altre ${product.count - 1} restano chiuse con la scadenza originale`
-                    : product.zone === 'frigo' ? 'Calcola scadenza post-apertura (3 giorni)'
-                    : product.zone === 'dispensa' ? 'Calcola scadenza post-apertura (3 mesi)'
-                    : 'Calcola scadenza post-apertura (30 giorni)'}
+                    ? t('product.othersStayClosed', { count: product.count - 1 })
+                    : product.zone === 'frigo' ? t('product.postOpenFridge')
+                    : product.zone === 'dispensa' ? t('product.postOpenPantry')
+                    : t('product.postOpenFreezer')}
                 </Text>
               </View>
               <Text style={styles.openBtnArrow}>›</Text>
@@ -433,9 +435,9 @@ export default function ProductDetailScreen() {
             <TouchableOpacity style={styles.openBtnActive} onPress={openOpenModal} activeOpacity={0.85}>
               <Ionicons name="lock-open-outline" size={22} color={T.primaryInk} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.openBtnTitleActive}>Prodotto aperto</Text>
+                <Text style={styles.openBtnTitleActive}>{t('product.openedTitle')}</Text>
                 <Text style={styles.openBtnSubActive}>
-                  Aperto il {shortDate(product.openedAt)} · consuma entro {product.openExpiry ? shortDate(product.openExpiry) : '—'}
+                  {t('product.openedSub', { date: shortDate(product.openedAt), until: product.openExpiry ? shortDate(product.openExpiry) : '—' })}
                 </Text>
               </View>
               <Text style={styles.openBtnArrowActive}>›</Text>
@@ -445,7 +447,7 @@ export default function ProductDetailScreen() {
         )}
 
         {/* Zone selector */}
-        <Text style={styles.sectionTitle}>Conservazione</Text>
+        <Text style={styles.sectionTitle}>{t('product.storageTitle')}</Text>
         <View style={styles.section}>
           <View style={styles.card}>
             {ZONES.map((z, i) => {
@@ -461,8 +463,8 @@ export default function ProductDetailScreen() {
                       <Text style={{ fontSize: 20 }}>{z.icon}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.zoneLabel}>{z.label}</Text>
-                      <Text style={styles.zoneSub}>{z.sub}</Text>
+                      <Text style={styles.zoneLabel}>{t(z.labelKey)}</Text>
+                      <Text style={styles.zoneSub}>{t(z.subKey)}</Text>
                     </View>
                     {active && (
                       <View style={styles.checkBadge}>
@@ -480,13 +482,13 @@ export default function ProductDetailScreen() {
         {/* Details */}
         {!editing && (
         <>
-        <Text style={styles.sectionTitle}>Dettagli</Text>
+        <Text style={styles.sectionTitle}>{t('product.detailsTitle')}</Text>
         <View style={styles.section}>
           <View style={styles.card}>
             {[
-              { label: 'Codice a barre', value: product.barcode || '—' },
-              { label: 'Categoria', value: product.category },
-              { label: 'Apporto', value: product.cal ? `${product.cal} kcal / 100g` : '—' },
+              { label: t('product.barcode'), value: product.barcode || '—' },
+              { label: t('add.fields.category'), value: product.category },
+              { label: t('product.energyIntake'), value: product.cal ? t('product.caloriesPer100', { cal: product.cal }) : '—' },
             ].map((row, i, arr) => (
               <React.Fragment key={row.label}>
                 <View style={styles.detailRow}>
@@ -508,7 +510,7 @@ export default function ProductDetailScreen() {
                 onPress={() => setShowNutrition((v) => !v)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.nutritionToggleText}>🥗 Informazioni nutrizionali</Text>
+                <Text style={styles.nutritionToggleText}>🥗 {t('common.nutrition.title')}</Text>
                 <Text style={styles.nutritionToggleIcon}>{showNutrition ? '▲' : '▼'}</Text>
               </TouchableOpacity>
 
@@ -537,14 +539,14 @@ export default function ProductDetailScreen() {
 
                   {product.nutrition && (
                     <View>
-                      <Text style={styles.nutritionCaption}>Valori per 100g/100ml</Text>
+                      <Text style={styles.nutritionCaption}>{t('common.nutrition.per100')}</Text>
                       {[
-                        { label: 'Calorie', value: product.nutrition.calories, unit: 'kcal' },
-                        { label: 'Proteine', value: product.nutrition.proteins, unit: 'g' },
-                        { label: 'Grassi', value: product.nutrition.fat, unit: 'g' },
-                        { label: 'Carboidrati', value: product.nutrition.carbs, unit: 'g' },
-                        { label: 'di cui zuccheri', value: product.nutrition.sugars, unit: 'g' },
-                        { label: 'Sale', value: product.nutrition.salt, unit: 'g' },
+                        { label: t('common.nutrition.calories'), value: product.nutrition.calories, unit: 'kcal' },
+                        { label: t('common.nutrition.proteins'), value: product.nutrition.proteins, unit: 'g' },
+                        { label: t('common.nutrition.fat'), value: product.nutrition.fat, unit: 'g' },
+                        { label: t('common.nutrition.carbs'), value: product.nutrition.carbs, unit: 'g' },
+                        { label: t('common.nutrition.sugars'), value: product.nutrition.sugars, unit: 'g' },
+                        { label: t('common.nutrition.salt'), value: product.nutrition.salt, unit: 'g' },
                       ].filter((r) => r.value !== undefined).map((r) => (
                         <View key={r.label} style={styles.nutritionRow}>
                           <Text style={styles.nutritionRowLabel}>{r.label}</Text>
@@ -556,7 +558,7 @@ export default function ProductDetailScreen() {
 
                   {product.allergens && product.allergens.length > 0 && (
                     <View>
-                      <Text style={styles.nutritionCaption}>Allergeni</Text>
+                      <Text style={styles.nutritionCaption}>{t('common.nutrition.allergens')}</Text>
                       <View style={styles.allergensRow}>
                         {product.allergens.map((a) => (
                           <View key={a} style={styles.allergenPill}>
@@ -581,12 +583,12 @@ export default function ProductDetailScreen() {
             style={{ justifyContent: 'center' }}
           >
             <Text style={{ fontFamily: FONTS.sansSemiBold, color: '#fbfaf3', fontSize: 16 }}>
-              ✓ Consumato{product.count > 1 ? ` (ne restano ${product.count - 1})` : ''}
+              {t('product.consumedLabel')}{product.count > 1 ? t('product.remainingSuffix', { count: product.count - 1 }) : ''}
             </Text>
           </Pill>
           {product.count > 1 && (
             <TouchableOpacity onPress={handleConsumeAll} activeOpacity={0.85} style={styles.consumeAllBtn}>
-              <Text style={styles.consumeAllText}>Consuma tutte le {product.count} unità</Text>
+              <Text style={styles.consumeAllText}>{t('product.consumeAllUnits', { count: product.count })}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -601,7 +603,7 @@ export default function ProductDetailScreen() {
           >
             <Ionicons name="trash-outline" size={17} color={T.urgent} />
             <Text style={{ fontFamily: FONTS.sansSemiBold, color: T.urgent, fontSize: 16 }}>
-              Rimuovi dalla dispensa
+              {t('product.removeFromPantry')}
             </Text>
           </Pill>
         </View>
@@ -624,9 +626,9 @@ export default function ProductDetailScreen() {
           onPress={() => setShowOpenModal(false)}
         >
           <TouchableOpacity activeOpacity={1} style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Prodotto aperto</Text>
+            <Text style={styles.modalTitle}>{t('product.openedTitle')}</Text>
             <Text style={styles.modalSub}>
-              Scegli entro quando consumarlo dopo l'apertura
+              {t('product.openModalSub')}
             </Text>
 
             {/* Quick presets */}
@@ -651,7 +653,7 @@ export default function ProductDetailScreen() {
                   }}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.presetText}>+{p.l}</Text>
+                  <Text style={styles.presetText}>+{t(p.labelKey)}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -659,7 +661,7 @@ export default function ProductDetailScreen() {
             {/* Date inputs */}
             <View style={styles.pickerRow}>
               <View style={styles.pickerCol}>
-                <Text style={styles.pickerLabel}>Giorno</Text>
+                <Text style={styles.pickerLabel}>{t('common.datePicker.day')}</Text>
                 <TextInput
                   style={styles.pickerInput}
                   value={openPickerDay}
@@ -670,7 +672,7 @@ export default function ProductDetailScreen() {
                 />
               </View>
               <View style={styles.pickerCol}>
-                <Text style={styles.pickerLabel}>Mese</Text>
+                <Text style={styles.pickerLabel}>{t('common.datePicker.month')}</Text>
                 <TextInput
                   style={styles.pickerInput}
                   value={openPickerMonth}
@@ -681,7 +683,7 @@ export default function ProductDetailScreen() {
                 />
               </View>
               <View style={styles.pickerCol}>
-                <Text style={styles.pickerLabel}>Anno</Text>
+                <Text style={styles.pickerLabel}>{t('common.datePicker.year')}</Text>
                 <TextInput
                   style={styles.pickerInput}
                   value={openPickerYear}
@@ -695,7 +697,7 @@ export default function ProductDetailScreen() {
 
             {openExpiryPreview ? (
               <Text style={styles.modalPreviewDate}>
-                Scade il {shortDate(openExpiryPreview)} ({daysTo(openExpiryPreview)} giorni)
+                {t('product.expiresOn', { date: shortDate(openExpiryPreview) })} ({t('add.remainingDays', { count: daysTo(openExpiryPreview) })})
               </Text>
             ) : null}
 
@@ -705,9 +707,9 @@ export default function ProductDetailScreen() {
                 onPress={() => setShowOpenModal(false)}
                 activeOpacity={0.85}
               >
-                <Text style={styles.modalCancelText}>Annulla</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
-              <PrimaryButton onPress={confirmOpen} icon="lock-open-outline" label="Conferma apertura" containerStyle={{ flex: 2 }} />
+              <PrimaryButton onPress={confirmOpen} icon="lock-open-outline" label={t('product.confirmOpen')} containerStyle={{ flex: 2 }} />
             </View>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -722,7 +724,7 @@ export default function ProductDetailScreen() {
       >
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowExpiryPicker(false)}>
           <TouchableOpacity activeOpacity={1} style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Data di scadenza</Text>
+            <Text style={styles.modalTitle}>{t('product.expiryDateTitle')}</Text>
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
               {PRESETS.map((p) => (
@@ -737,31 +739,31 @@ export default function ProductDetailScreen() {
                   }}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.presetText}>+{p.l}</Text>
+                  <Text style={styles.presetText}>+{t(p.labelKey)}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
 
             <View style={styles.pickerRow}>
               <View style={styles.pickerCol}>
-                <Text style={styles.pickerLabel}>Giorno</Text>
+                <Text style={styles.pickerLabel}>{t('common.datePicker.day')}</Text>
                 <TextInput style={styles.pickerInput} value={expDay} onChangeText={setExpDay} keyboardType="number-pad" maxLength={2} selectTextOnFocus />
               </View>
               <View style={styles.pickerCol}>
-                <Text style={styles.pickerLabel}>Mese</Text>
+                <Text style={styles.pickerLabel}>{t('common.datePicker.month')}</Text>
                 <TextInput style={styles.pickerInput} value={expMonth} onChangeText={setExpMonth} keyboardType="number-pad" maxLength={2} selectTextOnFocus />
               </View>
               <View style={styles.pickerCol}>
-                <Text style={styles.pickerLabel}>Anno</Text>
+                <Text style={styles.pickerLabel}>{t('common.datePicker.year')}</Text>
                 <TextInput style={styles.pickerInput} value={expYear} onChangeText={setExpYear} keyboardType="number-pad" maxLength={4} selectTextOnFocus />
               </View>
             </View>
 
             <View style={styles.modalBtns}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setShowExpiryPicker(false)} activeOpacity={0.85}>
-                <Text style={styles.modalCancelText}>Annulla</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
-              <PrimaryButton onPress={confirmExpiry} label="Conferma" containerStyle={{ flex: 2 }} />
+              <PrimaryButton onPress={confirmExpiry} label={t('common.datePicker.confirm')} containerStyle={{ flex: 2 }} />
             </View>
           </TouchableOpacity>
         </TouchableOpacity>

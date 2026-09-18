@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useProducts } from '@/context/ProductsContext';
 import { Zone } from '@/types';
 import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
@@ -12,15 +13,16 @@ import { tintForCategory } from '@/lib/urgency';
 import { showAlert } from '@/lib/alert';
 import PrimaryButton from '@/components/PrimaryButton';
 
-const ZONES: { id: Zone; label: string; icon: string }[] = [
-  { id: 'frigo', label: 'Frigo', icon: '❄️' },
-  { id: 'freezer', label: 'Freezer', icon: '🧊' },
-  { id: 'dispensa', label: 'Dispensa', icon: '📦' },
+const ZONES: { id: Zone; labelKey: string; icon: string }[] = [
+  { id: 'frigo', labelKey: 'common.zones.frigo', icon: '❄️' },
+  { id: 'freezer', labelKey: 'common.zones.freezer', icon: '🧊' },
+  { id: 'dispensa', labelKey: 'common.zones.dispensa', icon: '📦' },
 ];
 
 const PRESETS = [
-  { d: 3, l: '3 giorni' }, { d: 7, l: '1 settimana' },
-  { d: 30, l: '1 mese' }, { d: 180, l: '6 mesi' }, { d: 365, l: '1 anno' },
+  { d: 3, labelKey: 'common.presets.d3' }, { d: 7, labelKey: 'common.presets.d7' },
+  { d: 30, labelKey: 'common.presets.d30' }, { d: 180, labelKey: 'common.presets.d180' },
+  { d: 365, labelKey: 'common.presets.d365' },
 ];
 
 function addDays(n: number): string {
@@ -40,6 +42,7 @@ export default function ReceiptReviewScreen() {
   const params = useLocalSearchParams();
   const { addNewProducts } = useProducts();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   const initialItems: string[] = params.items ? JSON.parse(params.items as string) : [];
 
@@ -100,15 +103,15 @@ export default function ReceiptReviewScreen() {
 
   const handleSave = async () => {
     if (!zone) {
-      showAlert('Errore', 'Seleziona dove conservi questi prodotti (Frigo, Freezer o Dispensa)');
+      showAlert(t('common.error'), t('receiptReview.missingZoneError'));
       return;
     }
     if (validRows.length === 0) {
-      showAlert('Errore', 'Aggiungi almeno un prodotto');
+      showAlert(t('common.error'), t('receiptReview.missingProductError'));
       return;
     }
     if (!validRows.every((r) => !!r.expiry)) {
-      showAlert('Errore', 'Imposta la scadenza per ogni prodotto');
+      showAlert(t('common.error'), t('receiptReview.missingExpiryError'));
       return;
     }
 
@@ -132,7 +135,7 @@ export default function ReceiptReviewScreen() {
       );
       router.replace('/(tabs)');
     } catch (e: any) {
-      showAlert('Errore', e?.message ?? 'Impossibile salvare i prodotti');
+      showAlert(t('common.error'), e?.message ?? t('receiptReview.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -149,16 +152,16 @@ export default function ReceiptReviewScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
             <Text style={styles.closeBtnText}>✕</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Controlla la lista</Text>
+          <Text style={styles.headerTitle}>{t('receiptReview.headerTitle')}</Text>
           <View style={{ width: 40 }} />
         </View>
 
         <Text style={styles.intro}>
-          Ho letto {initialItems.length} righe dallo scontrino. Correggi i nomi, imposta le scadenze e rimuovi quello che non serve.
+          {t('receiptReview.intro', { count: initialItems.length })}
         </Text>
 
         {/* Zone */}
-        <Text style={styles.sectionLabel}>DOVE LI CONSERVI</Text>
+        <Text style={styles.sectionLabel}>{t('receiptReview.storageSection')}</Text>
         <View style={styles.zoneRow}>
           {ZONES.map((z) => {
             const active = zone === z.id;
@@ -170,14 +173,14 @@ export default function ReceiptReviewScreen() {
                 activeOpacity={0.85}
               >
                 <Text style={styles.zoneIcon}>{z.icon}</Text>
-                <Text style={[styles.zoneLabel, active && styles.zoneLabelActive]}>{z.label}</Text>
+                <Text style={[styles.zoneLabel, active && styles.zoneLabelActive]}>{t(z.labelKey)}</Text>
               </TouchableOpacity>
             );
           })}
         </View>
 
         {/* Preset rapido per righe senza scadenza */}
-        <Text style={styles.sectionLabel}>APPLICA SCADENZA A TUTTE LE RIGHE VUOTE</Text>
+        <Text style={styles.sectionLabel}>{t('receiptReview.applyToEmptySection')}</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -190,13 +193,13 @@ export default function ReceiptReviewScreen() {
               onPress={() => applyPresetToEmpty(p.d)}
               activeOpacity={0.85}
             >
-              <Text style={styles.presetText}>+ {p.l}</Text>
+              <Text style={styles.presetText}>+ {t(p.labelKey)}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
 
         {/* Rows */}
-        <Text style={styles.sectionLabel}>PRODOTTI ({rows.length})</Text>
+        <Text style={styles.sectionLabel}>{t('receiptReview.productsSection', { count: rows.length })}</Text>
         <View style={styles.rowsWrap}>
           {rows.map((row, index) => (
             <View key={index} style={styles.rowCard}>
@@ -204,7 +207,7 @@ export default function ReceiptReviewScreen() {
                 style={styles.rowNameInput}
                 value={row.name}
                 onChangeText={(v) => updateRowName(index, v)}
-                placeholder="Nome prodotto"
+                placeholder={t('receiptReview.namePlaceholder')}
                 placeholderTextColor={T.mute}
               />
               <TouchableOpacity
@@ -213,7 +216,7 @@ export default function ReceiptReviewScreen() {
                 style={styles.rowDateBtn}
               >
                 <Text style={[styles.rowDateText, !row.expiry && styles.rowDatePlaceholder]}>
-                  {row.expiry ?? 'Scadenza'}
+                  {row.expiry ?? t('receiptReview.expiryPlaceholder')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -227,7 +230,7 @@ export default function ReceiptReviewScreen() {
           ))}
 
           <TouchableOpacity style={styles.addRowBtn} onPress={addRow} activeOpacity={0.85}>
-            <Text style={styles.addRowBtnText}>+ Aggiungi riga</Text>
+            <Text style={styles.addRowBtnText}>{t('receiptReview.addRow')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -238,10 +241,10 @@ export default function ReceiptReviewScreen() {
       <Modal visible={showDatePicker} transparent animationType="fade" onRequestClose={() => setShowDatePicker(false)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowDatePicker(false)}>
           <TouchableOpacity activeOpacity={1} style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Scegli la data</Text>
+            <Text style={styles.modalTitle}>{t('common.datePicker.title')}</Text>
             <View style={styles.pickerRow}>
               <View style={styles.pickerCol}>
-                <Text style={styles.pickerLabel}>Giorno</Text>
+                <Text style={styles.pickerLabel}>{t('common.datePicker.day')}</Text>
                 <TextInput
                   style={styles.pickerInput}
                   value={pickerDay}
@@ -252,7 +255,7 @@ export default function ReceiptReviewScreen() {
                 />
               </View>
               <View style={styles.pickerCol}>
-                <Text style={styles.pickerLabel}>Mese</Text>
+                <Text style={styles.pickerLabel}>{t('common.datePicker.month')}</Text>
                 <TextInput
                   style={styles.pickerInput}
                   value={pickerMonth}
@@ -263,7 +266,7 @@ export default function ReceiptReviewScreen() {
                 />
               </View>
               <View style={styles.pickerCol}>
-                <Text style={styles.pickerLabel}>Anno</Text>
+                <Text style={styles.pickerLabel}>{t('common.datePicker.year')}</Text>
                 <TextInput
                   style={styles.pickerInput}
                   value={pickerYear}
@@ -287,15 +290,15 @@ export default function ReceiptReviewScreen() {
                   }}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.presetText}>+ {p.l}</Text>
+                  <Text style={styles.presetText}>+ {t(p.labelKey)}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
             <View style={styles.modalBtns}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setShowDatePicker(false)} activeOpacity={0.85}>
-                <Text style={styles.modalCancelText}>Annulla</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
-              <PrimaryButton onPress={confirmDate} label="Conferma" containerStyle={{ flex: 1.5 }} />
+              <PrimaryButton onPress={confirmDate} label={t('common.datePicker.confirm')} containerStyle={{ flex: 1.5 }} />
             </View>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -304,14 +307,14 @@ export default function ReceiptReviewScreen() {
       {/* Footer */}
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <TouchableOpacity style={styles.cancelBtn} onPress={() => router.back()} activeOpacity={0.85}>
-          <Text style={styles.cancelBtnText}>Annulla</Text>
+          <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
         <PrimaryButton
           onPress={handleSave}
           disabled={!canSave}
           loading={saving}
           icon="checkmark"
-          label={`Aggiungi ${validRows.length} prodott${validRows.length === 1 ? 'o' : 'i'}`}
+          label={t('receiptReview.addCount', { count: validRows.length })}
           containerStyle={{ flex: 1.8 }}
         />
       </View>

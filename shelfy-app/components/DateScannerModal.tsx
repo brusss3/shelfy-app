@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator, Modal, Dimensions,
+  View, Text, TouchableOpacity, TextInput, StyleSheet, Platform, ActivityIndicator, Modal, Dimensions,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { T, FONTS, RADIUS } from '@/constants/theme';
+import { useTranslation } from 'react-i18next';
+import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
 import { showAlert } from '@/lib/alert';
 import { recognizeText } from '@/lib/ocr';
 import { parseExpiry, type DateFormat } from '@/lib/parseExpiry';
@@ -83,28 +85,55 @@ interface Props {
 // Formati selezionabili prima dello scatto: aiutano l'OCR a disambiguare.
 // Conta solo l'ordine dei campi: separatori (/ . -) e anno a 2/4 cifre
 // sono sempre accettati.
-const FORMATS: { id: DateFormat; label: string }[] = [
-  { id: 'auto', label: 'Auto' },
-  { id: 'dmy', label: 'GG/MM/AAAA' },
-  { id: 'mdy', label: 'MM/GG/AAAA' },
-  { id: 'ymd', label: 'AAAA-MM-GG' },
-  { id: 'my', label: 'MM/AAAA' },
+const FORMATS: { id: DateFormat; labelKey: string }[] = [
+  { id: 'auto', labelKey: 'dateScanner.formats.auto' },
+  { id: 'dmy', labelKey: 'dateScanner.formats.dmy' },
+  { id: 'mdy', labelKey: 'dateScanner.formats.mdy' },
+  { id: 'ymd', labelKey: 'dateScanner.formats.ymd' },
+  { id: 'my', labelKey: 'dateScanner.formats.my' },
 ];
 
 // Fotocamera a tutto schermo che scatta una foto della scadenza, ne estrae
 // la data via OCR e la restituisce al chiamante. Usata dalla form prodotto.
 export default function DateScannerModal({ visible, onClose, onResult }: Props) {
+  const { t } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
   const [ocrLoading, setOcrLoading] = useState(false);
   const [format, setFormat] = useState<DateFormat>('auto');
   const [zoom, setZoom] = useState(0);
   const [camKey, setCamKey] = useState(0);
   const [mountError, setMountError] = useState<string | null>(null);
+  // 'camera': inquadra e scatta. 'confirm': la data letta (o inserita a mano)
+  // è mostrata modificabile prima di essere restituita al chiamante — un
+  // OCR letto male (es. 16→18) altrimenti finiva salvato senza controllo.
+  const [stage, setStage] = useState<'camera' | 'confirm'>('camera');
+  const [pickerDay, setPickerDay] = useState('');
+  const [pickerMonth, setPickerMonth] = useState('');
+  const [pickerYear, setPickerYear] = useState('');
   const camRef = useRef<CameraView>(null);
 
   useEffect(() => {
-    if (visible) setMountError(null);
+    if (visible) {
+      setMountError(null);
+      setStage('camera');
+    }
   }, [visible]);
+
+  const openManualEntry = () => {
+    const d = new Date();
+    setPickerDay(String(d.getDate()));
+    setPickerMonth(String(d.getMonth() + 1));
+    setPickerYear(String(d.getFullYear()));
+    setStage('confirm');
+  };
+
+  const confirmDate = () => {
+    const d = Math.max(1, Math.min(31, parseInt(pickerDay) || 1));
+    const m = Math.max(1, Math.min(12, parseInt(pickerMonth) || 1));
+    const y = parseInt(pickerYear) || new Date().getFullYear();
+    onResult(`${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+    onClose();
+  };
 
   if (!visible) return null;
 
@@ -133,23 +162,26 @@ export default function DateScannerModal({ visible, onClose, onResult }: Props) 
         quality: 1,
         base64: Platform.OS === 'web',
       });
-      if (!photo) throw new Error('Scatto non riuscito');
+      if (!photo) throw new Error(t('dateScanner.captureFailed'));
 
       const src = await cropToReticle(photo);
       const text = await recognizeText(src);
       const iso = parseExpiry(text, format);
 
       if (iso) {
-        onResult(iso);
-        onClose();
+        const [y, m, dd] = iso.split('-');
+        setPickerYear(y);
+        setPickerMonth(String(parseInt(m, 10)));
+        setPickerDay(String(parseInt(dd, 10)));
+        setStage('confirm');
       } else {
         showAlert(
-          'Data non trovata',
-          'Non sono riuscito a leggere la data. Avvicinati, inquadra bene la scritta della scadenza o inseriscila a mano.',
+          t('dateScanner.notFoundTitle'),
+          t('dateScanner.notFoundBody'),
         );
       }
     } catch (e: any) {
-      showAlert('Errore OCR', e?.message ?? 'Riprova');
+      showAlert(t('dateScanner.ocrErrorTitle'), e?.message ?? t('common.retry'));
     } finally {
       setOcrLoading(false);
     }
@@ -165,26 +197,79 @@ export default function DateScannerModal({ visible, onClose, onResult }: Props) 
         ) : !permission.granted ? (
           <View style={[styles.center, { gap: 16, padding: 32 }]}>
             <Text style={styles.hint}>
-              Shelfy ha bisogno della fotocamera per leggere la data di scadenza.
+              {t('dateScanner.permissionHint')}
             </Text>
             <TouchableOpacity style={styles.grantBtn} onPress={requestPermission} activeOpacity={0.85}>
-              <Text style={styles.grantBtnText}>Concedi accesso</Text>
+              <Text style={styles.grantBtnText}>{t('scanner.grantAccess')}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={onClose} activeOpacity={0.85}>
-              <Text style={styles.closeLink}>Annulla</Text>
+              <Text style={styles.closeLink}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         ) : mountError ? (
           <View style={[styles.center, { gap: 16, padding: 32 }]}>
             <Text style={styles.hint}>
-              Fotocamera non disponibile. Se hai scelto "Consenti una volta" nel browser, il permesso potrebbe essere scaduto.
+              {t('scanner.cameraUnavailableHint')}
             </Text>
             <TouchableOpacity style={styles.grantBtn} onPress={retryCamera} activeOpacity={0.85}>
-              <Text style={styles.grantBtnText}>Riprova</Text>
+              <Text style={styles.grantBtnText}>{t('common.retry')}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={onClose} activeOpacity={0.85}>
-              <Text style={styles.closeLink}>Annulla</Text>
+              <Text style={styles.closeLink}>{t('common.cancel')}</Text>
             </TouchableOpacity>
+          </View>
+        ) : stage === 'confirm' ? (
+          <View style={styles.confirmRoot}>
+            <View style={styles.confirmCard}>
+              <Text style={styles.confirmTitle}>{t('dateScanner.confirmTitle')}</Text>
+              <Text style={styles.confirmSub}>{t('dateScanner.confirmSub')}</Text>
+              <View style={styles.pickerRow}>
+                <View style={styles.pickerCol}>
+                  <Text style={styles.pickerLabel}>{t('common.datePicker.day')}</Text>
+                  <TextInput
+                    style={styles.pickerInput}
+                    value={pickerDay}
+                    onChangeText={setPickerDay}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    selectTextOnFocus
+                  />
+                </View>
+                <View style={styles.pickerCol}>
+                  <Text style={styles.pickerLabel}>{t('common.datePicker.month')}</Text>
+                  <TextInput
+                    style={styles.pickerInput}
+                    value={pickerMonth}
+                    onChangeText={setPickerMonth}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    selectTextOnFocus
+                  />
+                </View>
+                <View style={styles.pickerCol}>
+                  <Text style={styles.pickerLabel}>{t('common.datePicker.year')}</Text>
+                  <TextInput
+                    style={styles.pickerInput}
+                    value={pickerYear}
+                    onChangeText={setPickerYear}
+                    keyboardType="number-pad"
+                    maxLength={4}
+                    selectTextOnFocus
+                  />
+                </View>
+              </View>
+              <View style={styles.confirmBtns}>
+                <TouchableOpacity style={styles.confirmGhost} onPress={() => setStage('camera')} activeOpacity={0.85}>
+                  <Text style={styles.confirmGhostText}>{t('dateScanner.retakePhoto')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.confirmPrimary} onPress={confirmDate} activeOpacity={0.85}>
+                  <Text style={styles.confirmPrimaryText}>{t('common.datePicker.confirm')}</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity onPress={onClose} activeOpacity={0.85} style={{ alignSelf: 'center', marginTop: 4 }}>
+                <Text style={styles.closeLink}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : (
           <>
@@ -237,6 +322,10 @@ export default function DateScannerModal({ visible, onClose, onResult }: Props) 
               <TouchableOpacity onPress={onClose} style={styles.glassBtn} activeOpacity={0.85}>
                 <Text style={styles.glassBtnText}>✕</Text>
               </TouchableOpacity>
+              <TouchableOpacity onPress={openManualEntry} style={styles.glassBtnWide} activeOpacity={0.85}>
+                <Ionicons name="pencil-outline" size={15} color="#fbfaf3" />
+                <Text style={styles.glassBtnWideText}>{t('dateScanner.manualEntry')}</Text>
+              </TouchableOpacity>
             </View>
 
             {/* Status */}
@@ -244,19 +333,19 @@ export default function DateScannerModal({ visible, onClose, onResult }: Props) 
               {ocrLoading ? (
                 <>
                   <ActivityIndicator color="#fbfaf3" size="large" />
-                  <Text style={styles.statusSub}>Leggo la data…</Text>
+                  <Text style={styles.statusSub}>{t('dateScanner.statusReading')}</Text>
                 </>
               ) : (
                 <>
-                  <Text style={styles.statusTitle}>Inquadra la data</Text>
-                  <Text style={styles.statusSub}>Centra la scadenza e scatta</Text>
+                  <Text style={styles.statusTitle}>{t('dateScanner.statusTitle')}</Text>
+                  <Text style={styles.statusSub}>{t('dateScanner.statusSub')}</Text>
                 </>
               )}
             </View>
 
             {/* Selettore formato data */}
             <View style={styles.formatBar}>
-              <Text style={styles.formatHint}>Ordine della data sulla confezione (/, -, . vanno bene)</Text>
+              <Text style={styles.formatHint}>{t('dateScanner.formatHint')}</Text>
               <View style={styles.formatChips}>
                 {FORMATS.map((f) => {
                   const active = format === f.id;
@@ -268,7 +357,7 @@ export default function DateScannerModal({ visible, onClose, onResult }: Props) 
                       activeOpacity={0.85}
                     >
                       <Text style={[styles.formatChipText, active && styles.formatChipTextActive]}>
-                        {f.label}
+                        {t(f.labelKey)}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -318,7 +407,7 @@ const styles = StyleSheet.create({
 
   topBar: {
     position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingTop: Platform.OS === 'ios' ? 60 : 40, paddingHorizontal: 20,
   },
   glassBtn: {
@@ -326,6 +415,41 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   glassBtnText: { color: '#fff', fontSize: 18, fontFamily: FONTS.sans },
+  glassBtnWide: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    height: 40, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 16,
+  },
+  glassBtnWideText: { color: '#fbfaf3', fontSize: 13, fontFamily: FONTS.sansSemiBold },
+
+  confirmRoot: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  confirmCard: {
+    width: '100%', maxWidth: 340, backgroundColor: T.surface, borderRadius: RADIUS.clay,
+    padding: 24, gap: 14, ...SHADOW.card,
+  },
+  confirmTitle: {
+    fontFamily: FONTS.serifItalic, fontSize: 24, color: T.ink, letterSpacing: -0.4,
+  },
+  confirmSub: { fontSize: 13, fontFamily: FONTS.sans, color: T.mute, marginTop: -8 },
+  pickerRow: { flexDirection: 'row', gap: 12 },
+  pickerCol: { flex: 1, alignItems: 'center', gap: 6 },
+  pickerLabel: { fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.4 },
+  pickerInput: {
+    width: '100%', textAlign: 'center', backgroundColor: '#ece8de', borderRadius: RADIUS.input,
+    paddingVertical: 12, fontSize: 20, fontFamily: FONTS.sansBold, color: T.ink,
+    boxShadow: CLAY.inset,
+  },
+  confirmBtns: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  confirmGhost: {
+    flex: 1, borderRadius: RADIUS.lg, paddingVertical: 14, alignItems: 'center',
+    borderWidth: 1, borderColor: T.line,
+  },
+  confirmGhostText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.mute },
+  confirmPrimary: {
+    flex: 1.5, borderRadius: RADIUS.lg, paddingVertical: 14, alignItems: 'center',
+    backgroundColor: T.primary,
+  },
+  confirmPrimaryText: { fontFamily: FONTS.sansBold, fontSize: 15, color: '#fbfaf3' },
 
   zoomControl: {
     position: 'absolute', right: 16, top: '30%', zIndex: 10,

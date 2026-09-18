@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useRecipes } from '@/context/RecipesContext';
 import { showAlert } from '@/lib/alert';
 import RecipeDetailView from '@/components/RecipeDetailView';
@@ -11,6 +12,7 @@ export default function MyRecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { myRecipes, publishMyRecipe, removeMyRecipe } = useRecipes();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const recipe = useMemo(() => myRecipes.find((r) => r.id === id) ?? null, [myRecipes, id]);
   const [publishing, setPublishing] = useState(false);
@@ -18,19 +20,19 @@ export default function MyRecipeDetailScreen() {
   const handlePublish = () => {
     if (!recipe) return;
     showAlert(
-      'Pubblica nella community',
-      'La ricetta diventerà visibile a tutti gli utenti di Shelfy, che potranno votarla. Procedo?',
+      t('recipeDetail.publishConfirmTitle'),
+      t('recipeDetail.publishConfirmBody'),
       [
-        { text: 'Annulla', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Pubblica',
+          text: t('recipeDetail.publishAction'),
           onPress: async () => {
             setPublishing(true);
             try {
               const communityId = await publishMyRecipe(recipe);
               router.replace(`/recipe/${communityId}`);
             } catch (e: any) {
-              showAlert('Errore', e?.message ?? 'Pubblicazione non riuscita');
+              showAlert(t('common.error'), e?.message ?? t('recipeDetail.publishFailed'));
               setPublishing(false);
             }
           },
@@ -42,12 +44,12 @@ export default function MyRecipeDetailScreen() {
   const handleDelete = () => {
     if (!recipe) return;
     showAlert(
-      'Elimina ricetta',
-      `Vuoi eliminare "${recipe.title}" dalle tue ricette?`,
+      t('recipeDetail.deleteRecipe'),
+      t('recipeDetail.deleteConfirmBody', { title: recipe.title }),
       [
-        { text: 'Annulla', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Elimina',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             await removeMyRecipe(recipe.id);
@@ -61,7 +63,7 @@ export default function MyRecipeDetailScreen() {
   if (!recipe) {
     return (
       <View style={styles.center}>
-        <Text style={{ color: T.mute, fontFamily: FONTS.sans }}>Ricetta non trovata.</Text>
+        <Text style={{ color: T.mute, fontFamily: FONTS.sans }}>{t('recipeDetail.notFound')}</Text>
       </View>
     );
   }
@@ -78,7 +80,7 @@ export default function MyRecipeDetailScreen() {
       meta={
         <>
           <View style={styles.sourceBadge}>
-            <Text style={styles.sourceBadgeText}>{recipe.source === 'ai' ? '✦ AI' : 'Mia'}</Text>
+            <Text style={styles.sourceBadgeText}>{recipe.source === 'ai' ? '✦ AI' : t('recipeDetail.mine')}</Text>
           </View>
           <Text style={styles.metaDot}>·</Text>
         </>
@@ -94,7 +96,7 @@ export default function MyRecipeDetailScreen() {
                 onPress={() => recipe.publishedRecipeId && router.push(`/recipe/${recipe.publishedRecipeId}`)}
               >
                 <Text style={{ fontFamily: FONTS.sansSemiBold, fontSize: 16, color: T.primary }}>
-                  ✓ Pubblicata — vedi nella community
+                  {t('recipeDetail.alreadyPublished')}
                 </Text>
               </Pill>
             ) : (
@@ -109,7 +111,7 @@ export default function MyRecipeDetailScreen() {
                   <ActivityIndicator color="#fbfaf3" />
                 ) : (
                   <Text style={{ fontFamily: FONTS.sansSemiBold, fontSize: 16, color: '#fbfaf3' }}>
-                    ↗ Pubblica nella community
+                    {t('recipeDetail.publishToCommunity')}
                   </Text>
                 )}
               </Pill>
@@ -117,7 +119,7 @@ export default function MyRecipeDetailScreen() {
           </View>
           <View style={styles.actionSection}>
             <TouchableOpacity onPress={handleDelete} activeOpacity={0.85} style={styles.deleteBtn}>
-              <Text style={styles.deleteBtnText}>Elimina ricetta</Text>
+              <Text style={styles.deleteBtnText}>{t('recipeDetail.deleteRecipe')}</Text>
             </TouchableOpacity>
           </View>
         </>

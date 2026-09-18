@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useProducts } from '@/context/ProductsContext';
 import { urgencyOf, shortDate, effectiveDays, effectiveExpiry } from '@/lib/urgency';
 import FoodTile from '@/components/FoodTile';
@@ -15,6 +16,7 @@ import { Product } from '@/types';
 export default function NotificationsScreen() {
   const { products, removeProduct, changeZone, consumeOne } = useProducts();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const scaduti  = products.filter((p) => effectiveDays(p) < 0);
   const oggi     = products.filter((p) => effectiveDays(p) === 0);
@@ -29,18 +31,18 @@ export default function NotificationsScreen() {
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <View>
-              <Text style={styles.sub}>Avvisi & azioni</Text>
-              <Text style={styles.title}>Da gestire oggi</Text>
+              <Text style={styles.sub}>{t('notifications.sub')}</Text>
+              <Text style={styles.title}>{t('notifications.title')}</Text>
             </View>
             <ProfileButton />
           </View>
 
           <View style={styles.chips}>
             {[
-              { count: scaduti.length, label: 'scaduti', tone: 'urgent' as const },
-              { count: oggi.length, label: 'oggi', tone: 'urgent' as const },
-              { count: urgenti.length, label: 'entro 3 giorni', tone: 'warn' as const },
-              { count: prossimi.length, label: 'questa settimana', tone: 'ok' as const },
+              { count: scaduti.length, label: t('notifications.chips.expired'), tone: 'urgent' as const },
+              { count: oggi.length, label: t('notifications.chips.today'), tone: 'urgent' as const },
+              { count: urgenti.length, label: t('notifications.chips.within3Days'), tone: 'warn' as const },
+              { count: prossimi.length, label: t('notifications.chips.thisWeek'), tone: 'ok' as const },
             ].map((c) => c.count > 0 && (
               <SummaryChip key={c.label} count={c.count} label={c.label} tone={c.tone} />
             ))}
@@ -50,7 +52,7 @@ export default function NotificationsScreen() {
         {isEmpty && <EmptyState />}
 
         {scaduti.length > 0 && (
-          <Section title="Scaduti">
+          <Section title={t('notifications.sections.expired')}>
             {scaduti.map((p) => (
               <PriorityCard key={p.id} product={p} urgency="scaduto"
                 onOpen={() => router.push(`/product/${p.id}`)}
@@ -61,7 +63,7 @@ export default function NotificationsScreen() {
           </Section>
         )}
         {oggi.length > 0 && (
-          <Section title="Scadono oggi">
+          <Section title={t('notifications.sections.today')}>
             {oggi.map((p) => (
               <PriorityCard key={p.id} product={p} urgency="oggi"
                 onOpen={() => router.push(`/product/${p.id}`)}
@@ -74,7 +76,7 @@ export default function NotificationsScreen() {
           </Section>
         )}
         {urgenti.length > 0 && (
-          <Section title="Nei prossimi giorni">
+          <Section title={t('notifications.sections.upcoming')}>
             {urgenti.map((p) => (
               <PriorityCard key={p.id} product={p} urgency="urgente"
                 onOpen={() => router.push(`/product/${p.id}`)}
@@ -87,7 +89,7 @@ export default function NotificationsScreen() {
           </Section>
         )}
         {prossimi.length > 0 && (
-          <Section title="Questa settimana">
+          <Section title={t('notifications.sections.thisWeek')}>
             {prossimi.map((p) => (
               <CompactCard key={p.id} product={p}
                 onOpen={() => router.push(`/product/${p.id}`)}
@@ -139,15 +141,16 @@ interface PriorityCardProps {
 }
 
 function PriorityCard({ product, urgency, onOpen, onRemove, onConsumed, onFreeze, onRecipe, canFreeze }: PriorityCardProps) {
+  const { t } = useTranslation();
   const days = effectiveDays(product);
   const u = urgencyOf(days);
 
   const suggestion =
-    urgency === 'scaduto' ? 'Verifica se è ancora sicuro o registralo come spreco.' :
-    product.zone === 'frigo' && canFreeze ? 'Puoi congelarlo per estenderne la durata.' :
-    product.category === 'Latticini' ? 'Perfetto per una frittata o un risotto.' :
-    product.category === 'Verdura' ? 'Ottimo per un soffritto veloce o una vellutata.' :
-    'Ti suggeriamo di consumarlo presto.';
+    urgency === 'scaduto' ? t('notifications.suggestions.expired') :
+    product.zone === 'frigo' && canFreeze ? t('notifications.suggestions.canFreeze') :
+    product.category === 'Latticini' ? t('notifications.suggestions.dairy') :
+    product.category === 'Verdura' ? t('notifications.suggestions.vegetables') :
+    t('notifications.suggestions.generic');
 
   return (
     <View style={styles.priorityCard}>
@@ -164,7 +167,7 @@ function PriorityCard({ product, urgency, onOpen, onRemove, onConsumed, onFreeze
               <View style={[styles.urgencyBadge, { backgroundColor: u.soft }]}>
                 <Text style={[styles.urgencyBadgeText, { color: u.ink }]}>{u.label.toUpperCase()}</Text>
               </View>
-              <Text style={styles.zoneText}>{product.zone}</Text>
+              <Text style={styles.zoneText}>{t(`common.zones.${product.zone}`)}</Text>
             </View>
             <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
             <Text style={styles.productSub}>{product.qty} · {product.brand}</Text>
@@ -179,13 +182,13 @@ function PriorityCard({ product, urgency, onOpen, onRemove, onConsumed, onFreeze
         <View style={styles.actions}>
           {urgency === 'scaduto' ? (
             <>
-              {onRemove && <Pill variant="danger" size="sm" onPress={onRemove}>Rimuovi</Pill>}
+              {onRemove && <Pill variant="danger" size="sm" onPress={onRemove}>{t('notifications.remove')}</Pill>}
             </>
           ) : (
             <>
-              {onRecipe && <Pill variant="primary" size="sm" onPress={onRecipe}>🔥 Cucina</Pill>}
-              {canFreeze && onFreeze && <Pill variant="soft" size="sm" onPress={onFreeze}>🧊 Freezer</Pill>}
-              {onConsumed && <Pill variant="ghost" size="sm" onPress={onConsumed}>✓ Consumato</Pill>}
+              {onRecipe && <Pill variant="primary" size="sm" onPress={onRecipe}>{t('notifications.cook')}</Pill>}
+              {canFreeze && onFreeze && <Pill variant="soft" size="sm" onPress={onFreeze}>{t('notifications.freezer')}</Pill>}
+              {onConsumed && <Pill variant="ghost" size="sm" onPress={onConsumed}>{t('notifications.consumed')}</Pill>}
             </>
           )}
         </View>
@@ -195,6 +198,7 @@ function PriorityCard({ product, urgency, onOpen, onRemove, onConsumed, onFreeze
 }
 
 function CompactCard({ product, onOpen }: { product: Product; onOpen: () => void }) {
+  const { t } = useTranslation();
   const days = effectiveDays(product);
   const u = urgencyOf(days);
   return (
@@ -202,7 +206,9 @@ function CompactCard({ product, onOpen }: { product: Product; onOpen: () => void
       <FoodTile product={product} size={48} radius={12} />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
-        <Text style={styles.productSub}>Scade {shortDate(effectiveExpiry(product))} · {product.zone}</Text>
+        <Text style={styles.productSub}>
+          {t('notifications.expiresOn', { date: shortDate(effectiveExpiry(product)), zone: t(`common.zones.${product.zone}`) })}
+        </Text>
       </View>
       <View style={[styles.urgencyBadge, { backgroundColor: u.soft }]}>
         <Text style={[styles.urgencyBadgeText, { color: u.ink }]}>{u.label}</Text>
@@ -212,13 +218,14 @@ function CompactCard({ product, onOpen }: { product: Product; onOpen: () => void
 }
 
 function EmptyState() {
+  const { t } = useTranslation();
   return (
     <View style={styles.emptyState}>
       <View style={styles.emptyIcon}>
         <Text style={{ fontSize: 36 }}>🌿</Text>
       </View>
-      <Text style={styles.emptyTitle}>Tutto sotto controllo</Text>
-      <Text style={styles.emptyText}>Nessun prodotto in scadenza nei prossimi giorni.</Text>
+      <Text style={styles.emptyTitle}>{t('notifications.emptyTitle')}</Text>
+      <Text style={styles.emptyText}>{t('notifications.emptyText')}</Text>
     </View>
   );
 }

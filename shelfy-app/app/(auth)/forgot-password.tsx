@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { authErrorMessage } from '@/lib/authErrors';
 import PrimaryButton from '@/components/PrimaryButton';
@@ -16,10 +17,11 @@ export default function ForgotPasswordScreen() {
   const [sent, setSent] = useState(false);
   const { resetPassword } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const handleReset = async () => {
     if (!email.trim()) {
-      showAlert('Errore', 'Inserisci la tua email');
+      showAlert(t('common.error'), t('auth.forgotPassword.missingEmailError'));
       return;
     }
     setLoading(true);
@@ -29,7 +31,7 @@ export default function ForgotPasswordScreen() {
       // mostriamo sempre lo stesso messaggio di conferma.
       setSent(true);
     } catch (e: any) {
-      showAlert('Invio non riuscito', authErrorMessage(e, 'Impossibile inviare l\'email. Riprova.'));
+      showAlert(t('auth.forgotPassword.failedTitle'), authErrorMessage(e, t('auth.forgotPassword.failedFallback')));
     } finally {
       setLoading(false);
     }
@@ -44,38 +46,37 @@ export default function ForgotPasswordScreen() {
         <View style={styles.header}>
           <Image source={require('@/assets/icon.png')} style={styles.logoTile} resizeMode="contain" />
           <Text style={styles.appName}>Shelfy</Text>
-          <Text style={styles.tagline}>Recupera l'accesso al tuo account</Text>
+          <Text style={styles.tagline}>{t('auth.forgotPassword.tagline')}</Text>
         </View>
 
         <View style={styles.card}>
           {sent ? (
             <>
-              <Text style={styles.formTitle}>Controlla la tua email</Text>
+              <Text style={styles.formTitle}>{t('auth.forgotPassword.sentTitle')}</Text>
               <Text style={styles.infoText}>
-                Se esiste un account associato a <Text style={{ fontFamily: FONTS.sansSemiBold }}>{email.trim()}</Text>,
-                {' '}riceverai a breve un'email con le istruzioni per reimpostare la password.
+                {t('auth.forgotPassword.sentBodyPrefix')}<Text style={{ fontFamily: FONTS.sansSemiBold }}>{email.trim()}</Text>{t('auth.forgotPassword.sentBodySuffix')}
               </Text>
               <PrimaryButton
                 onPress={() => router.replace('/(auth)/login')}
-                label="Torna al login"
+                label={t('auth.forgotPassword.backToLogin')}
                 fullWidth
                 containerStyle={{ marginTop: 20 }}
               />
             </>
           ) : (
             <>
-              <Text style={styles.formTitle}>Password dimenticata</Text>
+              <Text style={styles.formTitle}>{t('auth.forgotPassword.title')}</Text>
               <Text style={styles.infoText}>
-                Inserisci l'email con cui ti sei registrato: ti mandiamo un link per crearne una nuova.
+                {t('auth.forgotPassword.intro')}
               </Text>
 
               <View style={[styles.field, { marginTop: 16 }]}>
-                <Text style={styles.label}>Email</Text>
+                <Text style={styles.label}>{t('auth.forgotPassword.emailLabel')}</Text>
                 <TextInput
                   style={styles.input}
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="tu@esempio.com"
+                  placeholder={t('auth.emailPlaceholder')}
                   placeholderTextColor={T.mute}
                   keyboardType="email-address"
                   autoCapitalize="none"
@@ -86,7 +87,7 @@ export default function ForgotPasswordScreen() {
               <PrimaryButton
                 onPress={handleReset}
                 loading={loading}
-                label="Invia link di reset"
+                label={t('auth.forgotPassword.submit')}
                 fullWidth
                 containerStyle={{ marginTop: 20 }}
               />
@@ -95,8 +96,8 @@ export default function ForgotPasswordScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Ti sei ricordato la password? </Text>
-          <Link href="/(auth)/login" style={styles.footerLink}>Accedi</Link>
+          <Text style={styles.footerText}>{t('auth.forgotPassword.rememberedPassword')}</Text>
+          <Link href="/(auth)/login" style={styles.footerLink}>{t('auth.login.title')}</Link>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

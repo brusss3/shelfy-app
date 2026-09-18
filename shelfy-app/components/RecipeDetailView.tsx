@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useProducts, daysTo } from '@/context/ProductsContext';
 import FoodTile from '@/components/FoodTile';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
@@ -29,6 +30,7 @@ export default function RecipeDetailView({
 }: Props) {
   const { products } = useProducts();
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.root}>
@@ -50,7 +52,7 @@ export default function RecipeDetailView({
 
         {beforeIngredients}
 
-        <Text style={styles.sectionTitle}>Ingredienti</Text>
+        <Text style={styles.sectionTitle}>{t('recipeDetail.ingredientsTitle')}</Text>
         <View style={styles.section}>
           {ingredients.map((ing, i) => {
             const p = products.find((pp) => pp.name.toLowerCase() === ing.name.toLowerCase());
@@ -61,13 +63,13 @@ export default function RecipeDetailView({
                 <View style={{ flex: 1 }}>
                   <Text style={styles.ingredientName}>{ing.name}</Text>
                   <Text style={styles.ingredientSub}>
-                    {ing.qty}{p ? ' · in dispensa' : ''}
+                    {ing.qty}{p ? t('recipeDetail.inPantry') : ''}
                   </Text>
                 </View>
                 {p && (
                   <View style={[styles.statusBadge, { backgroundColor: days! <= 3 ? T.warnSoft : T.okSoft }]}>
                     <Text style={{ fontSize: 11, fontFamily: FONTS.sansBold, color: days! <= 3 ? '#4a3414' : '#1b3320' }}>
-                      {days! <= 3 ? 'usa subito' : 'ok'}
+                      {days! <= 3 ? t('recipeDetail.useSoon') : t('recipeDetail.ok')}
                     </Text>
                   </View>
                 )}
@@ -76,7 +78,7 @@ export default function RecipeDetailView({
           })}
         </View>
 
-        <Text style={styles.sectionTitle}>Procedimento</Text>
+        <Text style={styles.sectionTitle}>{t('recipeDetail.stepsTitle')}</Text>
         <View style={styles.section}>
           {steps.map((step, i) => (
             <View key={i} style={styles.stepCard}>

@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { authErrorMessage } from '@/lib/authErrors';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
@@ -17,10 +18,11 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const handleLogin = async () => {
     if (!email || !password) {
-      showAlert('Errore', 'Inserisci email e password');
+      showAlert(t('common.error'), t('auth.login.missingFieldsError'));
       return;
     }
     setLoading(true);
@@ -28,7 +30,7 @@ export default function LoginScreen() {
       await signIn(email.trim(), password);
       router.replace('/(tabs)');
     } catch (e: any) {
-      showAlert('Accesso fallito', authErrorMessage(e, 'Controlla le tue credenziali e riprova.'));
+      showAlert(t('auth.login.failedTitle'), authErrorMessage(e, t('auth.login.failedFallback')));
     } finally {
       setLoading(false);
     }
@@ -44,20 +46,20 @@ export default function LoginScreen() {
         <View style={styles.header}>
           <Image source={require('@/assets/icon.png')} style={styles.logoTile} resizeMode="contain" />
           <Text style={styles.appName}>Shelfy</Text>
-          <Text style={styles.tagline}>La tua dispensa intelligente</Text>
+          <Text style={styles.tagline}>{t('auth.login.tagline')}</Text>
         </View>
 
         {/* Form */}
         <View style={styles.card}>
-          <Text style={styles.formTitle}>Accedi</Text>
+          <Text style={styles.formTitle}>{t('auth.login.title')}</Text>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Email</Text>
+            <Text style={styles.label}>{t('auth.login.emailLabel')}</Text>
             <TextInput
               style={styles.input}
               value={email}
               onChangeText={setEmail}
-              placeholder="tu@esempio.com"
+              placeholder={t('auth.emailPlaceholder')}
               placeholderTextColor={T.mute}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -66,7 +68,7 @@ export default function LoginScreen() {
           </View>
 
           <View style={[styles.field, { marginTop: 12 }]}>
-            <Text style={styles.label}>Password</Text>
+            <Text style={styles.label}>{t('auth.login.passwordLabel')}</Text>
             <TextInput
               style={styles.input}
               value={password}
@@ -79,20 +81,20 @@ export default function LoginScreen() {
           </View>
 
           <Link href="/(auth)/forgot-password" style={styles.forgotLink}>
-            Password dimenticata?
+            {t('auth.login.forgotLink')}
           </Link>
 
           <PrimaryButton
             onPress={handleLogin}
             loading={loading}
-            label="Accedi"
+            label={t('auth.login.submit')}
             fullWidth
             containerStyle={{ marginTop: 20 }}
           />
 
           <View style={styles.dividerRow}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>oppure</Text>
+            <Text style={styles.dividerText}>{t('auth.login.or')}</Text>
             <View style={styles.dividerLine} />
           </View>
 
@@ -100,9 +102,9 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Non hai un account? </Text>
+          <Text style={styles.footerText}>{t('auth.login.noAccount')}</Text>
           <Link href="/(auth)/register" style={styles.footerLink}>
-            Registrati
+            {t('auth.login.registerLink')}
           </Link>
         </View>
       </ScrollView>

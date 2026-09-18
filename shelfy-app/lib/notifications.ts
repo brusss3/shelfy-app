@@ -5,6 +5,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Product } from '@/types';
 import { effectiveExpiry } from '@/lib/urgency';
+import i18n from '@/lib/i18n';
 
 const isExpoGo = Constants.executionEnvironment === 'storeClient';
 
@@ -33,7 +34,7 @@ export function setupNotificationHandler(): void {
   Notifications.setNotificationCategoryAsync(EXPIRY_CATEGORY, [
     {
       identifier: 'consumed',
-      buttonTitle: '✓ Consumato',
+      buttonTitle: i18n.t('pushNotifications.consumedAction'),
       // MVP: apre l'app in foreground; l'handler cancella il prodotto.
       options: { opensAppToForeground: true },
     },
@@ -87,7 +88,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('expiry-alerts', {
-      name: 'Avvisi scadenza',
+      name: i18n.t('pushNotifications.androidChannelExpiry'),
       importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#2f4a31',
@@ -95,7 +96,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
     // Le push remote (Expo API) senza channelId esplicito finiscono sul
     // canale "default": se non esiste, Android le scarta senza errori.
     await Notifications.setNotificationChannelAsync('default', {
-      name: 'Generali',
+      name: i18n.t('pushNotifications.androidChannelDefault'),
       importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#2f4a31',
@@ -144,15 +145,17 @@ function groupByExpiryDate(products: Product[]): Map<string, Product[]> {
 }
 
 function expiryBody(products: Product[], when: 'oggi' | 'domani', pantryId: string | null, pantryName: string): string {
-  const where = pantryId === null ? 'nella tua dispensa personale' : `nella casa "${pantryName}"`;
+  const where = pantryId === null
+    ? i18n.t('pushNotifications.personalPantry')
+    : i18n.t('pushNotifications.inHomeNamed', { name: pantryName });
   if (products.length === 1) {
     return when === 'oggi'
-      ? `${products[0].name} scade oggi ${where}. Usalo subito o congelalo!`
-      : `${products[0].name} scade domani ${where}.`;
+      ? i18n.t('pushNotifications.singleExpiresToday', { name: products[0].name, where })
+      : i18n.t('pushNotifications.singleExpiresTomorrow', { name: products[0].name, where });
   }
   return when === 'oggi'
-    ? `Hai ${products.length} prodotti in scadenza oggi ${where}.`
-    : `Hai ${products.length} prodotti in scadenza domani ${where}.`;
+    ? i18n.t('pushNotifications.multiExpiresToday', { count: products.length, where })
+    : i18n.t('pushNotifications.multiExpiresTomorrow', { count: products.length, where });
 }
 
 export async function scheduleExpiryNotifications(
@@ -184,7 +187,7 @@ export async function scheduleExpiryNotifications(
       if (triggerSameDay > now) {
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: '⏰ Shelfy — Scade oggi',
+            title: i18n.t('pushNotifications.expiresTodayTitle'),
             body: expiryBody(prods, 'oggi', group.pantryId, group.pantryName),
             data: { productId: singleProductId, pantryId: group.pantryId },
             categoryIdentifier: singleProductId ? EXPIRY_CATEGORY : undefined,
@@ -201,7 +204,7 @@ export async function scheduleExpiryNotifications(
       if (triggerDayBefore > now) {
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: '⏰ Shelfy — Scadenza vicina',
+            title: i18n.t('pushNotifications.expiresSoonTitle'),
             body: expiryBody(prods, 'domani', group.pantryId, group.pantryName),
             data: { productId: singleProductId, pantryId: group.pantryId },
             categoryIdentifier: singleProductId ? EXPIRY_CATEGORY : undefined,
@@ -242,7 +245,7 @@ export async function sendExpoPushNotification(
   // exp.host non manda header CORS: dal browser il preflight fallisce sempre.
   // Su nativo (Android/iOS) fetch non passa da CORS, quindi funziona.
   if (Platform.OS === 'web') {
-    throw new Error('Invio push non disponibile da browser (limite CORS di Expo). Prova dall\'app su dispositivo mobile.');
+    throw new Error(i18n.t('pushNotifications.webPushUnavailable'));
   }
 
   const messages = tokens.map((to) => ({
@@ -271,7 +274,7 @@ export async function sendExpoPushNotification(
   const errors = results.filter((r) => r.status === 'error');
   if (errors.length > 0) {
     console.warn('[notifications] Expo push errors:', errors);
-    throw new Error(errors.map((e) => e.details?.error ?? e.message ?? 'errore sconosciuto').join(', '));
+    throw new Error(errors.map((e) => e.details?.error ?? e.message ?? i18n.t('pushNotifications.unknownError')).join(', '));
   }
 }
 
@@ -280,7 +283,7 @@ export async function notifyAdminsNewUser(newUser: { email: string; displayName?
   if (recipients.length === 0) return;
   const who = newUser.displayName ? `${newUser.displayName} (${newUser.email})` : newUser.email;
   await sendExpoPushNotification(recipients.map((r) => r.pushToken), {
-    title: '👤 Nuovo utente registrato',
+    title: i18n.t('pushNotifications.newUserTitle'),
     body: who,
     data: { type: 'new_user' },
   });
@@ -296,7 +299,7 @@ export async function notifyAdminsNewFeedback(feedback: {
   if (recipients.length === 0) return;
   const who = feedback.displayName ? `${feedback.displayName} (${feedback.email})` : feedback.email;
   await sendExpoPushNotification(recipients.map((r) => r.pushToken), {
-    title: '📮 Nuova segnalazione',
+    title: i18n.t('pushNotifications.newFeedbackTitle'),
     body: `${who}: ${feedback.message.slice(0, 100)}`,
     data: { type: 'new_feedback' },
   });
@@ -304,8 +307,8 @@ export async function notifyAdminsNewFeedback(feedback: {
 
 export async function sendAdminTestPushNotification(token: string): Promise<void> {
   await sendExpoPushNotification([token], {
-    title: '🔔 Shelfy — Notifica di test',
-    body: 'Il canale push admin funziona correttamente.',
+    title: i18n.t('pushNotifications.testTitle'),
+    body: i18n.t('pushNotifications.testBody'),
     data: { type: 'test' },
   });
 }

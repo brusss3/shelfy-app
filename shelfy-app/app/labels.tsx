@@ -5,30 +5,33 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Print from 'expo-print';
+import { useTranslation } from 'react-i18next';
 import { showAlert } from '@/lib/alert';
 import { buildLabelsHtml } from '@/lib/labels';
 import PrimaryButton from '@/components/PrimaryButton';
 import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
 
 const DURATIONS = [
-  { h: 24, l: '24 ore' },
-  { h: 48, l: '48 ore' },
-  { h: 72, l: '3 giorni' },
-  { h: 120, l: '5 giorni' },
-  { h: 168, l: '7 giorni' },
+  { h: 24, labelKey: 'labels.durations.h24' },
+  { h: 48, labelKey: 'labels.durations.h48' },
+  { h: 72, labelKey: 'labels.durations.h72' },
+  { h: 120, labelKey: 'labels.durations.h120' },
+  { h: 168, labelKey: 'labels.durations.h168' },
 ];
 
 const COPY_PRESETS = [21, 42, 63];
 
-function formatDateTime(d: Date): string {
-  const date = d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const time = d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-  return `${date} · ${time}`;
-}
-
 export default function LabelsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t, i18n } = useTranslation();
+
+  const formatDateTime = (d: Date): string => {
+    const locale = i18n.language === 'it' ? 'it-IT' : 'en-US';
+    const date = d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const time = d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+    return `${date} · ${time}`;
+  };
 
   const [packagingDate, setPackagingDate] = useState(new Date());
   const [durationHours, setDurationHours] = useState(72);
@@ -72,7 +75,7 @@ export default function LabelsScreen() {
       if (Platform.OS === 'web') {
         const win = window.open('', '_blank');
         if (!win) {
-          showAlert('Popup bloccato', 'Abilita i popup per questo sito per generare il PDF.');
+          showAlert(t('labels.popupBlockedTitle'), t('labels.popupBlockedBody'));
           return;
         }
         win.document.write(html);
@@ -83,7 +86,7 @@ export default function LabelsScreen() {
         await Print.printAsync({ html });
       }
     } catch (e: any) {
-      showAlert('Errore', e?.message ?? 'Impossibile generare le etichette.');
+      showAlert(t('common.error'), e?.message ?? t('labels.generateFailed'));
     } finally {
       setGenerating(false);
     }
@@ -95,26 +98,25 @@ export default function LabelsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
           <Text style={styles.closeBtnText}>✕</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Etichette HACCP</Text>
+        <Text style={styles.headerTitle}>{t('labels.headerTitle')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.content}>
         <Text style={styles.intro}>
-          Genera un foglio A4 di etichette: data/ora di confezionamento e scadenza già compilate,
-          con una riga vuota per scrivere il nome del prodotto a mano.
+          {t('labels.intro')}
         </Text>
 
-        <Text style={styles.sectionLabel}>CONFEZIONATO IL</Text>
+        <Text style={styles.sectionLabel}>{t('labels.packagedOnSection')}</Text>
         <TouchableOpacity style={styles.card} onPress={openTimePicker} activeOpacity={0.85}>
           <Text style={styles.dateValue}>{formatDateTime(packagingDate)}</Text>
-          <Text style={styles.dateEdit}>Modifica ›</Text>
+          <Text style={styles.dateEdit}>{t('labels.editDate')}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={resetToNow} activeOpacity={0.7}>
-          <Text style={styles.nowLink}>Usa data/ora attuale</Text>
+          <Text style={styles.nowLink}>{t('labels.useNow')}</Text>
         </TouchableOpacity>
 
-        <Text style={styles.sectionLabel}>DURATA (scadenza calcolata)</Text>
+        <Text style={styles.sectionLabel}>{t('labels.durationSection')}</Text>
         <View style={styles.chipsRow}>
           {DURATIONS.map((d) => {
             const active = durationHours === d.h;
@@ -125,17 +127,17 @@ export default function LabelsScreen() {
                 onPress={() => setDurationHours(d.h)}
                 activeOpacity={0.85}
               >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>{d.l}</Text>
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{t(d.labelKey)}</Text>
               </TouchableOpacity>
             );
           })}
         </View>
         <View style={styles.card}>
-          <Text style={styles.expiryLabel}>Scade il</Text>
+          <Text style={styles.expiryLabel}>{t('labels.expiresOnLabel')}</Text>
           <Text style={styles.expiryValue}>{formatDateTime(expiryDate)}</Text>
         </View>
 
-        <Text style={styles.sectionLabel}>QUANTE ETICHETTE</Text>
+        <Text style={styles.sectionLabel}>{t('labels.howManySection')}</Text>
         <View style={styles.chipsRow}>
           {COPY_PRESETS.map((n) => {
             const active = copies === n;
@@ -146,7 +148,7 @@ export default function LabelsScreen() {
                 onPress={() => setCopies(n)}
                 activeOpacity={0.85}
               >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>{n} ({Math.round(n / 21)} fogli)</Text>
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{n} ({t('labels.sheetsCount', { count: Math.round(n / 21) })})</Text>
               </TouchableOpacity>
             );
           })}
@@ -155,7 +157,7 @@ export default function LabelsScreen() {
           <TouchableOpacity style={styles.stepperBtn} onPress={() => setCopies((c) => Math.max(1, c - 1))} activeOpacity={0.85}>
             <Text style={styles.stepperBtnText}>−</Text>
           </TouchableOpacity>
-          <Text style={styles.stepperValue}>{copies} etichette</Text>
+          <Text style={styles.stepperValue}>{t('labels.labelsCount', { count: copies })}</Text>
           <TouchableOpacity style={styles.stepperBtn} onPress={() => setCopies((c) => c + 1)} activeOpacity={0.85}>
             <Text style={styles.stepperBtnText}>+</Text>
           </TouchableOpacity>
@@ -167,7 +169,7 @@ export default function LabelsScreen() {
           onPress={handleGenerate}
           loading={generating}
           icon="print-outline"
-          label="Genera e stampa"
+          label={t('labels.generateAndPrint')}
           fullWidth
         />
       </View>
@@ -175,21 +177,21 @@ export default function LabelsScreen() {
       <Modal visible={showTimePicker} transparent animationType="fade" onRequestClose={() => setShowTimePicker(false)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowTimePicker(false)}>
           <TouchableOpacity activeOpacity={1} style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Data e ora confezionamento</Text>
+            <Text style={styles.modalTitle}>{t('labels.pickerTitle')}</Text>
             <View style={styles.pickerRow}>
-              <PickerCol label="Giorno" value={pickerDay} onChange={setPickerDay} maxLength={2} />
-              <PickerCol label="Mese" value={pickerMonth} onChange={setPickerMonth} maxLength={2} />
-              <PickerCol label="Anno" value={pickerYear} onChange={setPickerYear} maxLength={4} />
+              <PickerCol label={t('labels.day')} value={pickerDay} onChange={setPickerDay} maxLength={2} />
+              <PickerCol label={t('labels.month')} value={pickerMonth} onChange={setPickerMonth} maxLength={2} />
+              <PickerCol label={t('labels.year')} value={pickerYear} onChange={setPickerYear} maxLength={4} />
             </View>
             <View style={styles.pickerRow}>
-              <PickerCol label="Ore" value={pickerHour} onChange={setPickerHour} maxLength={2} />
-              <PickerCol label="Minuti" value={pickerMinute} onChange={setPickerMinute} maxLength={2} />
+              <PickerCol label={t('labels.hour')} value={pickerHour} onChange={setPickerHour} maxLength={2} />
+              <PickerCol label={t('labels.minute')} value={pickerMinute} onChange={setPickerMinute} maxLength={2} />
             </View>
             <View style={styles.modalBtns}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setShowTimePicker(false)} activeOpacity={0.85}>
-                <Text style={styles.modalCancelText}>Annulla</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
-              <PrimaryButton onPress={confirmTimePicker} label="Conferma" containerStyle={{ flex: 1.5 }} />
+              <PrimaryButton onPress={confirmTimePicker} label={t('common.datePicker.confirm')} containerStyle={{ flex: 1.5 }} />
             </View>
           </TouchableOpacity>
         </TouchableOpacity>

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, Platform, StyleSheet, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -7,6 +7,7 @@ import { useFonts,
 } from '@expo-google-fonts/dm-sans';
 import * as SplashScreen from 'expo-splash-screen';
 import * as NavigationBar from 'expo-navigation-bar';
+import { initI18n } from '@/lib/i18n';
 import { AuthProvider } from '@/context/AuthContext';
 import { PantryProvider } from '@/context/PantryContext';
 import { ProductsProvider } from '@/context/ProductsContext';
@@ -26,10 +27,21 @@ export default function RootLayout() {
     DMSans_500Medium,
     DMSans_700Bold,
   });
+  const [i18nReady, setI18nReady] = useState(false);
 
   useEffect(() => {
-    if (fontsLoaded || fontError) SplashScreen.hideAsync();
-  }, [fontsLoaded, fontError]);
+    initI18n().then(() => setI18nReady(true));
+  }, []);
+
+  useEffect(() => {
+    // Nasconde lo splash NATIVO (icona piccola centrata) appena montato il
+    // primo frame JS, non quando i font sono pronti: prima lo tenevamo su
+    // fino a fontsLoaded, così restava sopra alla nostra immagine a schermo
+    // intero per tutta la durata del caricamento — l'utente vedeva solo
+    // l'icona piccola e mai il vero splash, comparso per un solo frame
+    // proprio nell'istante in cui i font finivano di caricare.
+    SplashScreen.hideAsync();
+  }, []);
 
   useEffect(() => {
     // Nasconde la barra di navigazione Android (tasti indietro/home/recenti):
@@ -44,9 +56,9 @@ export default function RootLayout() {
   // Lo splash nativo Android 12+ mostra solo un'icona centrata su sfondo
   // colorato (vincolo della Splash Screen API di sistema, non aggirabile via
   // config): per un vero splash a tutto schermo, dopo il breve lampo nativo
-  // mostriamo qui la stessa immagine a piena pagina finché i font non sono
-  // pronti, poi passiamo alla UI reale.
-  if (!fontsLoaded && !fontError) {
+  // mostriamo qui la stessa immagine a piena pagina finché font e lingua non
+  // sono pronti, poi passiamo alla UI reale.
+  if (!((fontsLoaded || fontError) && i18nReady)) {
     return (
       <View style={styles.splash}>
         <Image

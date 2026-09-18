@@ -3,7 +3,9 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useProducts } from '@/context/ProductsContext';
 import { useCommunity } from '@/context/CommunityContext';
 import { useRecipes } from '@/context/RecipesContext';
@@ -30,6 +32,7 @@ export default function RecipesScreen() {
   const { recipes, requests, loading } = useCommunity();
   const { myRecipes, savedRecipes, aiUsedToday, aiEnabled, refreshAiUsage } = useRecipes();
   const router = useRouter();
+  const { t } = useTranslation();
   const [view, setView] = useState<View_>('recipes');
 
   const expiringProducts = useMemo(
@@ -58,7 +61,7 @@ export default function RecipesScreen() {
 
   const handleGenerate = async () => {
     if (selectedIngredients.length === 0) {
-      showAlert('Nessun ingrediente', 'Seleziona almeno un ingrediente dalla tua dispensa.');
+      showAlert(t('recipes.noIngredientTitle'), t('recipes.noIngredientBody'));
       return;
     }
     setGenerating(true);
@@ -79,7 +82,7 @@ export default function RecipesScreen() {
             .slice(0, 5),
         );
       }
-      showAlert('Ricetta AI', err.message ?? 'Riprova più tardi.');
+      showAlert(t('recipes.aiErrorTitle'), err.message ?? t('recipes.aiErrorFallback'));
     } finally {
       setGenerating(false);
     }
@@ -91,10 +94,20 @@ export default function RecipesScreen() {
         {/* Header */}
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.sub}>La community di Shelfy</Text>
-            <Text style={styles.title}>Ricette</Text>
+            <Text style={styles.sub}>{t('recipes.communitySubtitle')}</Text>
+            <Text style={styles.title}>{t('recipes.title')}</Text>
           </View>
-          <ProfileButton />
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={() => setView('mine')}
+              style={styles.aiHeaderBtn}
+              activeOpacity={0.85}
+              accessibilityLabel={t('recipes.aiHeaderA11y')}
+            >
+              <Ionicons name="sparkles" size={19} color="#fbfaf3" />
+            </TouchableOpacity>
+            <ProfileButton />
+          </View>
         </View>
 
         {/* Toggle */}
@@ -105,7 +118,7 @@ export default function RecipesScreen() {
             activeOpacity={0.85}
           >
             <Text style={[styles.toggleText, view === 'recipes' && styles.toggleTextActive]}>
-              Ricette ({recipes.length})
+              {t('recipes.tabRecipes', { count: recipes.length })}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -114,7 +127,7 @@ export default function RecipesScreen() {
             activeOpacity={0.85}
           >
             <Text style={[styles.toggleText, view === 'requests' && styles.toggleTextActive]}>
-              Aiuto ({openRequests.length})
+              {t('recipes.tabHelp', { count: openRequests.length })}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -123,7 +136,7 @@ export default function RecipesScreen() {
             activeOpacity={0.85}
           >
             <Text style={[styles.toggleText, view === 'mine' && styles.toggleTextActive]}>
-              Le mie ({myRecipes.length})
+              {t('recipes.tabMine', { count: myRecipes.length })}
             </Text>
           </TouchableOpacity>
         </View>
@@ -133,13 +146,13 @@ export default function RecipesScreen() {
             <PrimaryButton
               onPress={() => router.push('/recipe/create')}
               icon="add-outline"
-              label="Nuova ricetta"
+              label={t('recipes.newRecipe')}
               containerStyle={styles.primaryBtn}
             />
 
             {!loading && recipes.length === 0 && (
               <Text style={styles.emptyText}>
-                Ancora nessuna ricetta pubblicata. Pubblica la prima tu!
+                {t('recipes.emptyPublished')}
               </Text>
             )}
 
@@ -160,7 +173,7 @@ export default function RecipesScreen() {
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={styles.recipeRowTitle} numberOfLines={1}>{recipe.title}</Text>
                       <View style={styles.recipeRowMeta}>
-                        <Text style={styles.metaSub}>di {recipe.authorName}</Text>
+                        <Text style={styles.metaSub}>{t('recipes.byAuthor', { name: recipe.authorName })}</Text>
                         {avg && (
                           <>
                             <Text style={styles.metaDot}>·</Text>
@@ -173,7 +186,7 @@ export default function RecipesScreen() {
                     </View>
                     {matches > 0 && (
                       <View style={styles.urgentBadge}>
-                        <Text style={styles.urgentBadgeText}>{matches} in scadenza</Text>
+                        <Text style={styles.urgentBadgeText}>{t('recipes.expiringMatch', { count: matches })}</Text>
                       </View>
                     )}
                   </TouchableOpacity>
@@ -188,17 +201,17 @@ export default function RecipesScreen() {
             <PrimaryButton
               onPress={() => router.push('/recipe/request-new')}
               icon="help-buoy-outline"
-              label="Chiedi aiuto"
+              label={t('recipes.askHelp')}
               containerStyle={styles.primaryBtn}
             />
 
             <Text style={styles.introRequests}>
-              Seleziona gli ingredienti in scadenza e chiedi alla community un'idea per usarli.
+              {t('recipes.requestsIntro')}
             </Text>
 
             {!loading && requests.length === 0 && (
               <Text style={styles.emptyText}>
-                Nessuna richiesta ancora. Sii il primo a chiedere aiuto!
+                {t('recipes.emptyRequests')}
               </Text>
             )}
 
@@ -214,7 +227,7 @@ export default function RecipesScreen() {
                     <Text style={styles.requestAuthor}>{req.authorName}</Text>
                     <View style={[styles.statusPill, req.status === 'open' ? styles.statusOpen : styles.statusClosed]}>
                       <Text style={[styles.statusPillText, req.status === 'open' ? styles.statusOpenText : styles.statusClosedText]}>
-                        {req.status === 'open' ? 'Aperta' : 'Risolta'}
+                        {req.status === 'open' ? t('recipes.statusOpen') : t('recipes.statusClosed')}
                       </Text>
                     </View>
                   </View>
@@ -239,11 +252,11 @@ export default function RecipesScreen() {
             {/* Ricetta AI del giorno */}
             <View style={styles.aiCard}>
               <View style={styles.aiBadge}>
-                <Text style={styles.aiBadgeText}>✦ RICETTA DEL GIORNO</Text>
+                <Text style={styles.aiBadgeText}>{t('recipes.aiDailyBadge')}</Text>
               </View>
-              <Text style={styles.aiTitle}>Cucina ciò che sta scadendo</Text>
+              <Text style={styles.aiTitle}>{t('recipes.aiDailyTitle')}</Text>
               <Text style={styles.aiDesc}>
-                Una ricetta al giorno, creata sugli ingredienti che scegli tu.
+                {t('recipes.aiDailyDesc')}
               </Text>
 
               {expiringProducts.length > 0 ? (
@@ -263,7 +276,7 @@ export default function RecipesScreen() {
                   })}
                 </ScrollView>
               ) : (
-                <Text style={styles.aiEmpty}>Nessun ingrediente in scadenza nei prossimi 7 giorni.</Text>
+                <Text style={styles.aiEmpty}>{t('recipes.aiEmptyIngredients')}</Text>
               )}
 
               <TouchableOpacity
@@ -277,10 +290,10 @@ export default function RecipesScreen() {
                 ) : (
                   <Text style={styles.aiBtnText}>
                     {!aiEnabled
-                      ? 'Momentaneamente non disponibile'
+                      ? t('recipes.aiUnavailable')
                       : aiUsedToday
-                        ? 'Già generata oggi — torna domani'
-                        : '✨ Genera la ricetta del giorno'}
+                        ? t('recipes.aiAlreadyToday')
+                        : t('recipes.aiGenerate')}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -288,7 +301,7 @@ export default function RecipesScreen() {
 
             {aiFallback.length > 0 && (
               <>
-                <Text style={styles.sectionLabel}>INTANTO DALLA COMMUNITY</Text>
+                <Text style={styles.sectionLabel}>{t('recipes.fromCommunity')}</Text>
                 <View style={styles.list}>
                   {aiFallback.map((recipe) => (
                     <TouchableOpacity
@@ -302,7 +315,7 @@ export default function RecipesScreen() {
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Text style={styles.recipeRowTitle} numberOfLines={1}>{recipe.title}</Text>
-                        <Text style={styles.metaSub}>di {recipe.authorName}</Text>
+                        <Text style={styles.metaSub}>{t('recipes.byAuthor', { name: recipe.authorName })}</Text>
                       </View>
                     </TouchableOpacity>
                   ))}
@@ -310,10 +323,10 @@ export default function RecipesScreen() {
               </>
             )}
 
-            <Text style={styles.sectionLabel}>CREATE DA ME</Text>
+            <Text style={styles.sectionLabel}>{t('recipes.createdByMe')}</Text>
             {myRecipes.length === 0 ? (
               <Text style={styles.emptyText}>
-                Qui finiscono le ricette che generi con l'AI e quelle che scrivi tu, private finché non le pubblichi.
+                {t('recipes.emptyMine')}
               </Text>
             ) : (
               <View style={styles.list}>
@@ -330,14 +343,14 @@ export default function RecipesScreen() {
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={styles.recipeRowTitle} numberOfLines={1}>{recipe.title}</Text>
                       <View style={styles.recipeRowMeta}>
-                        <Text style={styles.metaSub}>{recipe.source === 'ai' ? '✦ AI' : 'Scritta da te'}</Text>
+                        <Text style={styles.metaSub}>{recipe.source === 'ai' ? '✦ AI' : t('recipes.writtenByYou')}</Text>
                         <Text style={styles.metaDot}>·</Text>
                         <Text style={styles.metaSub}>⏱ {recipe.time}</Text>
                       </View>
                     </View>
                     {recipe.published && (
                       <View style={styles.publishedBadge}>
-                        <Text style={styles.publishedBadgeText}>Pubblicata</Text>
+                        <Text style={styles.publishedBadgeText}>{t('recipes.published')}</Text>
                       </View>
                     )}
                   </TouchableOpacity>
@@ -347,7 +360,7 @@ export default function RecipesScreen() {
 
             {savedRecipes.length > 0 && (
               <>
-                <Text style={styles.sectionLabel}>SALVATE DALLA COMMUNITY</Text>
+                <Text style={styles.sectionLabel}>{t('recipes.savedFromCommunity')}</Text>
                 <View style={styles.list}>
                   {savedRecipes.map((recipe) => (
                     <TouchableOpacity
@@ -362,7 +375,7 @@ export default function RecipesScreen() {
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Text style={styles.recipeRowTitle} numberOfLines={1}>{recipe.title}</Text>
                         <Text style={styles.metaSub}>
-                          {recipe.completed ? '✓ Già cucinata' : `di ${recipe.authorName}`}
+                          {recipe.completed ? t('recipes.alreadyCooked') : t('recipes.byAuthor', { name: recipe.authorName })}
                         </Text>
                       </View>
                     </TouchableOpacity>
@@ -386,6 +399,11 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
     paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4,
+  },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  aiHeaderBtn: {
+    width: 42, height: 42, borderRadius: RADIUS.pill,
+    backgroundColor: T.primary, alignItems: 'center', justifyContent: 'center',
   },
   sub: { fontSize: 13, color: T.mute, fontFamily: FONTS.sansMedium },
   title: {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Alert } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { GOOGLE_CLIENT_IDS, googleNativeConfigured } from '@/lib/googleAuth';
 import GoogleButtonUI from './GoogleButtonUI';
@@ -30,6 +31,7 @@ try {
 
 export default function GoogleAuthButton() {
   const { signInWithGoogleCredential } = useAuth();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
 
   const onPress = async () => {
@@ -44,13 +46,13 @@ export default function GoogleAuthButton() {
         const tokens = await GoogleSignin.getTokens();
         idToken = tokens?.idToken;
       }
-      if (!idToken) throw new Error('idToken mancante');
+      if (!idToken) throw new Error(t('common.error'));
 
       await signInWithGoogleCredential(idToken);
     } catch (e: any) {
       const code = e?.code;
       if (code !== statusCodes?.SIGN_IN_CANCELLED && code !== statusCodes?.IN_PROGRESS) {
-        Alert.alert('Errore', 'Accesso con Google non riuscito. Riprova.');
+        Alert.alert(t('common.error'), t('auth.googleFailed'));
       }
     } finally {
       setLoading(false);

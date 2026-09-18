@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useProducts } from '@/context/ProductsContext';
 import { ScannedProduct, Zone, ScoreGrade } from '@/types';
 import FoodTile from '@/components/FoodTile';
@@ -16,16 +17,22 @@ import { tintForCategory } from '@/lib/urgency';
 import { ocrAvailable } from '@/lib/ocr';
 import { showAlert } from '@/lib/alert';
 
-const ZONES: { id: Zone; label: string; icon: string }[] = [
-  { id: 'frigo',    label: 'Frigo',    icon: '❄️' },
-  { id: 'freezer',  label: 'Freezer',  icon: '🧊' },
-  { id: 'dispensa', label: 'Dispensa', icon: '📦' },
+const ZONES: { id: Zone; labelKey: string; icon: string }[] = [
+  { id: 'frigo',    labelKey: 'common.zones.frigo',    icon: '❄️' },
+  { id: 'freezer',  labelKey: 'common.zones.freezer',  icon: '🧊' },
+  { id: 'dispensa', labelKey: 'common.zones.dispensa', icon: '📦' },
 ];
 
 const PRESETS = [
-  { d: 3, l: '3 giorni' }, { d: 7, l: '1 settimana' },
-  { d: 30, l: '1 mese' }, { d: 180, l: '6 mesi' }, { d: 365, l: '1 anno' },
+  { d: 3, labelKey: 'common.presets.d3' }, { d: 7, labelKey: 'common.presets.d7' },
+  { d: 30, labelKey: 'common.presets.d30' }, { d: 180, labelKey: 'common.presets.d180' },
+  { d: 365, labelKey: 'common.presets.d365' },
 ];
+
+// Stima per prodotti senza una scadenza stampata (frutta, verdura sfusa,
+// ecc.): non è una data reale, solo un'indicazione ragionevole in base a
+// dove viene conservato il prodotto.
+const ESTIMATE_DAYS: Record<Zone, number> = { frigo: 7, freezer: 90, dispensa: 180 };
 
 function addDays(n: number): string {
   return new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
@@ -44,6 +51,7 @@ export default function AddScreen() {
   const params = useLocalSearchParams();
   const { addNewProduct } = useProducts();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   const scanned: ScannedProduct | null = params.scanned
     ? JSON.parse(params.scanned as string)
@@ -84,19 +92,27 @@ export default function AddScreen() {
     setShowDatePicker(true);
   };
 
+  const handleEstimate = () => {
+    if (!zone) {
+      showAlert(t('common.estimate.chooseZoneTitle'), t('common.estimate.chooseZoneBody'));
+      return;
+    }
+    setExpiry(addDays(ESTIMATE_DAYS[zone]));
+  };
+
   const tint = scanned?.tint ?? tintForCategory(category);
 
   const handleSave = async () => {
     if (!name.trim()) {
-      showAlert('Errore', 'Inserisci il nome del prodotto');
+      showAlert(t('common.error'), t('add.errors.missingName'));
       return;
     }
     if (!zone) {
-      showAlert('Errore', 'Seleziona dove conservi il prodotto (Frigo, Freezer o Dispensa)');
+      showAlert(t('common.error'), t('add.errors.missingZone'));
       return;
     }
     if (!expiry) {
-      showAlert('Errore', 'Seleziona la data di scadenza');
+      showAlert(t('common.error'), t('add.errors.missingExpiry'));
       return;
     }
     setSaving(true);
@@ -120,7 +136,7 @@ export default function AddScreen() {
       });
       router.back();
     } catch (e: any) {
-      showAlert('Errore', e.message ?? 'Impossibile salvare il prodotto');
+      showAlert(t('common.error'), e.message ?? t('add.errors.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -140,18 +156,18 @@ export default function AddScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
             <Text style={styles.closeBtnText}>✕</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Nuovo prodotto</Text>
+          <Text style={styles.headerTitle}>{t('add.headerTitle')}</Text>
           <View style={{ width: 40 }} />
         </View>
 
         {/* Preview */}
         <View style={styles.preview}>
           <FoodTile
-            product={{ name: name || 'Nuovo', tint }}
+            product={{ name: name || t('add.newFallbackName'), tint }}
             size={92}
             radius={22}
           />
-          <Text style={styles.previewName}>{name || 'Senza nome'}</Text>
+          <Text style={styles.previewName}>{name || t('add.noNameFallback')}</Text>
           {scanned?.barcode && (
             <View style={styles.barcodePill}>
               <Text style={styles.barcodeText}>📊 {scanned.barcode}</Text>
@@ -161,48 +177,48 @@ export default function AddScreen() {
 
         {/* Info fields */}
         <View style={styles.card}>
-          <FieldRow label="Nome">
+          <FieldRow label={t('add.fields.name')}>
             <TextInput
               style={styles.input}
               value={name}
               onChangeText={setName}
-              placeholder="es. Latte intero"
+              placeholder={t('add.fields.namePlaceholder')}
               placeholderTextColor={T.mute}
             />
           </FieldRow>
           <Divider />
-          <FieldRow label="Marca">
+          <FieldRow label={t('add.fields.brand')}>
             <TextInput
               style={styles.input}
               value={brand}
               onChangeText={setBrand}
-              placeholder="es. Granarolo"
+              placeholder={t('add.fields.brandPlaceholder')}
               placeholderTextColor={T.mute}
             />
           </FieldRow>
           <Divider />
-          <FieldRow label="Quantità">
+          <FieldRow label={t('add.fields.qty')}>
             <TextInput
               style={styles.input}
               value={qty}
               onChangeText={setQty}
-              placeholder="es. 1 L"
+              placeholder={t('add.fields.qtyPlaceholder')}
               placeholderTextColor={T.mute}
             />
           </FieldRow>
           <Divider />
-          <FieldRow label="Unità">
+          <FieldRow label={t('add.fields.unit')}>
             <View style={{ alignItems: 'flex-start' }}>
               <QuantityStepper value={count} onChange={setCount} />
             </View>
           </FieldRow>
           <Divider />
-          <FieldRow label="Categoria">
+          <FieldRow label={t('add.fields.category')}>
             <TextInput
               style={styles.input}
               value={category}
               onChangeText={setCategory}
-              placeholder="es. Latticini"
+              placeholder={t('add.fields.categoryPlaceholder')}
               placeholderTextColor={T.mute}
             />
           </FieldRow>
@@ -217,7 +233,7 @@ export default function AddScreen() {
               onPress={() => setShowNutrition((v) => !v)}
               activeOpacity={0.7}
             >
-              <Text style={styles.nutritionToggleText}>🥗 Informazioni nutrizionali</Text>
+              <Text style={styles.nutritionToggleText}>🥗 {t('common.nutrition.title')}</Text>
               <Text style={styles.nutritionToggleIcon}>{showNutrition ? '▲' : '▼'}</Text>
             </TouchableOpacity>
 
@@ -232,19 +248,19 @@ export default function AddScreen() {
 
                 {scanned?.nutrition && (
                   <View style={styles.nutritionGrid}>
-                    <Text style={styles.nutritionCaption}>Valori per 100g/100ml</Text>
-                    <NutritionRow label="Calorie" value={scanned.nutrition.calories} unit="kcal" />
-                    <NutritionRow label="Proteine" value={scanned.nutrition.proteins} unit="g" />
-                    <NutritionRow label="Grassi" value={scanned.nutrition.fat} unit="g" />
-                    <NutritionRow label="Carboidrati" value={scanned.nutrition.carbs} unit="g" />
-                    <NutritionRow label="di cui zuccheri" value={scanned.nutrition.sugars} unit="g" />
-                    <NutritionRow label="Sale" value={scanned.nutrition.salt} unit="g" />
+                    <Text style={styles.nutritionCaption}>{t('common.nutrition.per100')}</Text>
+                    <NutritionRow label={t('common.nutrition.calories')} value={scanned.nutrition.calories} unit="kcal" />
+                    <NutritionRow label={t('common.nutrition.proteins')} value={scanned.nutrition.proteins} unit="g" />
+                    <NutritionRow label={t('common.nutrition.fat')} value={scanned.nutrition.fat} unit="g" />
+                    <NutritionRow label={t('common.nutrition.carbs')} value={scanned.nutrition.carbs} unit="g" />
+                    <NutritionRow label={t('common.nutrition.sugars')} value={scanned.nutrition.sugars} unit="g" />
+                    <NutritionRow label={t('common.nutrition.salt')} value={scanned.nutrition.salt} unit="g" />
                   </View>
                 )}
 
                 {scanned?.allergens && scanned.allergens.length > 0 && (
                   <View style={styles.allergensBlock}>
-                    <Text style={styles.nutritionCaption}>Allergeni</Text>
+                    <Text style={styles.nutritionCaption}>{t('common.nutrition.allergens')}</Text>
                     <View style={styles.allergensRow}>
                       {scanned.allergens.map((a) => (
                         <View key={a} style={styles.allergenPill}>
@@ -260,7 +276,7 @@ export default function AddScreen() {
         )}
 
         {/* Zone */}
-        <Text style={styles.sectionLabel}>CONSERVAZIONE</Text>
+        <Text style={styles.sectionLabel}>{t('add.storageSection')}</Text>
         <View style={styles.zoneRow}>
           {ZONES.map((z) => {
             const active = zone === z.id;
@@ -273,20 +289,29 @@ export default function AddScreen() {
               >
                 <Text style={styles.zoneIcon}>{z.icon}</Text>
                 <Text style={[styles.zoneLabel, active && styles.zoneLabelActive]}>
-                  {z.label}
+                  {t(z.labelKey)}
                 </Text>
               </TouchableOpacity>
             );
           })}
         </View>
 
+        {/* Stima per prodotti senza scadenza stampata (frutta, verdura...) */}
+        <TouchableOpacity style={styles.estimateBtn} onPress={handleEstimate} activeOpacity={0.85}>
+          <Text style={styles.estimateBtnIcon}>🥬</Text>
+          <Text style={styles.estimateBtnText}>{t('common.estimate.cta')}</Text>
+        </TouchableOpacity>
+        <Text style={styles.estimateDisclaimer}>
+          {t('common.estimate.disclaimer')}
+        </Text>
+
         {/* Expiry */}
-        <Text style={styles.sectionLabel}>SCADENZA</Text>
+        <Text style={styles.sectionLabel}>{t('add.expirySection')}</Text>
         <View style={styles.card}>
-          <FieldRow label="Data">
+          <FieldRow label={t('add.fields.date')}>
             <TouchableOpacity onPress={openDatePicker} activeOpacity={0.85} style={styles.dateBtn}>
               <Text style={[styles.dateBtnText, !expiry && styles.dateBtnPlaceholder]}>
-                {expiry ?? 'Seleziona data'}
+                {expiry ?? t('add.selectDate')}
               </Text>
               <Text style={styles.dateBtnIcon}>📅</Text>
             </TouchableOpacity>
@@ -295,9 +320,9 @@ export default function AddScreen() {
             <>
               <Divider />
               <View style={styles.remainingRow}>
-                <Text style={styles.remainingLabel}>Rimangono</Text>
+                <Text style={styles.remainingLabel}>{t('add.remainingLabel')}</Text>
                 <Text style={styles.remainingValue}>
-                  {remaining >= 0 ? remaining : 0} giorni
+                  {t('add.remainingDays', { count: remaining >= 0 ? remaining : 0 })}
                 </Text>
               </View>
             </>
@@ -313,7 +338,7 @@ export default function AddScreen() {
             activeOpacity={0.85}
           >
             <Text style={styles.ocrBtnIcon}>📷</Text>
-            <Text style={styles.ocrBtnText}>Scansiona la data</Text>
+            <Text style={styles.ocrBtnText}>{t('add.ocrButton')}</Text>
           </TouchableOpacity>
         )}
 
@@ -330,7 +355,7 @@ export default function AddScreen() {
               onPress={() => setExpiry(addDays(p.d))}
               activeOpacity={0.85}
             >
-              <Text style={styles.presetText}>+ {p.l}</Text>
+              <Text style={styles.presetText}>+ {t(p.labelKey)}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -342,10 +367,10 @@ export default function AddScreen() {
       <Modal visible={showDatePicker} transparent animationType="fade" onRequestClose={() => setShowDatePicker(false)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowDatePicker(false)}>
           <TouchableOpacity activeOpacity={1} style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Scegli la data</Text>
+            <Text style={styles.modalTitle}>{t('common.datePicker.title')}</Text>
             <View style={styles.pickerRow}>
               <View style={styles.pickerCol}>
-                <Text style={styles.pickerLabel}>Giorno</Text>
+                <Text style={styles.pickerLabel}>{t('common.datePicker.day')}</Text>
                 <TextInput
                   style={styles.pickerInput}
                   value={pickerDay}
@@ -356,7 +381,7 @@ export default function AddScreen() {
                 />
               </View>
               <View style={styles.pickerCol}>
-                <Text style={styles.pickerLabel}>Mese</Text>
+                <Text style={styles.pickerLabel}>{t('common.datePicker.month')}</Text>
                 <TextInput
                   style={styles.pickerInput}
                   value={pickerMonth}
@@ -367,7 +392,7 @@ export default function AddScreen() {
                 />
               </View>
               <View style={styles.pickerCol}>
-                <Text style={styles.pickerLabel}>Anno</Text>
+                <Text style={styles.pickerLabel}>{t('common.datePicker.year')}</Text>
                 <TextInput
                   style={styles.pickerInput}
                   value={pickerYear}
@@ -392,15 +417,15 @@ export default function AddScreen() {
                   }}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.presetText}>+ {p.l}</Text>
+                  <Text style={styles.presetText}>+ {t(p.labelKey)}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
             <View style={styles.modalBtns}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setShowDatePicker(false)} activeOpacity={0.85}>
-                <Text style={styles.modalCancelText}>Annulla</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
-              <PrimaryButton onPress={confirmDate} label="Conferma" containerStyle={{ flex: 1.5 }} />
+              <PrimaryButton onPress={confirmDate} label={t('common.datePicker.confirm')} containerStyle={{ flex: 1.5 }} />
             </View>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -420,13 +445,13 @@ export default function AddScreen() {
           onPress={() => router.back()}
           activeOpacity={0.85}
         >
-          <Text style={styles.cancelBtnText}>Annulla</Text>
+          <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
         <PrimaryButton
           onPress={handleSave}
           loading={saving}
           icon="checkmark"
-          label="Salva nel diario"
+          label={t('add.save')}
           containerStyle={{ flex: 1.8 }}
         />
       </View>
@@ -557,6 +582,19 @@ const styles = StyleSheet.create({
   zoneIcon: { fontSize: 22 },
   zoneLabel: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: T.ink },
   zoneLabelActive: { color: '#fbfaf3' },
+
+  estimateBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: T.surface, borderRadius: RADIUS.lg,
+    marginHorizontal: 16, marginBottom: 6, paddingVertical: 12,
+    borderWidth: 1, borderColor: T.line,
+  },
+  estimateBtnIcon: { fontSize: 16 },
+  estimateBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: T.ink2 },
+  estimateDisclaimer: {
+    fontSize: 11, fontFamily: FONTS.sans, color: T.mute,
+    marginHorizontal: 16, marginBottom: 14, lineHeight: 15,
+  },
 
   remainingRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

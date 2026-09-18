@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import FoodTile from './FoodTile';
 import { Product } from '@/types';
 import { urgencyOf, effectiveDays } from '@/lib/urgency';
@@ -28,8 +29,9 @@ export default function ProductRow({ product, onPress }: Props) {
   // nella dispensa personale sei sempre e solo tu, dirlo sarebbe rumore.
   const { user } = useAuth();
   const { activePantry } = usePantry();
+  const { t } = useTranslation();
   const addedByName = activePantry && product.addedBy
-    ? (product.addedBy === user?.uid ? 'Tu' : activePantry.members[product.addedBy]?.name ?? 'Qualcuno')
+    ? (product.addedBy === user?.uid ? t('product.addedByYou') : activePantry.members[product.addedBy]?.name ?? t('product.addedBySomeone'))
     : null;
 
   return (
@@ -46,7 +48,7 @@ export default function ProductRow({ product, onPress }: Props) {
             )}
             {isOpened && (
               <View style={styles.openedBadge}>
-                <Text style={styles.openedBadgeText}>Aperto</Text>
+                <Text style={styles.openedBadgeText}>{t('product.openedBadge')}</Text>
               </View>
             )}
           </View>

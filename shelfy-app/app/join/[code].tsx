@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { usePantry } from '@/context/PantryContext';
 import PrimaryButton from '@/components/PrimaryButton';
@@ -18,6 +19,7 @@ export default function JoinByLinkScreen() {
   const { code: rawCode } = useLocalSearchParams<{ code: string }>();
   const code = (rawCode ?? '').toUpperCase();
   const router = useRouter();
+  const { t } = useTranslation();
   const { user, loading: authLoading } = useAuth();
   const { joinPantry, setActivePantryId } = usePantry();
 
@@ -29,7 +31,7 @@ export default function JoinByLinkScreen() {
     if (authLoading || !user || status !== 'idle') return;
     if (code.length !== 6) {
       setStatus('error');
-      setError('Questo link d\'invito non è valido.');
+      setError(t('pantry.linkJoin.invalidLink'));
       return;
     }
 
@@ -44,10 +46,10 @@ export default function JoinByLinkScreen() {
         const errCode: string = e?.code ?? '';
         setError(
           errCode.includes('not-found')
-            ? 'Codice non valido o scaduto. Chiedi un invito nuovo a chi ha creato la casa.'
+            ? t('pantry.linkJoin.notFoundError')
             : errCode.includes('resource-exhausted')
-              ? (e?.message ?? 'Troppi tentativi, riprova più tardi.')
-              : (e?.message ?? 'Impossibile entrare nella casa'),
+              ? (e?.message ?? t('pantry.join.rateLimitError'))
+              : (e?.message ?? t('pantry.join.joinFailed')),
         );
         setStatus('error');
       });
@@ -68,14 +70,13 @@ export default function JoinByLinkScreen() {
           <View style={styles.iconWrap}>
             <Ionicons name="log-in-outline" size={26} color={T.primary} />
           </View>
-          <Text style={styles.title}>Accedi prima di entrare</Text>
+          <Text style={styles.title}>{t('pantry.linkJoin.loginFirstTitle')}</Text>
           <Text style={styles.body}>
-            Questo link ti invita a una casa condivisa su Shelfy. Accedi (o registrati) e poi tocca di nuovo
-            il link per entrare.
+            {t('pantry.linkJoin.loginFirstBody')}
           </Text>
           <PrimaryButton
             onPress={() => router.replace('/(auth)/login')}
-            label="Vai al login"
+            label={t('pantry.linkJoin.goToLogin')}
             fullWidth
             containerStyle={{ marginTop: 18 }}
           />
@@ -91,11 +92,11 @@ export default function JoinByLinkScreen() {
           <View style={[styles.iconWrap, { backgroundColor: T.urgentSoft }]}>
             <Ionicons name="alert-circle-outline" size={26} color={T.urgent} />
           </View>
-          <Text style={styles.title}>Non sono riuscito a farti entrare</Text>
+          <Text style={styles.title}>{t('pantry.linkJoin.failedTitle')}</Text>
           <Text style={styles.body}>{error}</Text>
           <PrimaryButton
             onPress={() => router.replace('/(tabs)')}
-            label="Torna alla home"
+            label={t('pantry.linkJoin.backHome')}
             fullWidth
             containerStyle={{ marginTop: 18 }}
           />
@@ -111,11 +112,11 @@ export default function JoinByLinkScreen() {
           <View style={[styles.iconWrap, { backgroundColor: T.okSoft }]}>
             <Ionicons name="checkmark-circle-outline" size={26} color={T.ok} />
           </View>
-          <Text style={styles.title}>Sei entrato in "{pantryName}"</Text>
-          <Text style={styles.body}>È ora la tua casa attiva.</Text>
+          <Text style={styles.title}>{t('pantry.linkJoin.joinedTitle', { name: pantryName })}</Text>
+          <Text style={styles.body}>{t('pantry.linkJoin.joinedBody')}</Text>
           <PrimaryButton
             onPress={() => router.replace('/(tabs)')}
-            label="Vai alla dispensa"
+            label={t('pantry.linkJoin.goToPantry')}
             fullWidth
             containerStyle={{ marginTop: 18 }}
           />
@@ -127,7 +128,7 @@ export default function JoinByLinkScreen() {
   return (
     <SafeAreaView style={[styles.root, styles.center]}>
       <ActivityIndicator color={T.primary} />
-      <Text style={[styles.body, { marginTop: 16 }]}>Sto entrando nella casa…</Text>
+      <Text style={[styles.body, { marginTop: 16 }]}>{t('pantry.linkJoin.joining')}</Text>
     </SafeAreaView>
   );
 }

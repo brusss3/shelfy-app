@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { useCommunity } from '@/context/CommunityContext';
 import { useRecipes } from '@/context/RecipesContext';
@@ -24,6 +25,7 @@ export default function CreateRecipeScreen() {
   const { addMyRecipe } = useRecipes();
   const params = useLocalSearchParams<{ requestId?: string; prefillIngredients?: string }>();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   const prefill: string[] = params.prefillIngredients ? JSON.parse(params.prefillIngredients) : [];
 
@@ -84,14 +86,14 @@ export default function CreateRecipeScreen() {
         await createProposal(params.requestId, {
           recipeId,
           authorId: user.uid,
-          authorName: user.displayName ?? 'Utente Shelfy',
+          authorName: user.displayName ?? t('common.shelfyUser'),
         });
         router.replace(`/recipe/request/${params.requestId}`);
       } else {
         router.replace(`/recipe/${recipeId}`);
       }
     } catch (e: any) {
-      showAlert('Errore', e?.message ?? 'Impossibile pubblicare la ricetta');
+      showAlert(t('common.error'), e?.message ?? t('recipeCreate.publishFailed'));
     } finally {
       setSaving(false);
     }
@@ -109,54 +111,54 @@ export default function CreateRecipeScreen() {
             <Text style={styles.closeBtnText}>✕</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
-            {params.requestId ? 'Proponi una ricetta' : 'Nuova ricetta'}
+            {params.requestId ? t('recipeCreate.titlePropose') : t('recipeCreate.titleNew')}
           </Text>
           <View style={{ width: 40 }} />
         </View>
 
         <View style={styles.card}>
-          <FieldRow label="Titolo">
+          <FieldRow label={t('recipeCreate.fields.title')}>
             <TextInput
               style={styles.input}
               value={title}
               onChangeText={setTitle}
-              placeholder="es. Frittata di zucchine"
+              placeholder={t('recipeCreate.fields.titlePlaceholder')}
               placeholderTextColor={T.mute}
             />
           </FieldRow>
           <Divider />
-          <FieldRow label="Descrizione">
+          <FieldRow label={t('recipeCreate.fields.desc')}>
             <TextInput
               style={styles.input}
               value={desc}
               onChangeText={setDesc}
-              placeholder="Una frase che invoglia ad assaggiarla"
+              placeholder={t('recipeCreate.fields.descPlaceholder')}
               placeholderTextColor={T.mute}
             />
           </FieldRow>
           <Divider />
-          <FieldRow label="Tempo">
+          <FieldRow label={t('recipeCreate.fields.time')}>
             <TextInput
               style={styles.input}
               value={time}
               onChangeText={setTime}
-              placeholder="es. 20 min"
+              placeholder={t('recipeCreate.fields.timePlaceholder')}
               placeholderTextColor={T.mute}
             />
           </FieldRow>
           <Divider />
-          <FieldRow label="Tag">
+          <FieldRow label={t('recipeCreate.fields.tag')}>
             <TextInput
               style={styles.input}
               value={tag}
               onChangeText={setTag}
-              placeholder="es. Primo, Veloce, Vegetariano"
+              placeholder={t('recipeCreate.fields.tagPlaceholder')}
               placeholderTextColor={T.mute}
             />
           </FieldRow>
         </View>
 
-        <Text style={styles.sectionLabel}>DIFFICOLTÀ</Text>
+        <Text style={styles.sectionLabel}>{t('recipeCreate.difficultySection')}</Text>
         <View style={styles.chipRow}>
           {DIFFICULTIES.map((d) => {
             const active = difficulty === d;
@@ -175,32 +177,32 @@ export default function CreateRecipeScreen() {
 
         {!params.requestId && (
           <>
-            <Text style={styles.sectionLabel}>VISIBILITÀ</Text>
+            <Text style={styles.sectionLabel}>{t('recipeCreate.visibilitySection')}</Text>
             <View style={styles.chipRow}>
               <TouchableOpacity
                 style={[styles.chip, !publish && styles.chipActive]}
                 onPress={() => setPublish(false)}
                 activeOpacity={0.85}
               >
-                <Text style={[styles.chipText, !publish && styles.chipTextActive]}>🔒 Solo per me</Text>
+                <Text style={[styles.chipText, !publish && styles.chipTextActive]}>{t('recipeCreate.onlyMe')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.chip, publish && styles.chipActive]}
                 onPress={() => setPublish(true)}
                 activeOpacity={0.85}
               >
-                <Text style={[styles.chipText, publish && styles.chipTextActive]}>🌍 Community</Text>
+                <Text style={[styles.chipText, publish && styles.chipTextActive]}>{t('recipeCreate.community')}</Text>
               </TouchableOpacity>
             </View>
             <Text style={styles.visibilityHint}>
               {publish
-                ? 'Visibile a tutti gli utenti, che potranno votarla.'
-                : 'Resta nelle tue ricette: potrai pubblicarla quando vuoi.'}
+                ? t('recipeCreate.visibilityHintPublish')
+                : t('recipeCreate.visibilityHintPrivate')}
             </Text>
           </>
         )}
 
-        <Text style={styles.sectionLabel}>INGREDIENTI</Text>
+        <Text style={styles.sectionLabel}>{t('recipeCreate.ingredientsSection')}</Text>
         <View style={styles.rowsWrap}>
           {ingredients.map((ing, i) => (
             <View key={i} style={styles.ingredientRow}>
@@ -208,14 +210,14 @@ export default function CreateRecipeScreen() {
                 style={styles.ingredientNameInput}
                 value={ing.name}
                 onChangeText={(v) => updateIngredient(i, 'name', v)}
-                placeholder="Ingrediente"
+                placeholder={t('recipeCreate.ingredientPlaceholder')}
                 placeholderTextColor={T.mute}
               />
               <TextInput
                 style={styles.ingredientQtyInput}
                 value={ing.qty}
                 onChangeText={(v) => updateIngredient(i, 'qty', v)}
-                placeholder="Quantità"
+                placeholder={t('recipeCreate.qtyPlaceholder')}
                 placeholderTextColor={T.mute}
               />
               <TouchableOpacity onPress={() => removeIngredient(i)} style={styles.rowDeleteBtn} activeOpacity={0.85}>
@@ -224,11 +226,11 @@ export default function CreateRecipeScreen() {
             </View>
           ))}
           <TouchableOpacity style={styles.addRowBtn} onPress={addIngredient} activeOpacity={0.85}>
-            <Text style={styles.addRowBtnText}>+ Aggiungi ingrediente</Text>
+            <Text style={styles.addRowBtnText}>{t('recipeCreate.addIngredient')}</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionLabel}>PROCEDIMENTO</Text>
+        <Text style={styles.sectionLabel}>{t('recipeCreate.stepsSection')}</Text>
         <View style={styles.rowsWrap}>
           {steps.map((step, i) => (
             <View key={i} style={styles.stepRow}>
@@ -237,7 +239,7 @@ export default function CreateRecipeScreen() {
                 style={styles.stepInput}
                 value={step}
                 onChangeText={(v) => updateStep(i, v)}
-                placeholder={`Passo ${i + 1}`}
+                placeholder={t('recipeCreate.stepPlaceholder', { n: i + 1 })}
                 placeholderTextColor={T.mute}
                 multiline
               />
@@ -247,7 +249,7 @@ export default function CreateRecipeScreen() {
             </View>
           ))}
           <TouchableOpacity style={styles.addRowBtn} onPress={addStep} activeOpacity={0.85}>
-            <Text style={styles.addRowBtnText}>+ Aggiungi passo</Text>
+            <Text style={styles.addRowBtnText}>{t('recipeCreate.addStep')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -256,14 +258,14 @@ export default function CreateRecipeScreen() {
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <TouchableOpacity style={styles.cancelBtn} onPress={() => router.back()} activeOpacity={0.85}>
-          <Text style={styles.cancelBtnText}>Annulla</Text>
+          <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
         <PrimaryButton
           onPress={handleSave}
           disabled={!canSave}
           loading={saving}
           icon="checkmark"
-          label={publish ? 'Pubblica' : 'Salva'}
+          label={publish ? t('recipeCreate.publish') : t('recipeCreate.save')}
           containerStyle={{ flex: 1.8 }}
         />
       </View>

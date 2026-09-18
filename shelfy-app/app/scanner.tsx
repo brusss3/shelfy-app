@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator,
+  View, Text, TouchableOpacity, TextInput, Modal, StyleSheet, Platform, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
-import { T, FONTS, RADIUS } from '@/constants/theme';
+import { useTranslation } from 'react-i18next';
+import { T, FONTS, RADIUS, CLAY } from '@/constants/theme';
 import { ScannedProduct, Zone, NutritionInfo, ScoreGrade } from '@/types';
 import { tintForCategory } from '@/lib/urgency';
 import { useProducts } from '@/context/ProductsContext';
@@ -16,16 +17,22 @@ import DateScannerModal from '@/components/DateScannerModal';
 import PrimaryButton from '@/components/PrimaryButton';
 import { getInitials } from '@/lib/text';
 
-const ZONES: { id: Zone; label: string; icon: string }[] = [
-  { id: 'frigo',    label: 'Frigo',    icon: '❄️' },
-  { id: 'freezer',  label: 'Freezer',  icon: '🧊' },
-  { id: 'dispensa', label: 'Dispensa', icon: '📦' },
+const ZONES: { id: Zone; labelKey: string; icon: string }[] = [
+  { id: 'frigo',    labelKey: 'common.zones.frigo',    icon: '❄️' },
+  { id: 'freezer',  labelKey: 'common.zones.freezer',  icon: '🧊' },
+  { id: 'dispensa', labelKey: 'common.zones.dispensa', icon: '📦' },
 ];
 
 const PRESETS = [
-  { d: 3, l: '3 giorni' }, { d: 7, l: '1 settimana' },
-  { d: 30, l: '1 mese' }, { d: 180, l: '6 mesi' }, { d: 365, l: '1 anno' },
+  { d: 3, labelKey: 'common.presets.d3' }, { d: 7, labelKey: 'common.presets.d7' },
+  { d: 30, labelKey: 'common.presets.d30' }, { d: 180, labelKey: 'common.presets.d180' },
+  { d: 365, labelKey: 'common.presets.d365' },
 ];
+
+// Stima per prodotti senza una scadenza stampata (frutta, verdura sfusa,
+// ecc.): non è una data reale, solo un'indicazione ragionevole in base a
+// dove viene conservato il prodotto.
+const ESTIMATE_DAYS: Record<Zone, number> = { frigo: 7, freezer: 90, dispensa: 180 };
 
 function addDays(n: number): string {
   return new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
@@ -98,6 +105,7 @@ async function lookupBarcode(barcode: string): Promise<ScannedProduct | null> {
 export default function ScannerScreen() {
   const router = useRouter();
   const isFocused = useIsFocused();
+  const { t } = useTranslation();
   const { addNewProduct } = useProducts();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(true);
@@ -107,6 +115,10 @@ export default function ScannerScreen() {
   const [selectedExpiry, setSelectedExpiry] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showDateScanner, setShowDateScanner] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [pickerDay, setPickerDay] = useState('');
+  const [pickerMonth, setPickerMonth] = useState('');
+  const [pickerYear, setPickerYear] = useState('');
   const [zoom, setZoom] = useState(0);
   const [camKey, setCamKey] = useState(0);
   const [mountError, setMountError] = useState<string | null>(null);
@@ -125,7 +137,7 @@ export default function ScannerScreen() {
   // consumato) fallisce silenziosamente: onMountError la intercetta e permette
   // di riprovare forzando un remount completo del componente.
   const handleMountError = ({ message }: { message: string }) => {
-    setMountError(message || 'Fotocamera non disponibile.');
+    setMountError(message || t('scanner.cameraUnavailableShort'));
   };
 
   const retryCamera = () => {
@@ -187,7 +199,7 @@ export default function ScannerScreen() {
     } else {
       // Not found — set minimal mock
       setFound({
-        name: 'Prodotto sconosciuto',
+        name: t('scanner.unknownProduct'),
         brand: '',
         barcode: code,
         qty: '',
@@ -218,6 +230,30 @@ export default function ScannerScreen() {
     lastScan.current = '';
   };
 
+  const openDatePicker = () => {
+    const d = selectedExpiry ? new Date(selectedExpiry + 'T00:00:00') : new Date();
+    setPickerYear(String(d.getFullYear()));
+    setPickerMonth(String(d.getMonth() + 1));
+    setPickerDay(String(d.getDate()));
+    setShowDatePicker(true);
+  };
+
+  const confirmDate = () => {
+    const d = Math.max(1, Math.min(31, parseInt(pickerDay) || 1));
+    const m = Math.max(1, Math.min(12, parseInt(pickerMonth) || 1));
+    const y = parseInt(pickerYear) || new Date().getFullYear();
+    setSelectedExpiry(`${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+    setShowDatePicker(false);
+  };
+
+  const handleEstimate = () => {
+    if (!selectedZone) {
+      showAlert(t('common.estimate.chooseZoneTitle'), t('common.estimate.chooseZoneBody'));
+      return;
+    }
+    setSelectedExpiry(addDays(ESTIMATE_DAYS[selectedZone]));
+  };
+
   const handleQuickSave = async () => {
     if (!found || !selectedZone || !selectedExpiry) return;
     setSaving(true);
@@ -241,7 +277,7 @@ export default function ScannerScreen() {
       });
       router.back();
     } catch (e: any) {
-      showAlert('Errore', e?.message ?? 'Impossibile salvare il prodotto');
+      showAlert(t('common.error'), e?.message ?? t('add.errors.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -259,10 +295,10 @@ export default function ScannerScreen() {
     return (
       <View style={[styles.root, { justifyContent: 'center', alignItems: 'center', gap: 16, padding: 32 }]}>
         <Text style={[styles.hint, { fontSize: 18, textAlign: 'center' }]}>
-          Shelfy ha bisogno dell'accesso alla fotocamera per scansionare i barcode.
+          {t('scanner.permissionNeeded')}
         </Text>
         <TouchableOpacity style={styles.manualBtn} onPress={requestPermission}>
-          <Text style={styles.manualBtnText}>Concedi accesso</Text>
+          <Text style={styles.manualBtnText}>{t('scanner.grantAccess')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -285,10 +321,10 @@ export default function ScannerScreen() {
       {mountError && (
         <View style={[styles.root, styles.mountErrorBox]}>
           <Text style={[styles.hint, { fontSize: 16, textAlign: 'center' }]}>
-            Fotocamera non disponibile. Se hai scelto "Consenti una volta" nel browser, il permesso potrebbe essere scaduto.
+            {t('scanner.cameraUnavailableHint')}
           </Text>
           <TouchableOpacity style={styles.manualBtn} onPress={retryCamera}>
-            <Text style={styles.manualBtnText}>Riprova</Text>
+            <Text style={styles.manualBtnText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -315,7 +351,7 @@ export default function ScannerScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.glassBtn}>
           <Text style={styles.glassBtnText}>✕</Text>
         </TouchableOpacity>
-        <Text style={styles.topBarTitle}>Scansiona barcode</Text>
+        <Text style={styles.topBarTitle}>{t('scanner.headerTitle')}</Text>
         <View style={styles.glassBtn} />
       </View>
 
@@ -326,12 +362,12 @@ export default function ScannerScreen() {
         ) : (
           <>
             <Text style={styles.statusTitle}>
-              {found ? 'Trovato!' : 'Inquadra il codice…'}
+              {found ? t('scanner.statusFound') : t('scanner.statusScanning')}
             </Text>
             <Text style={styles.statusSub}>
               {found
                 ? `${found.brand ? found.brand + ' · ' : ''}${found.name}`
-                : 'Tieni fermo per qualche secondo'}
+                : t('scanner.statusHoldStill')}
             </Text>
           </>
         )}
@@ -354,7 +390,7 @@ export default function ScannerScreen() {
             </View>
           </View>
 
-          <Text style={styles.sheetSectionLabel}>DOVE LO CONSERVI?</Text>
+          <Text style={styles.sheetSectionLabel}>{t('scanner.sheetStorageSection')}</Text>
           <View style={styles.sheetZoneRow}>
             {ZONES.map((z) => {
               const active = selectedZone === z.id;
@@ -366,21 +402,34 @@ export default function ScannerScreen() {
                   activeOpacity={0.85}
                 >
                   <Text style={styles.sheetZoneIcon}>{z.icon}</Text>
-                  <Text style={[styles.sheetZoneLabel, active && styles.sheetZoneLabelActive]}>{z.label}</Text>
+                  <Text style={[styles.sheetZoneLabel, active && styles.sheetZoneLabelActive]}>{t(z.labelKey)}</Text>
                 </TouchableOpacity>
               );
             })}
           </View>
 
+          <TouchableOpacity style={styles.estimateBtn} onPress={handleEstimate} activeOpacity={0.85}>
+            <Text style={styles.estimateBtnIcon}>🥬</Text>
+            <Text style={styles.estimateBtnText}>{t('common.estimate.cta')}</Text>
+          </TouchableOpacity>
+          <Text style={styles.estimateDisclaimer}>
+            {t('common.estimate.disclaimer')}
+          </Text>
+
           <View style={styles.sheetExpiryHeader}>
-            <Text style={styles.sheetSectionLabel}>QUANDO SCADE?</Text>
-            {ocrAvailable && (
-              <TouchableOpacity onPress={() => setShowDateScanner(true)} activeOpacity={0.85}>
-                <Text style={styles.sheetRescanLink}>
-                  {selectedExpiry ? '↻ Rileggi data' : '📷 Inquadra data'}
-                </Text>
+            <Text style={styles.sheetSectionLabel}>{t('scanner.sheetExpirySection')}</Text>
+            <View style={styles.sheetHeaderLinks}>
+              {ocrAvailable && (
+                <TouchableOpacity onPress={() => setShowDateScanner(true)} activeOpacity={0.85}>
+                  <Text style={styles.sheetRescanLink}>
+                    {selectedExpiry ? t('scanner.rescanLink') : t('scanner.scanDateLink')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity onPress={openDatePicker} activeOpacity={0.85}>
+                <Text style={styles.sheetRescanLink}>{t('scanner.preciseDateLink')}</Text>
               </TouchableOpacity>
-            )}
+            </View>
           </View>
           <View style={styles.sheetPresetsRow}>
             {PRESETS.map((p) => {
@@ -393,7 +442,7 @@ export default function ScannerScreen() {
                   onPress={() => setSelectedExpiry(iso)}
                   activeOpacity={0.85}
                 >
-                  <Text style={[styles.sheetPresetText, active && styles.sheetPresetTextActive]}>+ {p.l}</Text>
+                  <Text style={[styles.sheetPresetText, active && styles.sheetPresetTextActive]}>+ {t(p.labelKey)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -401,10 +450,10 @@ export default function ScannerScreen() {
 
           <View style={styles.sheetActions}>
             <TouchableOpacity style={styles.sheetGhostBtn} onPress={handleRetry} activeOpacity={0.85}>
-              <Text style={styles.sheetGhostBtnText}>Rifai</Text>
+              <Text style={styles.sheetGhostBtnText}>{t('scanner.retryAction')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.sheetGhostBtn} onPress={handleEditDetails} activeOpacity={0.85}>
-              <Text style={styles.sheetGhostBtnText}>Modifica dettagli</Text>
+              <Text style={styles.sheetGhostBtnText}>{t('scanner.editDetails')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -413,7 +462,7 @@ export default function ScannerScreen() {
             disabled={!selectedZone || !selectedExpiry}
             loading={saving}
             icon="checkmark"
-            label="Salva nel diario"
+            label={t('add.save')}
             fullWidth
           />
         </View>
@@ -448,7 +497,7 @@ export default function ScannerScreen() {
           activeOpacity={0.85}
         >
           <Ionicons name="pencil-outline" size={16} color="#fbfaf3" />
-          <Text style={styles.manualBtnText}>Inserisci manualmente</Text>
+          <Text style={styles.manualBtnText}>{t('scanner.manualEntry')}</Text>
         </TouchableOpacity>
       )}
 
@@ -457,6 +506,55 @@ export default function ScannerScreen() {
         onClose={() => setShowDateScanner(false)}
         onResult={(iso) => setSelectedExpiry(iso)}
       />
+
+      <Modal visible={showDatePicker} transparent animationType="fade" onRequestClose={() => setShowDatePicker(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowDatePicker(false)}>
+          <TouchableOpacity activeOpacity={1} style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{t('common.datePicker.title')}</Text>
+            <View style={styles.pickerRow}>
+              <View style={styles.pickerCol}>
+                <Text style={styles.pickerLabel}>{t('common.datePicker.day')}</Text>
+                <TextInput
+                  style={styles.pickerInput}
+                  value={pickerDay}
+                  onChangeText={setPickerDay}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  selectTextOnFocus
+                />
+              </View>
+              <View style={styles.pickerCol}>
+                <Text style={styles.pickerLabel}>{t('common.datePicker.month')}</Text>
+                <TextInput
+                  style={styles.pickerInput}
+                  value={pickerMonth}
+                  onChangeText={setPickerMonth}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  selectTextOnFocus
+                />
+              </View>
+              <View style={styles.pickerCol}>
+                <Text style={styles.pickerLabel}>{t('common.datePicker.year')}</Text>
+                <TextInput
+                  style={styles.pickerInput}
+                  value={pickerYear}
+                  onChangeText={setPickerYear}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  selectTextOnFocus
+                />
+              </View>
+            </View>
+            <View style={styles.modalBtns}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setShowDatePicker(false)} activeOpacity={0.85}>
+                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              <PrimaryButton onPress={confirmDate} label={t('common.datePicker.confirm')} containerStyle={{ flex: 1.5 }} />
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -528,6 +626,7 @@ const styles = StyleSheet.create({
   sheetExpiryHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
+  sheetHeaderLinks: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   sheetRescanLink: {
     fontSize: 12, fontFamily: FONTS.sansSemiBold, color: T.primary, marginBottom: 8,
   },
@@ -541,6 +640,19 @@ const styles = StyleSheet.create({
   sheetZoneIcon: { fontSize: 20 },
   sheetZoneLabel: { fontFamily: FONTS.sansSemiBold, fontSize: 12, color: T.ink },
   sheetZoneLabelActive: { color: '#fbfaf3' },
+
+  estimateBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: T.surface, borderRadius: RADIUS.lg,
+    marginBottom: 6, paddingVertical: 12,
+    borderWidth: 1, borderColor: T.line,
+  },
+  estimateBtnIcon: { fontSize: 16 },
+  estimateBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: T.ink2 },
+  estimateDisclaimer: {
+    fontSize: 11, fontFamily: FONTS.sans, color: T.mute,
+    marginBottom: 14, lineHeight: 15,
+  },
 
   sheetPresetsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
   sheetPreset: {
@@ -582,4 +694,22 @@ const styles = StyleSheet.create({
   },
   zoomBtnText: { fontSize: 20, color: '#fbfaf3', fontFamily: FONTS.sansBold, lineHeight: 22 },
   zoomLabel: { fontSize: 11, color: '#fbfaf3', fontFamily: FONTS.sansSemiBold },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
+  modalCard: { backgroundColor: T.surface, borderRadius: 24, padding: 24, width: 320, gap: 12 },
+  modalTitle: { fontFamily: FONTS.serifItalic, fontSize: 22, color: T.ink, letterSpacing: -0.3 },
+  pickerRow: { flexDirection: 'row', gap: 12 },
+  pickerCol: { flex: 1, alignItems: 'center', gap: 6 },
+  pickerLabel: { fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.4 },
+  pickerInput: {
+    width: '100%', textAlign: 'center', backgroundColor: '#ece8de', borderRadius: RADIUS.input,
+    paddingVertical: 12, fontSize: 20, fontFamily: FONTS.sansBold, color: T.ink,
+    boxShadow: CLAY.inset,
+  },
+  modalBtns: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  modalCancel: {
+    flex: 1, borderRadius: RADIUS.lg, paddingVertical: 14, alignItems: 'center',
+    borderWidth: 1, borderColor: T.line,
+  },
+  modalCancelText: { fontFamily: FONTS.sansSemiBold, fontSize: 15, color: T.mute },
 });

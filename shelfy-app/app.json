@@ -68,7 +68,8 @@
       "react-native-edge-to-edge",
       "expo-web-browser",
       "@react-native-google-signin/google-signin",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-localization"
     ],
     "scheme": "shelfy",
     "experiments": {

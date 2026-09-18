@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { usePantry } from '@/context/PantryContext';
 import PrimaryButton from '@/components/PrimaryButton';
 import QrScannerModal from '@/components/QrScannerModal';
@@ -13,6 +14,7 @@ import { T, FONTS, RADIUS, CLAY } from '@/constants/theme';
 
 export default function PantryJoinScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { joinPantry, setActivePantryId } = usePantry();
   const [code, setCode] = useState('');
   const [joining, setJoining] = useState(false);
@@ -20,7 +22,7 @@ export default function PantryJoinScreen() {
 
   const attemptJoin = async (rawCode: string) => {
     if (rawCode.length !== 6) {
-      showAlert('Codice incompleto', 'Il codice è di 6 caratteri.');
+      showAlert(t('pantry.join.incompleteTitle'), t('pantry.join.incompleteBody'));
       return;
     }
     setJoining(true);
@@ -28,20 +30,20 @@ export default function PantryJoinScreen() {
       const result = await joinPantry(rawCode);
       setActivePantryId(result.id);
       showAlert(
-        result.alreadyMember ? 'Fatto' : 'Benvenuto! 🎉',
+        result.alreadyMember ? t('pantry.join.doneTitle') : t('pantry.join.welcomeTitle'),
         result.alreadyMember
-          ? `Eri già in "${result.name}". L'ho impostata come casa attiva.`
-          : `Sei entrato in "${result.name}" ed è ora la tua casa attiva.`,
+          ? t('pantry.join.alreadyMemberBody', { name: result.name })
+          : t('pantry.join.joinedBody', { name: result.name }),
       );
       router.replace('/(tabs)');
     } catch (e: any) {
       const errCode: string = e?.code ?? '';
       const message = errCode.includes('not-found')
-        ? 'Codice non valido o scaduto. Chiedi un codice nuovo a chi ha creato la casa.'
+        ? t('pantry.join.notFoundError')
         : errCode.includes('resource-exhausted')
-          ? (e?.message ?? 'Troppi tentativi, riprova più tardi.')
-          : (e?.message ?? 'Impossibile entrare nella casa');
-      showAlert('Errore', message);
+          ? (e?.message ?? t('pantry.join.rateLimitError'))
+          : (e?.message ?? t('pantry.join.joinFailed'));
+      showAlert(t('common.error'), message);
     } finally {
       setJoining(false);
     }
@@ -61,7 +63,7 @@ export default function PantryJoinScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.navBtn} activeOpacity={0.85}>
           <Ionicons name="chevron-back" size={20} color={T.ink} />
         </TouchableOpacity>
-        <Text style={styles.title}>Entra con un codice</Text>
+        <Text style={styles.title}>{t('pantry.join.title')}</Text>
         <View style={styles.navBtn} />
       </View>
 
@@ -73,8 +75,8 @@ export default function PantryJoinScreen() {
           <View style={styles.iconWrap}>
             <Ionicons name="key-outline" size={28} color={T.primary} />
           </View>
-          <Text style={styles.lead}>Chiedi il codice a 6 caratteri a chi ha creato la casa</Text>
-          <Text style={styles.sub}>O inquadra il suo QR d'invito</Text>
+          <Text style={styles.lead}>{t('pantry.join.lead')}</Text>
+          <Text style={styles.sub}>{t('pantry.join.sub')}</Text>
 
           <TouchableOpacity
             style={styles.scanBtn}
@@ -82,12 +84,12 @@ export default function PantryJoinScreen() {
             activeOpacity={0.85}
           >
             <Ionicons name="qr-code-outline" size={18} color={T.primary} />
-            <Text style={styles.scanBtnText}>Scansiona il QR</Text>
+            <Text style={styles.scanBtnText}>{t('pantry.join.scanQr')}</Text>
           </TouchableOpacity>
 
           <View style={styles.dividerRow}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>oppure digita il codice</Text>
+            <Text style={styles.dividerText}>{t('pantry.join.orType')}</Text>
             <View style={styles.dividerLine} />
           </View>
 
@@ -95,7 +97,7 @@ export default function PantryJoinScreen() {
             style={styles.codeInput}
             value={code}
             onChangeText={(v) => setCode(v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
-            placeholder="ABC123"
+            placeholder={t('pantry.join.codePlaceholder')}
             placeholderTextColor={T.mute}
             autoCapitalize="characters"
             autoCorrect={false}
@@ -107,7 +109,7 @@ export default function PantryJoinScreen() {
             loading={joining}
             disabled={code.length !== 6}
             icon="log-in-outline"
-            label="Entra nella casa"
+            label={t('pantry.join.enterHome')}
             fullWidth
           />
         </View>

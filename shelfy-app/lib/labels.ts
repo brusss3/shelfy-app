@@ -3,9 +3,12 @@
 // prodotto da scrivere a mano. Condiviso tra la stampa nativa (expo-print)
 // e l'apertura in una nuova scheda su web.
 
+import i18n from '@/lib/i18n';
+
 function formatDateTime(d: Date): { date: string; time: string } {
-  const date = d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const time = d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+  const locale = i18n.language === 'it' ? 'it-IT' : 'en-US';
+  const date = d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const time = d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
   return { date, time };
 }
 
@@ -23,11 +26,14 @@ export function buildLabelsHtml({ packagingDate, expiryDate, copies }: LabelShee
   const packaging = formatDateTime(packagingDate);
   const expiry = formatDateTime(expiryDate);
 
+  const packagedLabel = i18n.t('labels.packaged');
+  const expiresLabel = i18n.t('labels.expires');
+
   const labelHtml = `
     <div class="label">
       <div class="nameLine">&nbsp;</div>
-      <div class="row"><span class="k">Confezionato</span><span class="v">${packaging.date} · ${packaging.time}</span></div>
-      <div class="row expiry"><span class="k">Scade</span><span class="v">${expiry.date} · ${expiry.time}</span></div>
+      <div class="row"><span class="k">${packagedLabel}</span><span class="v">${packaging.date} · ${packaging.time}</span></div>
+      <div class="row expiry"><span class="k">${expiresLabel}</span><span class="v">${expiry.date} · ${expiry.time}</span></div>
     </div>
   `;
 
@@ -43,10 +49,10 @@ export function buildLabelsHtml({ packagingDate, expiryDate, copies }: LabelShee
 
   return `
 <!DOCTYPE html>
-<html lang="it">
+<html lang="${i18n.language}">
 <head>
 <meta charset="utf-8" />
-<title>Etichette Shelfy</title>
+<title>${i18n.t('labels.printTitle')}</title>
 <style>
   @page { size: A4; margin: 10mm; }
   * { box-sizing: border-box; }

@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { usePantry } from '@/context/PantryContext';
 import { subscribeToPantry, subscribeToPantryInvite } from '@/lib/pantry';
@@ -19,16 +20,18 @@ import {
   T, FONTS, RADIUS, CLAY,
 } from '@/constants/theme';
 
-function shortDate(iso: string | null): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
-}
-
 export default function PantryDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
+  const { t, i18n } = useTranslation();
+
+  const shortDate = (iso: string | null): string => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const locale = i18n.language === 'it' ? 'it-IT' : 'en-US';
+    return d.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
+  };
   const {
     activePantryId, setActivePantryId, renamePantry, rotateInviteCode,
     disableInviteCode, leavePantry, removeMember, deletePantry,
@@ -82,7 +85,7 @@ export default function PantryDetailScreen() {
       await renamePantry(pantry.id, newName.trim());
       setRenaming(false);
     } catch (e: any) {
-      showAlert('Errore', e?.message ?? 'Impossibile rinominare');
+      showAlert(t('common.error'), e?.message ?? t('pantry.detail.renameFailed'));
     } finally {
       setBusy(null);
     }
@@ -93,14 +96,14 @@ export default function PantryDetailScreen() {
   const handleCopyCode = async () => {
     if (!invite?.code) return;
     await Clipboard.setStringAsync(invite.code);
-    showAlert('Copiato', 'Codice copiato negli appunti.');
+    showAlert(t('pantry.detail.copiedTitle'), t('pantry.detail.copiedBody'));
   };
 
   const handleShareCode = async () => {
     if (!invite?.code) return;
     try {
       await Share.share({
-        message: `Unisciti alla mia casa "${pantry.name}" su Shelfy! Codice: ${invite.code}\nScade il ${shortDate(invite.expiresAt)}.`,
+        message: t('pantry.detail.shareMessage', { name: pantry.name, code: invite.code, date: shortDate(invite.expiresAt) }),
       });
     } catch {
       // L'utente ha chiuso il foglio di condivisione: nessuna azione.
@@ -112,21 +115,21 @@ export default function PantryDetailScreen() {
     try {
       await rotateInviteCode(pantry.id);
     } catch (e: any) {
-      showAlert('Errore', e?.message ?? 'Impossibile rigenerare il codice');
+      showAlert(t('common.error'), e?.message ?? t('pantry.detail.regenerateFailed'));
     } finally {
       setBusy(null);
     }
   };
 
   const handleDisableCode = () => {
-    showAlert('Disattivare il codice?', 'Chi non è ancora entrato non potrà più usarlo. Potrai generarne uno nuovo quando vuoi.', [
-      { text: 'Annulla', style: 'cancel' },
+    showAlert(t('pantry.detail.deactivateTitle'), t('pantry.detail.deactivateBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Disattiva', style: 'destructive',
+        text: t('pantry.detail.deactivate'), style: 'destructive',
         onPress: async () => {
           setBusy('disable');
           try { await disableInviteCode(pantry.id); }
-          catch (e: any) { showAlert('Errore', e?.message ?? 'Impossibile disattivare il codice'); }
+          catch (e: any) { showAlert(t('common.error'), e?.message ?? t('pantry.detail.deactivateFailed')); }
           finally { setBusy(null); }
         },
       },
@@ -134,14 +137,14 @@ export default function PantryDetailScreen() {
   };
 
   const handleRemoveMember = (uid: string, name: string) => {
-    showAlert(`Rimuovere ${name}?`, 'Perderà l\'accesso a questa casa condivisa.', [
-      { text: 'Annulla', style: 'cancel' },
+    showAlert(t('pantry.detail.removeMemberTitle', { name }), t('pantry.detail.removeMemberBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Rimuovi', style: 'destructive',
+        text: t('common.delete'), style: 'destructive',
         onPress: async () => {
           setBusy(`remove-${uid}`);
           try { await removeMember(pantry.id, uid); }
-          catch (e: any) { showAlert('Errore', e?.message ?? 'Impossibile rimuovere'); }
+          catch (e: any) { showAlert(t('common.error'), e?.message ?? t('pantry.detail.removeMemberFailed')); }
           finally { setBusy(null); }
         },
       },
@@ -149,10 +152,10 @@ export default function PantryDetailScreen() {
   };
 
   const handleLeave = () => {
-    showAlert('Abbandonare questa casa?', 'Non vedrai più i suoi prodotti finché non torni a entrarci con un nuovo codice.', [
-      { text: 'Annulla', style: 'cancel' },
+    showAlert(t('pantry.detail.leaveTitle'), t('pantry.detail.leaveBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Abbandona', style: 'destructive',
+        text: t('pantry.detail.leaveHome'), style: 'destructive',
         onPress: async () => {
           setBusy('leave');
           try {
@@ -160,7 +163,7 @@ export default function PantryDetailScreen() {
             if (isActive) setActivePantryId(null);
             router.back();
           } catch (e: any) {
-            showAlert('Errore', e?.message ?? 'Impossibile abbandonare');
+            showAlert(t('common.error'), e?.message ?? t('pantry.detail.leaveFailed'));
             setBusy(null);
           }
         },
@@ -169,10 +172,10 @@ export default function PantryDetailScreen() {
   };
 
   const handleDelete = () => {
-    showAlert(`Eliminare "${pantry.name}"?`, 'Tutti i prodotti condivisi andranno persi per sempre, per tutti i membri. Non si può annullare.', [
-      { text: 'Annulla', style: 'cancel' },
+    showAlert(t('pantry.detail.deleteTitle', { name: pantry.name }), t('pantry.detail.deleteBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Elimina', style: 'destructive',
+        text: t('common.delete'), style: 'destructive',
         onPress: async () => {
           setBusy('delete');
           try {
@@ -180,7 +183,7 @@ export default function PantryDetailScreen() {
             if (isActive) setActivePantryId(null);
             router.back();
           } catch (e: any) {
-            showAlert('Errore', e?.message ?? 'Impossibile eliminare');
+            showAlert(t('common.error'), e?.message ?? t('pantry.detail.deleteFailed'));
             setBusy(null);
           }
         },
@@ -210,20 +213,19 @@ export default function PantryDetailScreen() {
             )}
           </View>
           <Text style={styles.cardSub}>
-            {members.length} {members.length === 1 ? 'persona' : 'persone'} · creata da{' '}
-            {pantry.members[pantry.ownerId]?.name ?? '—'}
+            {t('pantry.detail.memberCountCreatedBy', { count: members.length, owner: pantry.members[pantry.ownerId]?.name ?? '—' })}
           </Text>
 
           {isActive ? (
             <View style={styles.activeBadge}>
               <Ionicons name="checkmark-circle" size={16} color={T.ok} />
-              <Text style={styles.activeBadgeText}>È la tua casa attiva</Text>
+              <Text style={styles.activeBadgeText}>{t('pantry.detail.activeBadge')}</Text>
             </View>
           ) : (
             <PrimaryButton
               onPress={handleUseAsActive}
               icon="swap-horizontal-outline"
-              label="Usa questa casa"
+              label={t('pantry.detail.useThisHome')}
               fullWidth
               containerStyle={{ marginTop: 14 }}
             />
@@ -233,8 +235,8 @@ export default function PantryDetailScreen() {
         {/* Codice invito — solo il creatore lo vede */}
         {isOwner && (
           <View style={styles.card}>
-            <Text style={styles.sectionLabel}>CODICE INVITO</Text>
-            <Text style={styles.sectionHint}>Solo tu lo vedi. Condividilo con chi vuoi far entrare.</Text>
+            <Text style={styles.sectionLabel}>{t('pantry.detail.inviteCodeTitle')}</Text>
+            <Text style={styles.sectionHint}>{t('pantry.detail.inviteCodeHint')}</Text>
 
             {invite?.code ? (
               <>
@@ -245,17 +247,17 @@ export default function PantryDetailScreen() {
                 <View style={styles.qrBox}>
                   <QRCode value={`shelfy://join/${invite.code}`} size={148} backgroundColor="#ffffff" color={T.ink} />
                 </View>
-                <Text style={styles.qrHint}>Chi lo inquadra con Shelfy entra subito</Text>
+                <Text style={styles.qrHint}>{t('pantry.detail.qrHint')}</Text>
 
-                <Text style={[styles.codeExpiry, { textAlign: 'center' }]}>Scade il {shortDate(invite.expiresAt)}</Text>
+                <Text style={[styles.codeExpiry, { textAlign: 'center' }]}>{t('pantry.detail.codeExpiresOn', { date: shortDate(invite.expiresAt) })}</Text>
                 <View style={styles.codeActionsRow}>
                   <TouchableOpacity style={styles.codeActionBtn} onPress={handleCopyCode} activeOpacity={0.85}>
                     <Ionicons name="copy-outline" size={17} color={T.primary} />
-                    <Text style={styles.codeActionText}>Copia</Text>
+                    <Text style={styles.codeActionText}>{t('pantry.detail.copy')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.codeActionBtn} onPress={handleShareCode} activeOpacity={0.85}>
                     <Ionicons name="share-outline" size={17} color={T.primary} />
-                    <Text style={styles.codeActionText}>Condividi</Text>
+                    <Text style={styles.codeActionText}>{t('pantry.detail.share')}</Text>
                   </TouchableOpacity>
                 </View>
                 <View style={styles.codeActionsRow}>
@@ -267,7 +269,7 @@ export default function PantryDetailScreen() {
                   >
                     {busy === 'rotate'
                       ? <ActivityIndicator size="small" color={T.mute} />
-                      : <Text style={styles.codeActionGhostText}>Rigenera</Text>}
+                      : <Text style={styles.codeActionGhostText}>{t('pantry.detail.regenerate')}</Text>}
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.codeActionBtnGhost}
@@ -277,7 +279,7 @@ export default function PantryDetailScreen() {
                   >
                     {busy === 'disable'
                       ? <ActivityIndicator size="small" color={T.urgent} />
-                      : <Text style={[styles.codeActionGhostText, { color: T.urgent }]}>Disattiva</Text>}
+                      : <Text style={[styles.codeActionGhostText, { color: T.urgent }]}>{t('pantry.detail.deactivate')}</Text>}
                   </TouchableOpacity>
                 </View>
               </>
@@ -285,10 +287,10 @@ export default function PantryDetailScreen() {
               <ActivityIndicator color={T.primary} style={{ marginVertical: 12 }} />
             ) : (
               <View style={{ alignItems: 'flex-start', gap: 10 }}>
-                <Text style={styles.codeExpiry}>Il codice è disattivato: nessuno può entrare con un vecchio codice.</Text>
+                <Text style={styles.codeExpiry}>{t('pantry.detail.codeDisabledHint')}</Text>
                 <TouchableOpacity onPress={handleRotateCode} disabled={busy === 'rotate'} activeOpacity={0.85}>
                   <Text style={[styles.codeActionText, { color: T.primary }]}>
-                    {busy === 'rotate' ? 'Genero…' : 'Genera un nuovo codice'}
+                    {busy === 'rotate' ? t('pantry.detail.regenerating') : t('pantry.detail.generateNewCode')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -298,7 +300,7 @@ export default function PantryDetailScreen() {
 
         {/* Membri */}
         <View style={styles.card}>
-          <Text style={styles.sectionLabel}>MEMBRI</Text>
+          <Text style={styles.sectionLabel}>{t('pantry.detail.membersTitle')}</Text>
           <View style={{ gap: 8, marginTop: 8 }}>
             {members.map(([uid, m]) => (
               <View key={uid} style={styles.memberRow}>
@@ -307,9 +309,9 @@ export default function PantryDetailScreen() {
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={styles.memberName} numberOfLines={1}>
-                    {m.name} {uid === user?.uid ? '(tu)' : ''}
+                    {m.name} {uid === user?.uid ? t('pantry.detail.youSuffix') : ''}
                   </Text>
-                  <Text style={styles.memberRole}>{m.role === 'owner' ? 'Creatore' : 'Membro'}</Text>
+                  <Text style={styles.memberRole}>{m.role === 'owner' ? t('pantry.detail.roleOwner') : t('pantry.detail.roleMember')}</Text>
                 </View>
                 {isOwner && uid !== user?.uid && (
                   <TouchableOpacity
@@ -332,11 +334,11 @@ export default function PantryDetailScreen() {
         <View style={{ marginTop: 8 }}>
           {isOwner ? (
             <Pill variant="danger" size="lg" onPress={handleDelete} disabled={busy === 'delete'} style={{ justifyContent: 'center' }}>
-              {busy === 'delete' ? 'Elimino…' : 'Elimina casa'}
+              {busy === 'delete' ? t('pantry.detail.deleting') : t('pantry.detail.deleteHome')}
             </Pill>
           ) : (
             <Pill variant="danger" size="lg" onPress={handleLeave} disabled={busy === 'leave'} style={{ justifyContent: 'center' }}>
-              {busy === 'leave' ? 'Esco…' : 'Abbandona casa'}
+              {busy === 'leave' ? t('pantry.detail.leaving') : t('pantry.detail.leaveHome')}
             </Pill>
           )}
         </View>
@@ -345,21 +347,21 @@ export default function PantryDetailScreen() {
       <Modal visible={renaming} transparent animationType="fade" onRequestClose={() => setRenaming(false)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setRenaming(false)}>
           <TouchableOpacity activeOpacity={1} style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Rinomina casa</Text>
+            <Text style={styles.modalTitle}>{t('pantry.detail.renameTitle')}</Text>
             <TextInput
               style={styles.modalInput}
               value={newName}
               onChangeText={setNewName}
-              placeholder="Nome della casa"
+              placeholder={t('pantry.hub.namePlaceholder')}
               placeholderTextColor={T.mute}
               autoFocus
               maxLength={60}
             />
             <View style={styles.modalBtns}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setRenaming(false)} activeOpacity={0.85}>
-                <Text style={styles.modalCancelText}>Annulla</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
-              <PrimaryButton onPress={confirmRename} loading={busy === 'rename'} label="Salva" containerStyle={{ flex: 1.3 }} />
+              <PrimaryButton onPress={confirmRename} loading={busy === 'rename'} label={t('common.save')} containerStyle={{ flex: 1.3 }} />
             </View>
           </TouchableOpacity>
         </TouchableOpacity>

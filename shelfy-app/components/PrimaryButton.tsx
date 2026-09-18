@@ -14,8 +14,13 @@ interface PrimaryButtonProps {
   loading?: boolean;
   /** 'pill' per bottoni testo/CTA, 'circle' per FAB icona-sola. */
   shape?: 'pill' | 'circle';
-  /** Lato del cerchio quando shape='circle'. */
+  /** Lato quando shape='circle'. */
   size?: number;
+  /** Raggio quando shape='circle' — default un cerchio pieno (size / 2).
+   *  Passa un valore più piccolo (es. RADIUS.input) per un quadrato con
+   *  angoli smussati invece di un cerchio, come i pulsanti icona-sola
+   *  accanto a cui compare spesso. */
+  radius?: number;
   icon?: IoniconName;
   /** 'inline': icona piccola accanto al testo (default). 'shutter': badge
    *  circolare chiaro con l'icona dentro — riservato al bottone scan della
@@ -43,12 +48,16 @@ interface PrimaryButtonProps {
 // restano solo per elementi decorativi/informativi (tab bar, zone, badge),
 // non per le azioni nei bottoni.
 export default function PrimaryButton({
-  onPress, disabled, loading, shape = 'pill', size = 56,
+  onPress, disabled, loading, shape = 'pill', size = 56, radius,
   icon, iconVariant = 'inline', label, subLabel, compactOnNative,
   fullWidth, containerStyle, style, labelStyle, accessibilityLabel,
 }: PrimaryButtonProps) {
   const isCircle = shape === 'circle';
   const compact = compactOnNative && Platform.OS !== 'web';
+  // Proporzionata al lato invece che fissa: un box più grande (es. il CTA
+  // scan della home, 55px) non deve ritrovarsi con la stessa icona minuta
+  // di un FAB piccolo.
+  const circleIconSize = Math.round(size * 0.42);
 
   return (
     <TouchableOpacity
@@ -64,7 +73,7 @@ export default function PrimaryButton({
         end={{ x: 0, y: 1 }}
         style={[
           isCircle
-            ? { width: size, height: size, borderRadius: size / 2 }
+            ? { width: size, height: size, borderRadius: radius ?? size / 2, alignItems: 'center', justifyContent: 'center' }
             : [styles.pill, compact && styles.pillCompact],
           styles.depth,
           style,
@@ -73,7 +82,7 @@ export default function PrimaryButton({
         {loading ? (
           <ActivityIndicator color="#fbfaf3" />
         ) : isCircle ? (
-          icon ? <Ionicons name={icon} size={20} color="#fbfaf3" /> : null
+          icon ? <Ionicons name={icon} size={circleIconSize} color="#fbfaf3" /> : null
         ) : compact ? (
           icon ? (
             iconVariant === 'shutter' ? (

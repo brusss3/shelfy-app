@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { authErrorMessage } from '@/lib/authErrors';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
@@ -18,14 +19,15 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const handleRegister = async () => {
     if (!name || !email || !password) {
-      showAlert('Errore', 'Compila tutti i campi');
+      showAlert(t('common.error'), t('auth.register.missingFieldsError'));
       return;
     }
     if (password.length < 6) {
-      showAlert('Errore', 'La password deve avere almeno 6 caratteri');
+      showAlert(t('common.error'), t('auth.register.weakPasswordError'));
       return;
     }
     setLoading(true);
@@ -33,7 +35,7 @@ export default function RegisterScreen() {
       await signUp(email.trim(), password, name.trim());
       router.replace('/(tabs)');
     } catch (e: any) {
-      showAlert('Registrazione fallita', authErrorMessage(e, 'Impossibile completare la registrazione. Riprova.'));
+      showAlert(t('auth.register.failedTitle'), authErrorMessage(e, t('auth.register.failedFallback')));
     } finally {
       setLoading(false);
     }
@@ -48,16 +50,16 @@ export default function RegisterScreen() {
         <View style={styles.header}>
           <Image source={require('@/assets/icon.png')} style={styles.logoTile} resizeMode="contain" />
           <Text style={styles.appName}>Shelfy</Text>
-          <Text style={styles.tagline}>Inizia a tenere traccia del tuo cibo</Text>
+          <Text style={styles.tagline}>{t('auth.register.tagline')}</Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.formTitle}>Crea account</Text>
+          <Text style={styles.formTitle}>{t('auth.register.title')}</Text>
 
           {[
-            { label: 'Il tuo nome', value: name, onChange: setName, placeholder: 'Mario', autoComplete: 'name' as const, keyboard: 'default' as const },
-            { label: 'Email', value: email, onChange: setEmail, placeholder: 'tu@esempio.com', autoComplete: 'email' as const, keyboard: 'email-address' as const },
-            { label: 'Password', value: password, onChange: setPassword, placeholder: '••••••••', autoComplete: 'new-password' as const, keyboard: 'default' as const, secure: true },
+            { label: t('auth.register.nameLabel'), value: name, onChange: setName, placeholder: t('auth.register.namePlaceholder'), autoComplete: 'name' as const, keyboard: 'default' as const },
+            { label: t('auth.register.emailLabel'), value: email, onChange: setEmail, placeholder: t('auth.emailPlaceholder'), autoComplete: 'email' as const, keyboard: 'email-address' as const },
+            { label: t('auth.register.passwordLabel'), value: password, onChange: setPassword, placeholder: '••••••••', autoComplete: 'new-password' as const, keyboard: 'default' as const, secure: true },
           ].map((f, i) => (
             <View key={i} style={[styles.field, i > 0 && { marginTop: 12 }]}>
               <Text style={styles.label}>{f.label}</Text>
@@ -78,14 +80,14 @@ export default function RegisterScreen() {
           <PrimaryButton
             onPress={handleRegister}
             loading={loading}
-            label="Crea account"
+            label={t('auth.register.submit')}
             fullWidth
             containerStyle={{ marginTop: 20 }}
           />
 
           <View style={styles.dividerRow}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>oppure</Text>
+            <Text style={styles.dividerText}>{t('auth.register.or')}</Text>
             <View style={styles.dividerLine} />
           </View>
 
@@ -93,8 +95,8 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Hai già un account? </Text>
-          <Link href="/(auth)/login" style={styles.footerLink}>Accedi</Link>
+          <Text style={styles.footerText}>{t('auth.register.haveAccount')}</Text>
+          <Link href="/(auth)/login" style={styles.footerLink}>{t('auth.register.loginLink')}</Link>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

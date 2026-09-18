@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { submitFeedback, FeedbackCategory } from '@/lib/firestore';
 import ProfileButton from '@/components/ProfileButton';
@@ -20,54 +21,50 @@ import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 
 interface CategoryOption {
   id: FeedbackCategory;
-  label: string;
+  labelKey: string;
   emoji: string;
-  desc: string;
-  placeholder: string;
+  descKey: string;
+  placeholderKey: string;
 }
 
 const CATEGORIES: CategoryOption[] = [
   {
     id: 'suggerimento',
-    label: 'Nuova Idea',
+    labelKey: 'feedback.categories.suggestion.label',
     emoji: '💡',
-    desc: 'Funzioni o miglioramenti che vorresti vedere',
-    placeholder: 'Descrivi la tua idea o la funzione che renderebbe Shelfy perfetta per te…',
+    descKey: 'feedback.categories.suggestion.desc',
+    placeholderKey: 'feedback.categories.suggestion.placeholder',
   },
   {
     id: 'bug',
-    label: 'Segnala Bug',
+    labelKey: 'feedback.categories.bug.label',
     emoji: '🐞',
-    desc: 'Problemi grafici, blocchi o errori di funzionamento',
-    placeholder: 'Cosa è successo? Su quale schermata? Descrivi i passaggi per riprodurre il problema…',
+    descKey: 'feedback.categories.bug.desc',
+    placeholderKey: 'feedback.categories.bug.placeholder',
   },
   {
     id: 'prodotto',
-    label: 'Barcode/Cibo',
+    labelKey: 'feedback.categories.product.label',
     emoji: '📦',
-    desc: 'Prodotti non riconosciuti o dati incompleti',
-    placeholder: 'Indica il codice a barre o il nome del prodotto e i dettagli mancanti…',
+    descKey: 'feedback.categories.product.desc',
+    placeholderKey: 'feedback.categories.product.placeholder',
   },
   {
     id: 'altro',
-    label: 'Altro',
+    labelKey: 'feedback.categories.other.label',
     emoji: '💬',
-    desc: 'Domande, complimenti o commenti generali',
-    placeholder: 'Scrivi qui qualsiasi tuo pensiero o suggerimento per il team…',
+    descKey: 'feedback.categories.other.desc',
+    placeholderKey: 'feedback.categories.other.placeholder',
   },
 ];
 
-const QUICK_TAGS = [
-  'Widget per schermata home 📱',
-  'Filtro allergeni & bio 🌿',
-  'Esportazione lista spesa 🛒',
-];
+const QUICK_TAG_KEYS = ['feedback.quickTags.widget', 'feedback.quickTags.allergens', 'feedback.quickTags.export'];
 
 const RATING_EMOJIS = ['😡', '😕', '😐', '😊', '🤩'];
-const RATING_LABELS = ['Pessima', 'Da migliorare', 'Sufficiente', 'Buona', 'Eccellente!'];
 
 export default function FeedbackScreen() {
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const [category, setCategory] = useState<FeedbackCategory>('suggerimento');
   const [rating, setRating] = useState<number | null>(5);
@@ -76,24 +73,28 @@ export default function FeedbackScreen() {
   const [submitted, setSubmitted] = useState(false);
 
   const activeCategory = CATEGORIES.find((c) => c.id === category) ?? CATEGORIES[0];
+  const RATING_LABELS = [
+    t('feedback.ratingLabel1'), t('feedback.ratingLabel2'), t('feedback.ratingLabel3'),
+    t('feedback.ratingLabel4'), t('feedback.ratingLabel5'),
+  ];
 
   const handleSelectQuickTag = (tag: string) => {
     setMessage((prev) => {
       const clean = tag.replace(/ [^\s]+$/, ''); // remove trailing emoji if needed
-      if (!prev.trim()) return `Vorrei suggerire: ${clean}. `;
+      if (!prev.trim()) return t('feedback.quickTagPrefix', { clean });
       if (prev.includes(clean)) return prev;
-      return `${prev.trim()} + ${clean}. `;
+      return t('feedback.quickTagAppend', { prev: prev.trim(), clean });
     });
   };
 
   const handleSubmit = async () => {
     if (!message.trim()) {
-      showAlert('Campo obbligatorio', 'Inserisci un messaggio prima di inviare.');
+      showAlert(t('feedback.missingMessageTitle'), t('feedback.missingMessageBody'));
       return;
     }
 
     if (!user) {
-      showAlert('Attenzione', 'Devi aver effettuato l\'accesso per inviare un feedback.');
+      showAlert(t('feedback.notLoggedInTitle'), t('feedback.notLoggedInBody'));
       return;
     }
 
@@ -111,9 +112,9 @@ export default function FeedbackScreen() {
       setSubmitted(true);
       setMessage('');
 
-      showAlert('Inviato con successo 🎉', 'Grazie di cuore! Il tuo feedback è stato inviato ed è fondamentale per far crescere Shelfy.');
+      showAlert(t('feedback.sentTitle'), t('feedback.sentBody'));
     } catch (e: any) {
-      showAlert('Errore', e?.message ?? 'Errore durante l\'invio. Riprova più tardi.');
+      showAlert(t('common.error'), e?.message ?? t('feedback.genericErrorBody'));
     } finally {
       setSubmitting(false);
     }
@@ -134,8 +135,8 @@ export default function FeedbackScreen() {
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.headerText}>
-                <Text style={styles.tagline}>La tua voce conta</Text>
-                <Text style={styles.title}>Idee & Feedback</Text>
+                <Text style={styles.tagline}>{t('feedback.tagline')}</Text>
+                <Text style={styles.title}>{t('feedback.title')}</Text>
               </View>
               <ProfileButton />
             </View>
@@ -146,9 +147,9 @@ export default function FeedbackScreen() {
                 <Text style={{ fontSize: 26 }}>✨</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.introTitle}>Aiutaci a costruire Shelfy</Text>
+                <Text style={styles.introTitle}>{t('feedback.introTitle')}</Text>
                 <Text style={styles.introDesc}>
-                  Stiamo sviluppando costantemente l'app. Raccontaci quali funzioni ti servono o cosa possiamo migliorare!
+                  {t('feedback.introDesc')}
                 </Text>
               </View>
             </View>
@@ -158,23 +159,23 @@ export default function FeedbackScreen() {
               <View style={styles.successCard}>
                 <Text style={styles.successEmoji}>🎉</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.successTitle}>Feedback inviato!</Text>
+                  <Text style={styles.successTitle}>{t('feedback.successTitle')}</Text>
                   <Text style={styles.successText}>
-                    Abbiamo ricevuto la tua segnalazione. Grazie per aiutarci a combattere lo spreco alimentare.
+                    {t('feedback.successText')}
                   </Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => setSubmitted(false)}
                   style={styles.newFeedbackBtn}
                 >
-                  <Text style={styles.newFeedbackBtnText}>Nuovo</Text>
+                  <Text style={styles.newFeedbackBtnText}>{t('feedback.newFeedback')}</Text>
                 </TouchableOpacity>
               </View>
             )}
 
             {/* Step 1: Categoria */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>1. Cosa desideri segnalare?</Text>
+              <Text style={styles.sectionTitle}>{t('feedback.step1Title')}</Text>
               <View style={styles.grid}>
                 {CATEGORIES.map((cat) => {
                   const isSelected = category === cat.id;
@@ -190,10 +191,10 @@ export default function FeedbackScreen() {
                         {isSelected && <View style={styles.radioDot} />}
                       </View>
                       <Text style={[styles.catLabel, isSelected && styles.catLabelActive]}>
-                        {cat.label}
+                        {t(cat.labelKey)}
                       </Text>
                       <Text style={styles.catDesc} numberOfLines={2}>
-                        {cat.desc}
+                        {t(cat.descKey)}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -203,7 +204,7 @@ export default function FeedbackScreen() {
 
             {/* Step 2: Valutazione complessiva */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>2. Come valuti la tua esperienza con Shelfy?</Text>
+              <Text style={styles.sectionTitle}>{t('feedback.step2Title')}</Text>
               <View style={styles.ratingCard}>
                 <View style={styles.starsRow}>
                   {[1, 2, 3, 4, 5].map((star) => {
@@ -227,38 +228,41 @@ export default function FeedbackScreen() {
                     {RATING_EMOJIS[rating - 1]} {RATING_LABELS[rating - 1]} ({rating}/5)
                   </Text>
                 ) : (
-                  <Text style={styles.ratingSub}>Tocca una stella per valutare</Text>
+                  <Text style={styles.ratingSub}>{t('feedback.ratingPrompt')}</Text>
                 )}
               </View>
             </View>
 
             {/* Quick Suggestions Chips */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Suggerimenti rapidi più richiesti</Text>
+              <Text style={styles.sectionTitle}>{t('feedback.quickSuggestionsTitle')}</Text>
               <View style={styles.chipsWrap}>
-                {QUICK_TAGS.map((tag) => (
-                  <TouchableOpacity
-                    key={tag}
-                    style={styles.chip}
-                    onPress={() => handleSelectQuickTag(tag)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.chipText}>{tag}</Text>
-                    <Text style={styles.chipPlus}>+</Text>
-                  </TouchableOpacity>
-                ))}
+                {QUICK_TAG_KEYS.map((key) => {
+                  const tag = t(key);
+                  return (
+                    <TouchableOpacity
+                      key={key}
+                      style={styles.chip}
+                      onPress={() => handleSelectQuickTag(tag)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.chipText}>{tag}</Text>
+                      <Text style={styles.chipPlus}>+</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
 
             {/* Step 3: Messaggio */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>3. Dettagli del tuo messaggio</Text>
+              <Text style={styles.sectionTitle}>{t('feedback.step3Title')}</Text>
               <View style={styles.inputContainer}>
                 <TextInput
                   style={styles.textArea}
                   value={message}
                   onChangeText={setMessage}
-                  placeholder={activeCategory.placeholder}
+                  placeholder={t(activeCategory.placeholderKey)}
                   placeholderTextColor={T.mute}
                   multiline
                   numberOfLines={5}
@@ -266,11 +270,11 @@ export default function FeedbackScreen() {
                 />
                 <View style={styles.inputFooter}>
                   <Text style={styles.charCount}>
-                    {message.length} caratteri
+                    {t('feedback.charCount', { count: message.length })}
                   </Text>
                   {message.length > 0 && (
                     <TouchableOpacity onPress={() => setMessage('')}>
-                      <Text style={styles.clearText}>Cancella</Text>
+                      <Text style={styles.clearText}>{t('feedback.clear')}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -283,39 +287,39 @@ export default function FeedbackScreen() {
               disabled={!message.trim()}
               loading={submitting}
               icon="send-outline"
-              label="Invia suggerimento"
+              label={t('feedback.submit')}
               fullWidth
             />
 
             {/* Roadmap / Prossime novità */}
             <View style={styles.roadmapCard}>
-              <Text style={styles.roadmapHeader}>🗺️ Roadmap della Community</Text>
+              <Text style={styles.roadmapHeader}>{t('feedback.roadmapHeader')}</Text>
               <Text style={styles.roadmapSub}>
-                Ecco cosa stiamo preparando grazie ai feedback ricevuti:
+                {t('feedback.roadmapSub')}
               </Text>
               <View style={styles.roadmapList}>
                 <View style={styles.roadmapItem}>
-                  <Text style={styles.roadmapStatusTag}>In arrivo</Text>
+                  <Text style={styles.roadmapStatusTag}>{t('feedback.comingSoon')}</Text>
                   <Text style={styles.roadmapText}>
-                    👨‍👩‍👧 <Text style={styles.roadmapBold}>Case condivise</Text> per gestire la dispensa insieme a famiglia o coinquilini
+                    👨‍👩‍👧 <Text style={styles.roadmapBold}>{t('feedback.roadmapSharedHomes')}</Text> {t('feedback.roadmapSharedHomesDesc')}
                   </Text>
                 </View>
                 <View style={styles.roadmapItem}>
-                  <Text style={[styles.roadmapStatusTag, { backgroundColor: T.okSoft }]}>Attivo</Text>
+                  <Text style={[styles.roadmapStatusTag, { backgroundColor: T.okSoft }]}>{t('feedback.active')}</Text>
                   <Text style={styles.roadmapText}>
-                    🍳 <Text style={styles.roadmapBold}>Ricetta del giorno con AI</Text> basata sugli ingredienti in scadenza
+                    🍳 <Text style={styles.roadmapBold}>{t('feedback.roadmapAiRecipe')}</Text> {t('feedback.roadmapAiRecipeDesc')}
                   </Text>
                 </View>
                 <View style={styles.roadmapItem}>
-                  <Text style={[styles.roadmapStatusTag, { backgroundColor: T.okSoft }]}>Attivo</Text>
+                  <Text style={[styles.roadmapStatusTag, { backgroundColor: T.okSoft }]}>{t('feedback.active')}</Text>
                   <Text style={styles.roadmapText}>
-                    🧾 <Text style={styles.roadmapBold}>Scansione scontrino & data di scadenza</Text> dalla fotocamera
+                    🧾 <Text style={styles.roadmapBold}>{t('feedback.roadmapReceiptScan')}</Text> {t('feedback.roadmapReceiptScanDesc')}
                   </Text>
                 </View>
                 <View style={styles.roadmapItem}>
-                  <Text style={[styles.roadmapStatusTag, { backgroundColor: T.okSoft }]}>Attivo</Text>
+                  <Text style={[styles.roadmapStatusTag, { backgroundColor: T.okSoft }]}>{t('feedback.active')}</Text>
                   <Text style={styles.roadmapText}>
-                    🔔 <Text style={styles.roadmapBold}>Avvisi e notifiche</Text> per non dimenticare mai un cibo
+                    🔔 <Text style={styles.roadmapBold}>{t('feedback.roadmapNotifications')}</Text> {t('feedback.roadmapNotificationsDesc')}
                   </Text>
                 </View>
               </View>

@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { useCommunity } from '@/context/CommunityContext';
 import {
@@ -19,6 +20,7 @@ export default function RequestDetailScreen() {
   const { user } = useAuth();
   const { requests, recipes, closeRequest } = useCommunity();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const fromContext = useMemo(() => requests.find((r) => r.id === id) ?? null, [requests, id]);
   const [request, setRequest] = useState<RecipeRequest | null>(fromContext);
@@ -70,7 +72,7 @@ export default function RequestDetailScreen() {
     try {
       await closeRequest(request.id);
     } catch (e: any) {
-      showAlert('Errore', e?.message ?? 'Impossibile chiudere la richiesta');
+      showAlert(t('common.error'), e?.message ?? t('recipeRequestDetail.closeFailed'));
     } finally {
       setClosing(false);
     }
@@ -83,11 +85,11 @@ export default function RequestDetailScreen() {
       await createProposal(request.id, {
         recipeId,
         authorId: user.uid,
-        authorName: user.displayName ?? 'Utente Shelfy',
+        authorName: user.displayName ?? t('common.shelfyUser'),
       });
       setPickerVisible(false);
     } catch (e: any) {
-      showAlert('Errore', e?.message ?? 'Impossibile proporre la ricetta');
+      showAlert(t('common.error'), e?.message ?? t('recipeRequestDetail.proposeFailed'));
     } finally {
       setLinking(false);
     }
@@ -104,7 +106,7 @@ export default function RequestDetailScreen() {
   if (!request) {
     return (
       <View style={[styles.root, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: T.mute, fontFamily: FONTS.sans }}>Richiesta non trovata.</Text>
+        <Text style={{ color: T.mute, fontFamily: FONTS.sans }}>{t('recipeRequestDetail.notFound')}</Text>
       </View>
     );
   }
@@ -118,13 +120,13 @@ export default function RequestDetailScreen() {
           </TouchableOpacity>
           <View style={[styles.statusPill, request.status === 'open' ? styles.statusOpen : styles.statusClosed]}>
             <Text style={[styles.statusPillText, request.status === 'open' ? styles.statusOpenText : styles.statusClosedText]}>
-              {request.status === 'open' ? 'Aperta' : 'Risolta'}
+              {request.status === 'open' ? t('recipes.statusOpen') : t('recipes.statusClosed')}
             </Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.author}>{request.authorName} chiede aiuto per:</Text>
+          <Text style={styles.author}>{t('recipeRequestDetail.asksHelpFor', { name: request.authorName })}</Text>
           <View style={styles.ingredientChipsRow}>
             {request.ingredients.map((name) => (
               <View key={name} style={styles.ingredientChip}>
@@ -136,11 +138,11 @@ export default function RequestDetailScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>
-          Proposte {proposals.length > 0 ? `(${proposals.length})` : ''}
+          {t('recipeRequestDetail.proposalsTitle')} {proposals.length > 0 ? `(${proposals.length})` : ''}
         </Text>
         <View style={styles.section}>
           {proposals.length === 0 && (
-            <Text style={styles.emptyText}>Nessuna proposta ancora. Sii il primo ad aiutare!</Text>
+            <Text style={styles.emptyText}>{t('recipeRequestDetail.emptyProposals')}</Text>
           )}
           {proposals.map((p) => {
             const r = proposalRecipes[p.recipeId];
@@ -156,8 +158,8 @@ export default function RequestDetailScreen() {
                   <Text style={styles.tileLetter}>{(r?.title ?? '?').charAt(0).toUpperCase()}</Text>
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.proposalTitle} numberOfLines={1}>{r?.title ?? 'Caricamento…'}</Text>
-                  <Text style={styles.proposalSub}>proposta da {p.authorName}</Text>
+                  <Text style={styles.proposalTitle} numberOfLines={1}>{r?.title ?? t('recipeRequestDetail.loadingTitle')}</Text>
+                  <Text style={styles.proposalSub}>{t('recipeRequestDetail.proposedBy', { name: p.authorName })}</Text>
                 </View>
               </TouchableOpacity>
             );
@@ -172,7 +174,7 @@ export default function RequestDetailScreen() {
                 params: { requestId: request.id, prefillIngredients: JSON.stringify(request.ingredients) },
               })}
               icon="create-outline"
-              label="Scrivi una ricetta nuova"
+              label={t('recipeRequestDetail.writeNewRecipe')}
               fullWidth
             />
             <TouchableOpacity
@@ -183,7 +185,7 @@ export default function RequestDetailScreen() {
             >
               <Ionicons name="book-outline" size={17} color={T.primary} style={myRecipes.length === 0 ? { opacity: 0.5 } : undefined} />
               <Text style={[styles.secondaryBtnText, myRecipes.length === 0 && { opacity: 0.5 }]}>
-                Proponi una mia ricetta
+                {t('recipeRequestDetail.proposeMine')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -193,7 +195,7 @@ export default function RequestDetailScreen() {
           <View style={styles.section}>
             <TouchableOpacity style={styles.secondaryBtn} onPress={handleClose} disabled={closing} activeOpacity={0.85}>
               {!closing && <Ionicons name="checkmark" size={17} color={T.primary} />}
-              <Text style={styles.secondaryBtnText}>{closing ? 'Attendere…' : 'Segna come risolta'}</Text>
+              <Text style={styles.secondaryBtnText}>{closing ? t('recipeRequestDetail.waiting') : t('recipeRequestDetail.markResolved')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -204,7 +206,7 @@ export default function RequestDetailScreen() {
       <Modal visible={pickerVisible} transparent animationType="fade" onRequestClose={() => setPickerVisible(false)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setPickerVisible(false)}>
           <TouchableOpacity activeOpacity={1} style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Scegli una tua ricetta</Text>
+            <Text style={styles.modalTitle}>{t('recipeRequestDetail.pickRecipeTitle')}</Text>
             <ScrollView style={{ maxHeight: 320 }}>
               {myRecipes.map((r) => (
                 <TouchableOpacity
@@ -222,7 +224,7 @@ export default function RequestDetailScreen() {
               ))}
             </ScrollView>
             <TouchableOpacity style={styles.modalCancel} onPress={() => setPickerVisible(false)} activeOpacity={0.85}>
-              <Text style={styles.modalCancelText}>Annulla</Text>
+              <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { usePantry } from '@/context/PantryContext';
 import PrimaryButton from '@/components/PrimaryButton';
 import { showAlert } from '@/lib/alert';
@@ -15,6 +16,7 @@ import {
 
 export default function PantryHubScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { pantries, loading, activePantryId, setActivePantryId } = usePantry();
 
   const [showCreate, setShowCreate] = useState(false);
@@ -24,7 +26,7 @@ export default function PantryHubScreen() {
 
   const handleCreate = async () => {
     if (!name.trim()) {
-      showAlert('Errore', 'Dai un nome alla casa');
+      showAlert(t('common.error'), t('pantry.hub.missingNameBody'));
       return;
     }
     setCreating(true);
@@ -34,7 +36,7 @@ export default function PantryHubScreen() {
       setName('');
       router.push(`/pantry/${result.id}`);
     } catch (e: any) {
-      showAlert('Errore', e?.message ?? 'Impossibile creare la casa');
+      showAlert(t('common.error'), e?.message ?? t('pantry.hub.createFailed'));
     } finally {
       setCreating(false);
     }
@@ -46,12 +48,12 @@ export default function PantryHubScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.navBtn} activeOpacity={0.85}>
           <Ionicons name="chevron-back" size={20} color={T.ink} />
         </TouchableOpacity>
-        <Text style={styles.title}>Le tue case</Text>
+        <Text style={styles.title}>{t('pantry.hub.title')}</Text>
         <View style={styles.navBtn} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionLabel}>SPAZIO ATTIVO</Text>
+        <Text style={styles.sectionLabel}>{t('pantry.hub.activeSpace')}</Text>
 
         <TouchableOpacity onPress={() => setActivePantryId(null)} activeOpacity={0.9}>
           <LinearGradient
@@ -62,8 +64,8 @@ export default function PantryHubScreen() {
               <Ionicons name="person-outline" size={20} color={activePantryId === null ? '#fbfaf3' : T.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.rowTitle, activePantryId === null && styles.rowTitleActive]}>Personale</Text>
-              <Text style={[styles.rowSub, activePantryId === null && styles.rowSubActive]}>Solo tua, come sempre</Text>
+              <Text style={[styles.rowTitle, activePantryId === null && styles.rowTitleActive]}>{t('pantry.hub.personal')}</Text>
+              <Text style={[styles.rowSub, activePantryId === null && styles.rowSubActive]}>{t('pantry.hub.personalSub')}</Text>
             </View>
             {activePantryId === null && <Ionicons name="checkmark-circle" size={22} color="#fbfaf3" />}
           </LinearGradient>
@@ -73,7 +75,7 @@ export default function PantryHubScreen() {
           <ActivityIndicator color={T.primary} style={{ marginTop: 24 }} />
         ) : pantries.length > 0 ? (
           <>
-            <Text style={[styles.sectionLabel, { marginTop: 20 }]}>LE TUE CASE</Text>
+            <Text style={[styles.sectionLabel, { marginTop: 20 }]}>{t('pantry.hub.yourHomes')}</Text>
             {pantries.map((p) => {
               const active = p.id === activePantryId;
               return (
@@ -85,7 +87,7 @@ export default function PantryHubScreen() {
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={[styles.rowTitle, active && styles.rowTitleActive]} numberOfLines={1}>{p.name}</Text>
                       <Text style={[styles.rowSub, active && styles.rowSubActive]}>
-                        {p.memberIds.length} {p.memberIds.length === 1 ? 'persona' : 'persone'}
+                        {t('pantry.hub.memberCount', { count: p.memberIds.length })}
                       </Text>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color={active ? '#fbfaf3' : T.mute} />
@@ -96,9 +98,9 @@ export default function PantryHubScreen() {
           </>
         ) : (
           <View style={styles.emptyBox}>
-            <Text style={styles.emptyTitle}>Nessuna casa condivisa</Text>
+            <Text style={styles.emptyTitle}>{t('pantry.hub.emptyTitle')}</Text>
             <Text style={styles.emptyText}>
-              Crea una casa per gestirla insieme a chi vuoi tu, o entra con un codice che ti hanno dato.
+              {t('pantry.hub.emptyText')}
             </Text>
           </View>
         )}
@@ -107,7 +109,7 @@ export default function PantryHubScreen() {
           <PrimaryButton
             onPress={() => setShowCreate(true)}
             icon="add-outline"
-            label="Nuova casa"
+            label={t('pantry.hub.newHome')}
             fullWidth
           />
           <TouchableOpacity
@@ -116,7 +118,7 @@ export default function PantryHubScreen() {
             activeOpacity={0.85}
           >
             <Ionicons name="key-outline" size={17} color={T.primary} />
-            <Text style={styles.joinBtnText}>Ho un codice d'invito</Text>
+            <Text style={styles.joinBtnText}>{t('pantry.hub.haveCode')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -124,22 +126,22 @@ export default function PantryHubScreen() {
       <Modal visible={showCreate} transparent animationType="fade" onRequestClose={() => setShowCreate(false)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowCreate(false)}>
           <TouchableOpacity activeOpacity={1} style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Nuova casa</Text>
-            <Text style={styles.modalSub}>Es. "Casa di Via Roma" o "Famiglia Rossi"</Text>
+            <Text style={styles.modalTitle}>{t('pantry.hub.createTitle')}</Text>
+            <Text style={styles.modalSub}>{t('pantry.hub.createSub')}</Text>
             <TextInput
               style={styles.modalInput}
               value={name}
               onChangeText={setName}
-              placeholder="Nome della casa"
+              placeholder={t('pantry.hub.namePlaceholder')}
               placeholderTextColor={T.mute}
               autoFocus
               maxLength={60}
             />
             <View style={styles.modalBtns}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setShowCreate(false)} activeOpacity={0.85}>
-                <Text style={styles.modalCancelText}>Annulla</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
-              <PrimaryButton onPress={handleCreate} loading={creating} label="Crea" containerStyle={{ flex: 1.3 }} />
+              <PrimaryButton onPress={handleCreate} loading={creating} label={t('pantry.hub.create')} containerStyle={{ flex: 1.3 }} />
             </View>
           </TouchableOpacity>
         </TouchableOpacity>

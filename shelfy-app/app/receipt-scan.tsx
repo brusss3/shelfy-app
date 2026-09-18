@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { T, FONTS, RADIUS } from '@/constants/theme';
 import { showAlert } from '@/lib/alert';
 import { recognizeText } from '@/lib/ocr';
@@ -14,6 +15,7 @@ import { parseReceiptLines } from '@/lib/parseReceipt';
 // AI), poi passa la lista alla schermata di revisione per la conferma.
 export default function ReceiptScanScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
   const [ocrLoading, setOcrLoading] = useState(false);
   const [zoom, setZoom] = useState(0);
@@ -22,7 +24,7 @@ export default function ReceiptScanScreen() {
   const camRef = useRef<CameraView>(null);
 
   const handleMountError = ({ message }: { message: string }) => {
-    setMountError(message || 'Fotocamera non disponibile.');
+    setMountError(message || t('scanner.cameraUnavailableShort'));
   };
 
   const retryCamera = () => {
@@ -42,7 +44,7 @@ export default function ReceiptScanScreen() {
         quality: 1,
         base64: Platform.OS === 'web',
       });
-      if (!photo) throw new Error('Scatto non riuscito');
+      if (!photo) throw new Error(t('receiptScan.captureFailed'));
 
       const src = photo.base64 ?? photo.uri;
       const text = await recognizeText(src);
@@ -50,15 +52,15 @@ export default function ReceiptScanScreen() {
 
       if (items.length === 0) {
         showAlert(
-          'Nessun prodotto trovato',
-          'Non sono riuscito a leggere righe utili dallo scontrino. Avvicinati e assicurati che sia ben illuminato, oppure inserisci i prodotti manualmente.',
+          t('receiptScan.noItemsTitle'),
+          t('receiptScan.noItemsBody'),
         );
         return;
       }
 
       router.replace({ pathname: '/receipt-review', params: { items: JSON.stringify(items) } });
     } catch (e: any) {
-      showAlert('Errore OCR', e?.message ?? 'Riprova');
+      showAlert(t('dateScanner.ocrErrorTitle'), e?.message ?? t('common.retry'));
     } finally {
       setOcrLoading(false);
     }
@@ -76,13 +78,13 @@ export default function ReceiptScanScreen() {
     return (
       <View style={[styles.root, styles.center, { gap: 16, padding: 32 }]}>
         <Text style={styles.hint}>
-          Shelfy ha bisogno della fotocamera per leggere lo scontrino.
+          {t('receiptScan.permissionHint')}
         </Text>
         <TouchableOpacity style={styles.grantBtn} onPress={requestPermission} activeOpacity={0.85}>
-          <Text style={styles.grantBtnText}>Concedi accesso</Text>
+          <Text style={styles.grantBtnText}>{t('scanner.grantAccess')}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.85}>
-          <Text style={styles.closeLink}>Annulla</Text>
+          <Text style={styles.closeLink}>{t('common.cancel')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -104,10 +106,10 @@ export default function ReceiptScanScreen() {
       {mountError && (
         <View style={[styles.root, styles.center, { gap: 16, padding: 32 }]}>
           <Text style={styles.hint}>
-            Fotocamera non disponibile. Se hai scelto "Consenti una volta" nel browser, il permesso potrebbe essere scaduto.
+            {t('scanner.cameraUnavailableHint')}
           </Text>
           <TouchableOpacity style={styles.grantBtn} onPress={retryCamera} activeOpacity={0.85}>
-            <Text style={styles.grantBtnText}>Riprova</Text>
+            <Text style={styles.grantBtnText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -138,7 +140,7 @@ export default function ReceiptScanScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.glassBtn} activeOpacity={0.85}>
           <Text style={styles.glassBtnText}>✕</Text>
         </TouchableOpacity>
-        <Text style={styles.topBarTitle}>Scansiona scontrino</Text>
+        <Text style={styles.topBarTitle}>{t('receiptScan.headerTitle')}</Text>
         <View style={styles.glassBtn} />
       </View>
 
@@ -147,12 +149,12 @@ export default function ReceiptScanScreen() {
         {ocrLoading ? (
           <>
             <ActivityIndicator color="#fbfaf3" size="large" />
-            <Text style={styles.statusSub}>Leggo lo scontrino…</Text>
+            <Text style={styles.statusSub}>{t('receiptScan.statusReading')}</Text>
           </>
         ) : (
           <>
-            <Text style={styles.statusTitle}>Inquadra lo scontrino</Text>
-            <Text style={styles.statusSub}>Tienilo disteso e ben illuminato</Text>
+            <Text style={styles.statusTitle}>{t('receiptScan.statusTitle')}</Text>
+            <Text style={styles.statusSub}>{t('receiptScan.statusSub')}</Text>
           </>
         )}
       </View>

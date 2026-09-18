@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { getOfferings, purchasePackage, restorePurchases, getActiveSubscriptionInfo } from '@/lib/purchases';
 import { showAlert } from '@/lib/alert';
@@ -16,6 +17,7 @@ const isWeb = Platform.OS === 'web';
 
 export default function PaywallScreen() {
   const { setPremium, setSubscription } = useAuth();
+  const { t, i18n } = useTranslation();
   const [offerings, setOfferings] = useState<any[]>([]);
   const [loadingOfferings, setLoadingOfferings] = useState(true);
   const [selectedPkg, setSelectedPkg] = useState<any>(null);
@@ -41,7 +43,7 @@ export default function PaywallScreen() {
         if (info) await setSubscription(info);
       }
     } catch (e: any) {
-      showAlert('Errore acquisto', e?.message ?? 'Riprova più tardi.');
+      showAlert(t('paywall.purchaseErrorTitle'), e?.message ?? t('paywall.purchaseErrorFallback'));
     } finally {
       setPurchasing(false);
     }
@@ -56,7 +58,7 @@ export default function PaywallScreen() {
         : new Date(now.setMonth(now.getMonth() + 1)).toISOString();
       await setSubscription({ type, expiresAt });
     } catch (e: any) {
-      alert(e?.message ?? 'Errore simulazione acquisto.');
+      alert(e?.message ?? t('paywall.webSimErrorFallback'));
     } finally {
       setPurchasing(false);
     }
@@ -68,12 +70,12 @@ export default function PaywallScreen() {
       const ok = await restorePurchases();
       if (ok) {
         await setPremium(true);
-        showAlert('Ripristino completato', 'Abbonamento premium attivato.');
+        showAlert(t('paywall.restoreCompletedTitle'), t('paywall.restoreCompletedBody'));
       } else {
-        showAlert('Nessun acquisto trovato', 'Nessun abbonamento attivo trovato su questo account.');
+        showAlert(t('paywall.noPurchaseFoundTitle'), t('paywall.noPurchaseFoundBody'));
       }
     } catch {
-      showAlert('Errore', 'Impossibile ripristinare gli acquisti.');
+      showAlert(t('common.error'), t('paywall.restoreFailedBody'));
     } finally {
       setPurchasing(false);
     }
@@ -87,20 +89,19 @@ export default function PaywallScreen() {
           <Text style={{ fontSize: 36 }}>🔒</Text>
         </View>
         <View style={styles.premiumBadge}>
-          <Text style={styles.premiumBadgeText}>PREMIUM</Text>
+          <Text style={styles.premiumBadgeText}>{t('paywall.badge')}</Text>
         </View>
-        <Text style={styles.title}>Ricette AI</Text>
+        <Text style={styles.title}>{t('paywall.title')}</Text>
         <Text style={styles.desc}>
-          Genera ricette della tradizione italiana con i tuoi ingredienti in scadenza.
-          Riduci gli sprechi, scopri nuovi piatti.
+          {t('paywall.desc')}
         </Text>
 
         <View style={styles.featureList}>
           {[
-            '✨  Ricette AI personalizzate',
-            '⏰  Priorità ai prodotti in scadenza',
-            '📚  Storico ricette salvate',
-            '✓  Segna le ricette cucinate',
+            t('paywall.features.f1'),
+            t('paywall.features.f2'),
+            t('paywall.features.f3'),
+            t('paywall.features.f4'),
           ].map((f) => (
             <View key={f} style={styles.featureRow}>
               <Text style={styles.featureText}>{f}</Text>
@@ -111,15 +112,14 @@ export default function PaywallScreen() {
         {isExpoGo ? (
           <View style={styles.noteBox}>
             <Text style={styles.noteText}>
-              ℹ️  Gli acquisti in-app richiedono un build nativo.{'\n'}
-              Avvia l'app con <Text style={{ fontFamily: FONTS.sansBold }}>expo-dev-client</Text> per testare i pagamenti.
+              {t('paywall.expoGoNotePrefix')}<Text style={{ fontFamily: FONTS.sansBold }}>expo-dev-client</Text>{t('paywall.expoGoNoteSuffix')}
             </Text>
           </View>
         ) : isWeb ? (
           <View style={styles.webTestBox}>
-            <Text style={styles.webTestLabel}>🧪  Modalità test — solo sviluppo</Text>
+            <Text style={styles.webTestLabel}>{t('paywall.webTestLabel')}</Text>
             <Text style={styles.webTestDesc}>
-              RevenueCat non supporta acquisti su web. Usa questi pulsanti per simulare un abbonamento e testare l'app.
+              {t('paywall.webTestDesc')}
             </Text>
             <View style={styles.webTestBtns}>
               <TouchableOpacity
@@ -130,7 +130,7 @@ export default function PaywallScreen() {
               >
                 {purchasing
                   ? <ActivityIndicator color="#fbfaf3" size="small" />
-                  : <Text style={styles.webTestBtnText}>Mensile (test)</Text>}
+                  : <Text style={styles.webTestBtnText}>{t('paywall.monthlyTest')}</Text>}
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.webTestBtn, styles.webTestBtnAnnual, purchasing && { opacity: 0.55 }]}
@@ -140,7 +140,7 @@ export default function PaywallScreen() {
               >
                 {purchasing
                   ? <ActivityIndicator color="#fbfaf3" size="small" />
-                  : <Text style={styles.webTestBtnText}>Annuale (test)</Text>}
+                  : <Text style={styles.webTestBtnText}>{t('paywall.annualTest')}</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -149,9 +149,7 @@ export default function PaywallScreen() {
         ) : offerings.length === 0 ? (
           <View style={styles.noteBox}>
             <Text style={styles.noteText}>
-              ⚠️  Prodotti non configurati.{'\n'}
-              Inserisci le API key RevenueCat in <Text style={{ fontFamily: FONTS.sansBold }}>lib/purchases.ts</Text>{'\n'}
-              e configura i prodotti su App Store Connect / Google Play Console.
+              {t('paywall.productsNotConfiguredPrefix')}<Text style={{ fontFamily: FONTS.sansBold }}>lib/purchases.ts</Text>{t('paywall.productsNotConfiguredSuffix')}
             </Text>
           </View>
         ) : (
@@ -159,8 +157,9 @@ export default function PaywallScreen() {
             {offerings.map((pkg) => {
               const isSelected = selectedPkg?.identifier === pkg.identifier;
               const isAnnual = pkg.packageType === 'ANNUAL';
+              const priceValue = (pkg.product.price / 12).toFixed(2);
               const monthlyEquiv = isAnnual
-                ? `${(pkg.product.price / 12).toFixed(2).replace('.', ',')}€/mese`
+                ? t('paywall.perMonth', { price: i18n.language === 'it' ? priceValue.replace('.', ',') : priceValue })
                 : null;
               return (
                 <TouchableOpacity
@@ -171,12 +170,12 @@ export default function PaywallScreen() {
                 >
                   {isAnnual && (
                     <View style={styles.bestValueBadge}>
-                      <Text style={styles.bestValueText}>Miglior valore</Text>
+                      <Text style={styles.bestValueText}>{t('paywall.bestValue')}</Text>
                     </View>
                   )}
                   <Text style={[styles.packagePeriod, isSelected && { color: '#fbfaf3' }]}>
-                    {pkg.packageType === 'ANNUAL' ? 'Annuale'
-                      : pkg.packageType === 'MONTHLY' ? 'Mensile'
+                    {pkg.packageType === 'ANNUAL' ? t('paywall.annual')
+                      : pkg.packageType === 'MONTHLY' ? t('paywall.monthly')
                       : pkg.product.title}
                   </Text>
                   <Text style={[styles.packagePrice, isSelected && { color: '#fbfaf3' }]}>
@@ -198,7 +197,7 @@ export default function PaywallScreen() {
             onPress={handlePurchase}
             disabled={!selectedPkg}
             loading={purchasing}
-            label="Sblocca Premium"
+            label={t('paywall.unlockPremium')}
             fullWidth
             containerStyle={{ marginBottom: 16 }}
           />
@@ -209,12 +208,11 @@ export default function PaywallScreen() {
           disabled={purchasing || isExpoGo}
           style={styles.restoreBtn}
         >
-          <Text style={styles.restoreText}>Ripristina acquisti</Text>
+          <Text style={styles.restoreText}>{t('paywall.restorePurchases')}</Text>
         </TouchableOpacity>
 
         <Text style={styles.legal}>
-          L'abbonamento si rinnova automaticamente. Puoi disdire in qualsiasi momento dalle
-          impostazioni App Store o Google Play.
+          {t('paywall.legal')}
         </Text>
       </ScrollView>
     </SafeAreaView>

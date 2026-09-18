@@ -1,5 +1,6 @@
 import { Urgency, Product } from '@/types';
 import { T } from '@/constants/theme';
+import i18n from '@/lib/i18n';
 
 export function daysTo(iso: string): number {
   const today = new Date();
@@ -24,20 +25,19 @@ export function effectiveDays(product: Pick<Product, 'expiry' | 'openExpiry'>): 
 }
 
 export function urgencyOf(days: number): Urgency {
-  if (days < 0)  return { key: 'scaduto',   label: 'Scaduto',        color: T.urgent, soft: T.urgentSoft, ink: '#4d1a10' };
-  if (days === 0) return { key: 'oggi',      label: 'Scade oggi',     color: T.urgent, soft: T.urgentSoft, ink: '#4d1a10' };
-  if (days === 1) return { key: 'domani',    label: 'Scade domani',   color: T.warn,   soft: T.warnSoft,   ink: '#4a3414' };
-  if (days <= 3)  return { key: 'urgente',   label: `${days} giorni`, color: T.warn,   soft: T.warnSoft,   ink: '#4a3414' };
-  if (days <= 7)  return { key: 'prossimo',  label: `${days} giorni`, color: T.ok,     soft: T.okSoft,     ink: '#1b3320' };
-  if (days <= 30) return { key: 'ok',        label: `${days} giorni`, color: '#5f7a55', soft: '#e8ede0',   ink: '#2c3a26' };
-  return            { key: 'lungo',          label: `${Math.round(days / 30)} mesi`, color: '#7a8473', soft: '#eceee5', ink: '#36392f' };
+  if (days < 0)  return { key: 'scaduto',   label: i18n.t('common.urgency.expired'),  color: T.urgent, soft: T.urgentSoft, ink: '#4d1a10' };
+  if (days === 0) return { key: 'oggi',      label: i18n.t('common.urgency.today'),    color: T.urgent, soft: T.urgentSoft, ink: '#4d1a10' };
+  if (days === 1) return { key: 'domani',    label: i18n.t('common.urgency.tomorrow'), color: T.warn,   soft: T.warnSoft,   ink: '#4a3414' };
+  if (days <= 3)  return { key: 'urgente',   label: i18n.t('add.remainingDays', { count: days }), color: T.warn,   soft: T.warnSoft,   ink: '#4a3414' };
+  if (days <= 7)  return { key: 'prossimo',  label: i18n.t('add.remainingDays', { count: days }), color: T.ok,     soft: T.okSoft,     ink: '#1b3320' };
+  if (days <= 30) return { key: 'ok',        label: i18n.t('add.remainingDays', { count: days }), color: '#5f7a55', soft: '#e8ede0',   ink: '#2c3a26' };
+  return            { key: 'lungo',          label: i18n.t('common.urgency.monthsCount', { count: Math.round(days / 30) }), color: '#7a8473', soft: '#eceee5', ink: '#36392f' };
 }
-
-const MONTHS = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
 
 export function shortDate(iso: string): string {
   const d = new Date(iso);
-  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  const locale = i18n.language === 'it' ? 'it-IT' : 'en-US';
+  return d.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
 }
 
 export function tintForCategory(category: string): string {

@@ -3,6 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator, Modal,
 } from 'react-native';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
+import { useTranslation } from 'react-i18next';
 import { T, FONTS, RADIUS } from '@/constants/theme';
 
 interface Props {
@@ -27,6 +28,7 @@ function extractInviteCode(raw: string): string | null {
 // scatto/OCR come DateScannerModal, il riconoscimento QR è continuo e nativo
 // (expo-camera), basta filtrare i risultati che non sono un invito valido.
 export default function QrScannerModal({ visible, onClose, onResult }: Props) {
+  const { t } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
   const [mountError, setMountError] = useState<string | null>(null);
   const [notAnInvite, setNotAnInvite] = useState(false);
@@ -43,7 +45,7 @@ export default function QrScannerModal({ visible, onClose, onResult }: Props) {
   if (!visible) return null;
 
   const handleMountError = ({ message }: { message: string }) => {
-    setMountError(message || 'Fotocamera non disponibile.');
+    setMountError(message || t('scanner.cameraUnavailableShort'));
   };
 
   const handleScan = (result: BarcodeScanningResult) => {
@@ -69,19 +71,19 @@ export default function QrScannerModal({ visible, onClose, onResult }: Props) {
           </View>
         ) : !permission.granted ? (
           <View style={[styles.center, { gap: 16, padding: 32 }]}>
-            <Text style={styles.hint}>Shelfy ha bisogno della fotocamera per leggere il QR d'invito.</Text>
+            <Text style={styles.hint}>{t('pantry.qrScanner.permissionHint')}</Text>
             <TouchableOpacity style={styles.grantBtn} onPress={requestPermission} activeOpacity={0.85}>
-              <Text style={styles.grantBtnText}>Concedi accesso</Text>
+              <Text style={styles.grantBtnText}>{t('scanner.grantAccess')}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={onClose} activeOpacity={0.85}>
-              <Text style={styles.closeLink}>Annulla</Text>
+              <Text style={styles.closeLink}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         ) : mountError ? (
           <View style={[styles.center, { gap: 16, padding: 32 }]}>
-            <Text style={styles.hint}>Fotocamera non disponibile.</Text>
+            <Text style={styles.hint}>{t('scanner.cameraUnavailableShort')}</Text>
             <TouchableOpacity onPress={onClose} activeOpacity={0.85}>
-              <Text style={styles.closeLink}>Chiudi</Text>
+              <Text style={styles.closeLink}>{t('common.close')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -116,9 +118,9 @@ export default function QrScannerModal({ visible, onClose, onResult }: Props) {
             </View>
 
             <View style={styles.statusBox}>
-              <Text style={styles.statusTitle}>Inquadra il QR d'invito</Text>
+              <Text style={styles.statusTitle}>{t('pantry.qrScanner.statusTitle')}</Text>
               <Text style={styles.statusSub}>
-                {notAnInvite ? 'Questo QR non è un invito Shelfy — riprova.' : 'Te lo mostra chi ha creato la casa'}
+                {notAnInvite ? t('pantry.qrScanner.notAnInvite') : t('pantry.qrScanner.statusSub')}
               </Text>
             </View>
           </>

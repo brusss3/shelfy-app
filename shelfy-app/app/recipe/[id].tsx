@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { useRecipes } from '@/context/RecipesContext';
 import { useCommunity } from '@/context/CommunityContext';
@@ -19,6 +20,7 @@ export default function RecipeDetailScreen() {
   const { savedRecipes, saveRecipe, markCompleted } = useRecipes();
   const { recipes, rateRecipe, deleteRecipe } = useCommunity();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const fromContext = useMemo(() => recipes.find((r) => r.id === id) ?? null, [recipes, id]);
   const [recipe, setRecipe] = useState<CommunityRecipe | null>(fromContext);
@@ -59,7 +61,7 @@ export default function RecipeDetailScreen() {
       } : r);
       setMyRating(value);
     } catch (e: any) {
-      showAlert('Errore', e?.message ?? 'Voto non riuscito');
+      showAlert(t('common.error'), e?.message ?? t('recipeDetail.rateFailed'));
     } finally {
       setRating(false);
     }
@@ -70,7 +72,7 @@ export default function RecipeDetailScreen() {
     try {
       await saveRecipe(recipe);
     } catch (e: any) {
-      showAlert('Errore', e?.message ?? 'Salvataggio non riuscito');
+      showAlert(t('common.error'), e?.message ?? t('recipeDetail.saveFailed'));
     }
   };
 
@@ -81,7 +83,7 @@ export default function RecipeDetailScreen() {
       await deleteRecipe(recipe.id);
       router.back();
     } catch (e: any) {
-      showAlert('Errore', e?.message ?? 'Impossibile eliminare la ricetta');
+      showAlert(t('common.error'), e?.message ?? t('recipeDetail.deleteFailed'));
       setDeleting(false);
     }
   };
@@ -97,7 +99,7 @@ export default function RecipeDetailScreen() {
   if (!recipe) {
     return (
       <View style={styles.center}>
-        <Text style={{ color: T.mute, fontFamily: FONTS.sans }}>Ricetta non trovata.</Text>
+        <Text style={{ color: T.mute, fontFamily: FONTS.sans }}>{t('recipeDetail.notFound')}</Text>
       </View>
     );
   }
@@ -113,16 +115,16 @@ export default function RecipeDetailScreen() {
       steps={recipe.steps}
       meta={
         <>
-          <Text style={styles.metaItem}>di {recipe.authorName}</Text>
+          <Text style={styles.metaItem}>{t('recipes.byAuthor', { name: recipe.authorName })}</Text>
           <Text style={styles.metaDot}>·</Text>
         </>
       }
       beforeIngredients={
         <View style={styles.ratingCard}>
           <View>
-            <Text style={styles.ratingAvg}>{avg ? `⭐ ${avg}` : 'Nessun voto ancora'}</Text>
+            <Text style={styles.ratingAvg}>{avg ? `⭐ ${avg}` : t('recipeDetail.noRatingYet')}</Text>
             <Text style={styles.ratingCountText}>
-              {recipe.ratingCount} vot{recipe.ratingCount === 1 ? 'o' : 'i'}
+              {t('recipeDetail.voteCount', { count: recipe.ratingCount })}
             </Text>
           </View>
           <View style={styles.starsRow}>
@@ -148,14 +150,14 @@ export default function RecipeDetailScreen() {
                 fontFamily: FONTS.sansSemiBold, fontSize: 16,
                 color: isCompleted ? T.primary : '#fbfaf3',
               }}>
-                {isCompleted ? '✓ Già cucinata' : saved ? '✓ Segna come cucinata' : '☆ Salva ricetta'}
+                {isCompleted ? t('recipes.alreadyCooked') : saved ? t('recipeDetail.markCooked') : t('recipeDetail.saveRecipe')}
               </Text>
             </Pill>
           </View>
           {isAuthor && (
             <View style={styles.actionSection}>
               <TouchableOpacity onPress={handleDelete} disabled={deleting} activeOpacity={0.85} style={styles.deleteBtn}>
-                <Text style={styles.deleteBtnText}>{deleting ? 'Eliminazione…' : 'Elimina ricetta'}</Text>
+                <Text style={styles.deleteBtnText}>{deleting ? t('recipeDetail.deleting') : t('recipeDetail.deleteRecipe')}</Text>
               </TouchableOpacity>
             </View>
           )}

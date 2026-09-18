@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useProducts } from '@/context/ProductsContext';
 import { useAuth } from '@/context/AuthContext';
 import { usePantry } from '@/context/PantryContext';
@@ -21,11 +22,11 @@ import {
 
 type Zone = 'all' | 'frigo' | 'freezer' | 'dispensa';
 
-const ZONES: { id: Zone; label: string; icon: string }[] = [
-  { id: 'all',      label: 'Tutto',    icon: '' },
-  { id: 'frigo',    label: 'Frigo',    icon: '❄️' },
-  { id: 'freezer',  label: 'Freezer',  icon: '🧊' },
-  { id: 'dispensa', label: 'Dispensa', icon: '📦' },
+const ZONES: { id: Zone; labelKey: string; icon: string }[] = [
+  { id: 'all',      labelKey: 'common.zones.all',      icon: '' },
+  { id: 'frigo',    labelKey: 'common.zones.frigo',    icon: '❄️' },
+  { id: 'freezer',  labelKey: 'common.zones.freezer',  icon: '🧊' },
+  { id: 'dispensa', labelKey: 'common.zones.dispensa', icon: '📦' },
 ];
 
 export default function HomeScreen() {
@@ -33,13 +34,14 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const { activePantry } = usePantry();
   const router = useRouter();
+  const { t } = useTranslation();
   const [zone, setZone] = useState<Zone>('all');
   const [query, setQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
 
-  const firstName = user?.displayName?.split(' ')[0] ?? 'ciao';
+  const firstName = user?.displayName?.split(' ')[0] ?? t('home.defaultName');
   const hour = new Date().getHours();
-  const greet = hour < 12 ? 'Buongiorno' : hour < 19 ? 'Buon pomeriggio' : 'Buonasera';
+  const greet = hour < 12 ? t('home.greeting.morning') : hour < 19 ? t('home.greeting.afternoon') : t('home.greeting.evening');
 
   const filtered = useMemo(() => {
     return products
@@ -72,14 +74,14 @@ export default function HomeScreen() {
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.greet}>{greet}, {firstName}</Text>
-            <Text style={styles.title} numberOfLines={1}>{activePantry ? activePantry.name : 'La tua dispensa'}</Text>
+            <Text style={styles.title} numberOfLines={1}>{activePantry ? activePantry.name : t('home.defaultTitle')}</Text>
             <TouchableOpacity
               onPress={() => router.push('/pantry')}
               style={styles.scopeChip}
               activeOpacity={0.8}
             >
               <Ionicons name={activePantry ? 'people-outline' : 'person-outline'} size={12} color={T.mute} />
-              <Text style={styles.scopeChipText}>{activePantry ? 'Condivisa' : 'Personale'}</Text>
+              <Text style={styles.scopeChipText}>{activePantry ? t('home.scopeShared') : t('home.scopePersonal')}</Text>
               <Ionicons name="chevron-down" size={12} color={T.mute} />
             </TouchableOpacity>
           </View>
@@ -103,7 +105,7 @@ export default function HomeScreen() {
             riga rimanda invece di duplicare. */}
         <View style={styles.statsRow}>
           <Text style={styles.statsCount}>
-            {products.length} {products.length === 1 ? 'prodotto' : 'prodotti'}
+            {t('home.productCount', { count: products.length })}
           </Text>
           {urgentCount + expiredCount > 0 && (
             <TouchableOpacity
@@ -114,8 +116,8 @@ export default function HomeScreen() {
               <Text style={styles.urgentPillIcon}>🔥</Text>
               <Text style={styles.urgentPillText}>
                 {[
-                  expiredCount > 0 ? `${expiredCount} scadut${expiredCount === 1 ? 'o' : 'i'}` : null,
-                  urgentCount > 0 ? `${urgentCount} urgent${urgentCount === 1 ? 'e' : 'i'}` : null,
+                  expiredCount > 0 ? t('home.expiredCount', { count: expiredCount }) : null,
+                  urgentCount > 0 ? t('home.urgentCount', { count: urgentCount }) : null,
                 ].filter(Boolean).join(' · ')}
               </Text>
               <Ionicons name="chevron-forward" size={14} color="#a86322" />
@@ -132,14 +134,14 @@ export default function HomeScreen() {
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="Cerca un prodotto…"
+              placeholder={t('home.searchPlaceholder')}
               placeholderTextColor={T.mute}
               style={styles.searchInput}
               autoFocus
             />
             <TouchableOpacity
               onPress={() => { setSearchOpen(false); setQuery(''); }}
-              accessibilityLabel="Chiudi ricerca"
+              accessibilityLabel={t('home.a11y.closeSearch')}
             >
               <Ionicons name="close-circle" size={19} color={T.mute} />
             </TouchableOpacity>
@@ -154,7 +156,7 @@ export default function HomeScreen() {
               onPress={() => setSearchOpen(true)}
               activeOpacity={0.85}
               style={[styles.chip, styles.searchToggleChip]}
-              accessibilityLabel="Cerca un prodotto"
+              accessibilityLabel={t('home.a11y.search')}
             >
               <Ionicons name="search-outline" size={16} color={T.ink} />
             </TouchableOpacity>
@@ -173,7 +175,7 @@ export default function HomeScreen() {
                       <Text style={styles.chipIcon}>{z.icon}</Text>
                     ) : null}
                     <Text style={[styles.chipText, { color: labelColor }]}>
-                      {z.label}
+                      {t(z.labelKey)}
                     </Text>
                   </LinearGradient>
                 </TouchableOpacity>
@@ -184,9 +186,9 @@ export default function HomeScreen() {
 
         {/* Product list */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>In scadenza prima</Text>
+          <Text style={styles.sectionTitle}>{t('home.expiringFirst')}</Text>
           <Text style={styles.sectionCount}>
-            {filtered.length} {filtered.length === 1 ? 'prodotto' : 'prodotti'}
+            {t('home.productCount', { count: filtered.length })}
           </Text>
         </View>
 
@@ -199,20 +201,21 @@ export default function HomeScreen() {
             />
           ))}
           {filtered.length === 0 && (
-            <Text style={styles.empty}>Nessun prodotto trovato.</Text>
+            <Text style={styles.empty}>{t('home.emptyFiltered')}</Text>
           )}
         </View>
       </ScrollView>
 
-      {/* Barra azione: lo scan è il gesto primario (come lo scatto di una
-          fotocamera), non una voce in un menu da aprire prima. Manuale e
-          scontrino restano a un tocco, ma con peso visivo minore. */}
+      {/* Barra azione: lo scan è il gesto primario, sempre al centro — stessa
+          forma "quadrata" dei due pulsanti laterali (non una pillola), solo
+          più grande e verde pieno, così si riconosce come l'azione principale
+          senza sembrare un elemento diverso dal resto della barra. */}
       <View style={styles.actionBar}>
         <TouchableOpacity
           style={styles.actionSide}
           onPress={() => router.push('/add')}
           activeOpacity={0.85}
-          accessibilityLabel="Aggiungi manualmente"
+          accessibilityLabel={t('home.a11y.addManually')}
         >
           <Ionicons name="pencil-outline" size={19} color={T.primary} />
         </TouchableOpacity>
@@ -220,13 +223,10 @@ export default function HomeScreen() {
         <PrimaryButton
           onPress={() => router.push('/scanner')}
           icon="camera-outline"
-          iconVariant="shutter"
-          label="Scansiona"
-          subLabel="Aggiungi un prodotto"
-          compactOnNative
-          containerStyle={styles.scanCta}
-          style={styles.scanCtaSurface}
-          accessibilityLabel="Scansiona un prodotto"
+          shape="circle"
+          size={55}
+          radius={RADIUS.input}
+          accessibilityLabel={t('home.a11y.scanProduct')}
         />
 
         {ocrAvailable ? (
@@ -234,7 +234,7 @@ export default function HomeScreen() {
             style={styles.actionSide}
             onPress={() => router.push('/receipt-scan')}
             activeOpacity={0.85}
-            accessibilityLabel="Scansiona uno scontrino"
+            accessibilityLabel={t('home.a11y.scanReceipt')}
           >
             <Ionicons name="receipt-outline" size={19} color={T.primary} />
           </TouchableOpacity>
@@ -324,13 +324,11 @@ const styles = StyleSheet.create({
 
   actionBar: {
     position: 'absolute', left: 20, right: 20, bottom: 8,
-    flexDirection: 'row', alignItems: 'center', gap: 10,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   actionSide: {
     width: 50, height: 50, borderRadius: RADIUS.input,
     backgroundColor: T.surface, alignItems: 'center', justifyContent: 'center',
     boxShadow: DEPTH.buttonLight,
   },
-  scanCta: { flex: 1 },
-  scanCtaSurface: { paddingLeft: 6 },
 });

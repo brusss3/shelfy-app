@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   Switch, Platform, TextInput, ActivityIndicator,
@@ -6,34 +6,42 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { submitFeedback, FeedbackCategory } from '@/lib/firestore';
 import { openSubscriptionManagement } from '@/lib/purchases';
 import { showAlert } from '@/lib/alert';
+import { LanguageOption, getStoredLanguageOption, setAppLanguage } from '@/lib/i18n';
 import PrimaryButton from '@/components/PrimaryButton';
 import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
 
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
-}
+const CATEGORIES: { id: FeedbackCategory; labelKey: string }[] = [
+  { id: 'suggerimento', labelKey: 'settings.feedback.categories.idea' },
+  { id: 'bug', labelKey: 'settings.feedback.categories.bug' },
+  { id: 'prodotto', labelKey: 'settings.feedback.categories.product' },
+  { id: 'altro', labelKey: 'settings.feedback.categories.other' },
+];
 
-const CATEGORIES: { id: FeedbackCategory; label: string }[] = [
-  { id: 'suggerimento', label: '💡 Idea' },
-  { id: 'bug', label: '🐞 Bug' },
-  { id: 'prodotto', label: '📦 Cibo' },
-  { id: 'altro', label: '💬 Altro' },
+const LANGUAGE_OPTIONS: { id: LanguageOption; labelKey: string }[] = [
+  { id: 'system', labelKey: 'settings.language.system' },
+  { id: 'it', labelKey: 'settings.language.it' },
+  { id: 'en', labelKey: 'settings.language.en' },
 ];
 
 export default function SettingsScreen() {
   const { user, logOut, setNotificationsEnabled } = useAuth();
   const router = useRouter();
+  const { t, i18n } = useTranslation();
 
   const [savingNotif, setSavingNotif] = useState(false);
   const [fbCategory, setFbCategory] = useState<FeedbackCategory>('bug');
   const [fbMessage, setFbMessage] = useState('');
   const [sendingFb, setSendingFb] = useState(false);
+  const [langOption, setLangOption] = useState<LanguageOption>('system');
+
+  useEffect(() => {
+    getStoredLanguageOption().then(setLangOption);
+  }, []);
 
   const initial = user?.displayName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? 'U';
   const name = user?.displayName ?? '—';
@@ -41,6 +49,13 @@ export default function SettingsScreen() {
   const isPremium = !!user?.isPremium;
   const notifEnabled = user?.notificationsEnabled ?? true;
   const version = Constants.expoConfig?.version ?? '1.0.0';
+
+  const formatDate = (iso: string | null | undefined): string => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const locale = i18n.language === 'it' ? 'it-IT' : 'en-US';
+    return d.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
+  };
 
   const onToggleNotif = async (value: boolean) => {
     setSavingNotif(true);
@@ -53,17 +68,22 @@ export default function SettingsScreen() {
 
   const handleManageSub = () => {
     if (Platform.OS === 'web') {
-      alert("Gestisci l'abbonamento dall'App Store o Google Play sul tuo dispositivo.");
+      alert(t('settings.subscription.manageWebAlert'));
       return;
     }
     openSubscriptionManagement();
   };
 
   const handleLogout = () => {
-    showAlert('Logout', "Vuoi uscire dall'account?", [
-      { text: 'Annulla', style: 'cancel' },
-      { text: 'Esci', style: 'destructive', onPress: () => logOut() },
+    showAlert(t('settings.logout.confirmTitle'), t('settings.logout.confirmBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('settings.logout.confirm'), style: 'destructive', onPress: () => logOut() },
     ]);
+  };
+
+  const handleChangeLanguage = async (option: LanguageOption) => {
+    setLangOption(option);
+    await setAppLanguage(option);
   };
 
   const handleSendFeedback = async () => {
@@ -78,9 +98,9 @@ export default function SettingsScreen() {
         message: fbMessage.trim(),
       });
       setFbMessage('');
-      showAlert('Inviato', 'Grazie! La tua segnalazione è stata inviata.');
+      showAlert(t('settings.feedback.sentTitle'), t('settings.feedback.sentBody'));
     } catch {
-      showAlert('Errore', 'Invio non riuscito. Riprova più tardi.');
+      showAlert(t('common.error'), t('settings.feedback.errorBody'));
     } finally {
       setSendingFb(false);
     }
@@ -90,9 +110,9 @@ export default function SettingsScreen() {
     <SafeAreaView style={styles.root}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.back}>
-          <Text style={styles.backText}>← Indietro</Text>
+          <Text style={styles.backText}>{t('settings.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Impostazioni</Text>
+        <Text style={styles.title}>{t('settings.title')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -107,39 +127,60 @@ export default function SettingsScreen() {
             </View>
             {isPremium && (
               <View style={styles.premiumBadge}>
-                <Text style={styles.premiumBadgeText}>✦ PREMIUM</Text>
+                <Text style={styles.premiumBadgeText}>{t('settings.premium')}</Text>
               </View>
             )}
           </View>
 
           {/* Abbonamento */}
           {isPremium && (
-            <Section title="Abbonamento">
+            <Section title={t('settings.subscription.title')}>
               <View style={styles.row}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.rowLabel}>
-                    {user?.subscriptionType === 'annual' ? 'Piano annuale' :
-                     user?.subscriptionType === 'monthly' ? 'Piano mensile' : 'Premium attivo'}
+                    {user?.subscriptionType === 'annual' ? t('settings.subscription.annual') :
+                     user?.subscriptionType === 'monthly' ? t('settings.subscription.monthly') : t('settings.subscription.activeGeneric')}
                   </Text>
                   {user?.subscriptionExpiresAt ? (
-                    <Text style={styles.rowSub}>Rinnovo il {formatDate(user.subscriptionExpiresAt)}</Text>
+                    <Text style={styles.rowSub}>
+                      {t('settings.subscription.renewsOn', { date: formatDate(user.subscriptionExpiresAt) })}
+                    </Text>
                   ) : null}
                 </View>
                 <TouchableOpacity style={styles.smallBtn} onPress={handleManageSub} activeOpacity={0.8}>
-                  <Text style={styles.smallBtnText}>Gestisci</Text>
+                  <Text style={styles.smallBtnText}>{t('settings.subscription.manage')}</Text>
                 </TouchableOpacity>
               </View>
             </Section>
           )}
 
+          {/* Lingua */}
+          <Section title={t('settings.language.title')}>
+            <View style={styles.langRow}>
+              {LANGUAGE_OPTIONS.map((opt) => {
+                const active = langOption === opt.id;
+                return (
+                  <TouchableOpacity
+                    key={opt.id}
+                    onPress={() => handleChangeLanguage(opt.id)}
+                    activeOpacity={0.85}
+                    style={[styles.langOpt, active && styles.langOptActive]}
+                  >
+                    <Text style={[styles.langOptText, active && styles.langOptTextActive]}>{t(opt.labelKey)}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </Section>
+
           {/* Notifiche */}
-          <Section title="Notifiche">
+          <Section title={t('settings.notifications.title')}>
             <View style={styles.row}>
               <View style={{ flex: 1, marginRight: 12 }}>
-                <Text style={styles.rowLabel}>Notifiche push</Text>
+                <Text style={styles.rowLabel}>{t('settings.notifications.push')}</Text>
                 <Text style={styles.rowSub}>
-                  Avvisi quando un prodotto sta per scadere.
-                  {Platform.OS === 'web' ? ' Disponibili su app iOS e Android.' : ''}
+                  {t('settings.notifications.desc')}
+                  {Platform.OS === 'web' ? t('settings.notifications.webOnly') : ''}
                 </Text>
               </View>
               {savingNotif ? (
@@ -156,7 +197,7 @@ export default function SettingsScreen() {
           </Section>
 
           {/* Feedback */}
-          <Section title="Segnala un problema o un'idea">
+          <Section title={t('settings.feedback.title')}>
             <View style={styles.fbCats}>
               {CATEGORIES.map((c) => {
                 const active = fbCategory === c.id;
@@ -167,7 +208,7 @@ export default function SettingsScreen() {
                     activeOpacity={0.85}
                     style={[styles.fbCat, active && styles.fbCatActive]}
                   >
-                    <Text style={[styles.fbCatText, active && styles.fbCatTextActive]}>{c.label}</Text>
+                    <Text style={[styles.fbCatText, active && styles.fbCatTextActive]}>{t(c.labelKey)}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -176,7 +217,7 @@ export default function SettingsScreen() {
               style={styles.fbInput}
               value={fbMessage}
               onChangeText={setFbMessage}
-              placeholder="Descrivi il problema o la tua proposta…"
+              placeholder={t('settings.feedback.placeholder')}
               placeholderTextColor={T.mute}
               multiline
               numberOfLines={4}
@@ -186,26 +227,26 @@ export default function SettingsScreen() {
               onPress={handleSendFeedback}
               disabled={!fbMessage.trim()}
               loading={sendingFb}
-              label="Invia segnalazione"
+              label={t('settings.feedback.send')}
               fullWidth
               style={{ marginTop: 12 }}
             />
           </Section>
 
           {/* Strumenti ristorazione */}
-          <Section title="Ristoranti">
+          <Section title={t('settings.restaurants.title')}>
             <TouchableOpacity style={styles.linkRow} onPress={() => router.push('/labels')} activeOpacity={0.8}>
-              <Text style={styles.rowLabel}>🏷️  Etichette HACCP</Text>
+              <Text style={styles.rowLabel}>{t('settings.restaurants.labels')}</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
           </Section>
 
           {/* Logout */}
           <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.85}>
-            <Text style={styles.logoutText}>Esci dall'account</Text>
+            <Text style={styles.logoutText}>{t('settings.logout.button')}</Text>
           </TouchableOpacity>
 
-          <Text style={styles.version}>Shelfy v{version}</Text>
+          <Text style={styles.version}>{t('settings.version', { version })}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -265,6 +306,15 @@ const styles = StyleSheet.create({
 
   linkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   chevron: { fontSize: 22, color: T.mute },
+
+  langRow: { flexDirection: 'row', gap: 8 },
+  langOpt: {
+    flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: RADIUS.md,
+    backgroundColor: T.bg, borderWidth: 1, borderColor: T.line,
+  },
+  langOptActive: { backgroundColor: T.primarySoft, borderColor: T.primary },
+  langOptText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: T.ink2 },
+  langOptTextActive: { color: T.primaryInk },
 
   fbCats: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   fbCat: {

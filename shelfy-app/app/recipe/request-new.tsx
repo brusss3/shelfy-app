@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useProducts } from '@/context/ProductsContext';
 import { useCommunity } from '@/context/CommunityContext';
 import { showAlert } from '@/lib/alert';
@@ -18,6 +19,7 @@ export default function RequestNewScreen() {
   const insets = useSafeAreaInsets();
   const { products } = useProducts();
   const { createRequest } = useCommunity();
+  const { t } = useTranslation();
 
   const expiringIds = useMemo(() => {
     const now = Date.now();
@@ -43,7 +45,7 @@ export default function RequestNewScreen() {
 
   const handleSave = async () => {
     if (!canSave) {
-      showAlert('Errore', 'Seleziona almeno un ingrediente');
+      showAlert(t('common.error'), t('recipeRequest.missingIngredientError'));
       return;
     }
     setSaving(true);
@@ -51,7 +53,7 @@ export default function RequestNewScreen() {
       const id = await createRequest({ ingredients: selectedNames, note: note.trim() });
       router.replace(`/recipe/request/${id}`);
     } catch (e: any) {
-      showAlert('Errore', e?.message ?? 'Impossibile pubblicare la richiesta');
+      showAlert(t('common.error'), e?.message ?? t('recipeRequest.publishFailed'));
     } finally {
       setSaving(false);
     }
@@ -68,16 +70,16 @@ export default function RequestNewScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
             <Text style={styles.closeBtnText}>✕</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Chiedi aiuto</Text>
+          <Text style={styles.headerTitle}>{t('recipeRequest.headerTitle')}</Text>
           <View style={{ width: 40 }} />
         </View>
 
         <Text style={styles.intro}>
-          Seleziona gli ingredienti per cui vuoi un'idea: la community potrà proporti una ricetta.
+          {t('recipeRequest.intro')}
         </Text>
 
         {products.length === 0 ? (
-          <Text style={styles.emptyText}>Aggiungi prima qualche prodotto alla tua dispensa.</Text>
+          <Text style={styles.emptyText}>{t('recipeRequest.emptyProducts')}</Text>
         ) : (
           <View style={styles.chipsWrap}>
             {products.map((p) => {
@@ -99,13 +101,13 @@ export default function RequestNewScreen() {
           </View>
         )}
 
-        <Text style={styles.sectionLabel}>NOTA (OPZIONALE)</Text>
+        <Text style={styles.sectionLabel}>{t('recipeRequest.noteSection')}</Text>
         <View style={styles.card}>
           <TextInput
             style={styles.noteInput}
             value={note}
             onChangeText={setNote}
-            placeholder="es. Vorrei qualcosa di veloce per stasera"
+            placeholder={t('recipeRequest.notePlaceholder')}
             placeholderTextColor={T.mute}
             multiline
           />
@@ -116,14 +118,14 @@ export default function RequestNewScreen() {
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <TouchableOpacity style={styles.cancelBtn} onPress={() => router.back()} activeOpacity={0.85}>
-          <Text style={styles.cancelBtnText}>Annulla</Text>
+          <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
         <PrimaryButton
           onPress={handleSave}
           disabled={!canSave}
           loading={saving}
           icon="help-buoy-outline"
-          label="Pubblica richiesta"
+          label={t('recipeRequest.publishRequest')}
           containerStyle={{ flex: 1.8 }}
         />
       </View>

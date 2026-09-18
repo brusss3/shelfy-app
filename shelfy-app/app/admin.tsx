@@ -5,6 +5,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import i18n from '@/lib/i18n';
 import { useAuth } from '@/context/AuthContext';
 import {
   getAllUsers, adminSetPremium, adminSetAdmin, AdminUserRecord,
@@ -24,14 +26,15 @@ const NEW_USER_DAYS = 7;
 
 function confirm(title: string, message: string, onYes: () => void, destructive = false) {
   showAlert(title, message, [
-    { text: 'Annulla', style: 'cancel' },
-    { text: 'Conferma', style: destructive ? 'destructive' : 'default', onPress: onYes },
+    { text: i18n.t('common.cancel'), style: 'cancel' },
+    { text: i18n.t('admin.confirm'), style: destructive ? 'destructive' : 'default', onPress: onYes },
   ]);
 }
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return '';
-  return new Date(iso).toLocaleDateString('it-IT');
+  const locale = i18n.language === 'it' ? 'it-IT' : 'en-US';
+  return new Date(iso).toLocaleDateString(locale);
 }
 
 function daysSince(iso: string | null | undefined): number | null {
@@ -44,15 +47,16 @@ function daysSince(iso: string | null | undefined): number | null {
 function formatRelative(iso: string | null | undefined): string {
   const d = daysSince(iso);
   if (d === null) return '';
-  if (d <= 0) return 'Oggi';
-  if (d === 1) return 'Ieri';
-  if (d < 7) return `${d} giorni fa`;
+  if (d <= 0) return i18n.t('admin.relativeToday');
+  if (d === 1) return i18n.t('admin.relativeYesterday');
+  if (d < 7) return i18n.t('admin.relativeDaysAgo', { count: d });
   return formatDate(iso);
 }
 
 export default function AdminScreen() {
   const { user, updateAdminNotifSettings } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>('users');
   const [users, setUsers] = useState<AdminUserRecord[]>([]);
   const [feedback, setFeedback] = useState<FeedbackRecord[]>([]);
@@ -78,12 +82,12 @@ export default function AdminScreen() {
       setUsers(u);
       setFeedback(f);
     } catch (e: any) {
-      showAlert('Errore', e?.message ?? 'Impossibile caricare i dati.');
+      showAlert(t('common.error'), e?.message ?? t('admin.loadFailed'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!user?.isAdmin) {
@@ -99,16 +103,14 @@ export default function AdminScreen() {
 
   const toggleGlobalAi = (next: boolean) => {
     confirm(
-      next ? 'Riattiva ricette AI' : 'Disattiva ricette AI',
-      next
-        ? 'Tutti gli utenti potranno di nuovo generare la ricetta del giorno.'
-        : 'Nessun utente potrà generare ricette AI finché non riattivi. Le chiamate a Groq si fermano subito.',
+      next ? t('admin.enableAiTitle') : t('admin.disableAiTitle'),
+      next ? t('admin.enableAiBody') : t('admin.disableAiBody'),
       async () => {
         setTogglingAi(true);
         try {
           await adminSetAiEnabled(next);
         } catch (e: any) {
-          showAlert('Errore', e?.message ?? 'Aggiornamento fallito.');
+          showAlert(t('common.error'), e?.message ?? t('admin.updateFailed'));
         } finally { setTogglingAi(false); }
       },
       !next,
@@ -117,43 +119,43 @@ export default function AdminScreen() {
 
   const toggleUserAi = (u: AdminUserRecord) => {
     const next = !u.aiDisabled;
-    confirm(next ? 'Blocca AI per questo utente' : 'Sblocca AI', u.email, async () => {
+    confirm(next ? t('admin.blockAiForUser') : t('admin.unblockAi'), u.email, async () => {
       setUpdating(u.uid);
       try {
         await adminSetUserAiDisabled(u.uid, next);
         setUsers((prev) => prev.map((x) => x.uid === u.uid ? { ...x, aiDisabled: next } : x));
       } catch (e: any) {
-        showAlert('Errore', e?.message ?? 'Aggiornamento fallito.');
+        showAlert(t('common.error'), e?.message ?? t('admin.updateFailed'));
       } finally { setUpdating(null); }
     }, next);
   };
 
   const togglePremium = (u: AdminUserRecord) => {
     const next = !u.isPremium;
-    confirm(next ? 'Abilita Premium' : 'Rimuovi Premium', u.email, async () => {
+    confirm(next ? t('admin.enablePremium') : t('admin.removePremium'), u.email, async () => {
       setUpdating(u.uid);
       try {
         await adminSetPremium(u.uid, next);
         setUsers((prev) => prev.map((x) => x.uid === u.uid ? { ...x, isPremium: next } : x));
       } catch (e: any) {
-        showAlert('Errore', e?.message ?? 'Aggiornamento fallito.');
+        showAlert(t('common.error'), e?.message ?? t('admin.updateFailed'));
       } finally { setUpdating(null); }
     }, !next);
   };
 
   const toggleAdmin = (u: AdminUserRecord) => {
     if (u.uid === user?.uid) {
-      showAlert('Attenzione', 'Non puoi modificare il tuo ruolo admin.');
+      showAlert(t('admin.cantChangeOwnRoleTitle'), t('admin.cantChangeOwnRoleBody'));
       return;
     }
     const next = !u.isAdmin;
-    confirm(next ? 'Rendi Admin' : 'Rimuovi Admin', u.email, async () => {
+    confirm(next ? t('admin.makeAdmin') : t('admin.removeAdmin'), u.email, async () => {
       setUpdating(u.uid);
       try {
         await adminSetAdmin(u.uid, next);
         setUsers((prev) => prev.map((x) => x.uid === u.uid ? { ...x, isAdmin: next } : x));
       } catch (e: any) {
-        showAlert('Errore', e?.message ?? 'Aggiornamento fallito.');
+        showAlert(t('common.error'), e?.message ?? t('admin.updateFailed'));
       } finally { setUpdating(null); }
     }, true);
   };
@@ -197,7 +199,7 @@ export default function AdminScreen() {
       await updateFeedbackStatus(f.id, status);
       setFeedback((prev) => prev.map((x) => x.id === f.id ? { ...x, status } : x));
     } catch (e: any) {
-      showAlert('Errore', e?.message ?? 'Aggiornamento fallito.');
+      showAlert(t('common.error'), e?.message ?? t('admin.updateFailed'));
     } finally {
       setUpdatingFeedback(null);
     }
@@ -209,13 +211,13 @@ export default function AdminScreen() {
     try {
       const token = await registerForPushNotifications();
       if (!token) {
-        showAlert('Notifiche push', 'Permesso non concesso o non disponibile su questo dispositivo/browser.');
+        showAlert(t('admin.pushNotAvailableTitle'), t('admin.pushNotAvailableBody'));
         return;
       }
       await saveUserPushToken(user.uid, token);
-      showAlert('Notifiche push', 'Dispositivo registrato con successo.');
+      showAlert(t('admin.pushNotAvailableTitle'), t('admin.pushRegisteredBody'));
     } catch (e: any) {
-      showAlert('Errore', e?.message ?? 'Registrazione fallita.');
+      showAlert(t('common.error'), e?.message ?? t('admin.registrationFailed'));
     } finally {
       setRegisteringPush(false);
     }
@@ -223,15 +225,15 @@ export default function AdminScreen() {
 
   const handleTestPush = async () => {
     if (!user?.pushToken) {
-      showAlert('Notifiche push', 'Registra prima il dispositivo per ricevere notifiche.');
+      showAlert(t('admin.pushNotAvailableTitle'), t('admin.registerDeviceFirstBody'));
       return;
     }
     setSendingTest(true);
     try {
       await sendAdminTestPushNotification(user.pushToken);
-      showAlert('Notifiche push', 'Notifica di test inviata.');
+      showAlert(t('admin.pushNotAvailableTitle'), t('admin.testSentBody'));
     } catch (e: any) {
-      showAlert('Errore', e?.message ?? 'Invio fallito.');
+      showAlert(t('common.error'), e?.message ?? t('admin.sendFailed'));
     } finally {
       setSendingTest(false);
     }
@@ -247,19 +249,19 @@ export default function AdminScreen() {
       <View style={styles.header}>
         <View style={styles.headerInner}>
           <TouchableOpacity onPress={() => router.back()} style={styles.back}>
-            <Text style={styles.backText}>← Indietro</Text>
+            <Text style={styles.backText}>{t('admin.back')}</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Dashboard admin</Text>
+          <Text style={styles.title}>{t('admin.title')}</Text>
           <Text style={styles.subtitle}>
-            {users.length} utenti · {premiumCount} premium · {feedback.length} segnalazioni
-            {newFeedbackCount > 0 ? ` (${newFeedbackCount} nuove)` : ''}
+            {t('admin.subtitle', { users: users.length, premium: premiumCount, feedback: feedback.length })}
+            {newFeedbackCount > 0 ? t('admin.newFeedbackSuffix', { count: newFeedbackCount }) : ''}
           </Text>
 
           <View style={styles.tabs}>
-            <TabBtn label="Utenti" active={tab === 'users'} onPress={() => setTab('users')} />
-            <TabBtn label="Feedback" active={tab === 'feedback'} onPress={() => setTab('feedback')} />
-            <TabBtn label="Notifiche" active={tab === 'notifiche'} onPress={() => setTab('notifiche')} />
-            <TabBtn label={aiEnabled ? 'AI' : 'AI ⛔'} active={tab === 'ai'} onPress={() => setTab('ai')} />
+            <TabBtn label={t('admin.tabs.users')} active={tab === 'users'} onPress={() => setTab('users')} />
+            <TabBtn label={t('admin.tabs.feedback')} active={tab === 'feedback'} onPress={() => setTab('feedback')} />
+            <TabBtn label={t('admin.tabs.notifications')} active={tab === 'notifiche'} onPress={() => setTab('notifiche')} />
+            <TabBtn label={aiEnabled ? t('admin.tabs.ai') : `${t('admin.tabs.ai')} ⛔`} active={tab === 'ai'} onPress={() => setTab('ai')} />
           </View>
         </View>
       </View>
@@ -278,7 +280,7 @@ export default function AdminScreen() {
                   <TextInput
                     value={search}
                     onChangeText={setSearch}
-                    placeholder="Cerca per nome, email o UID..."
+                    placeholder={t('admin.searchPlaceholder')}
                     placeholderTextColor={T.mute}
                     style={styles.searchInput}
                     autoCapitalize="none"
@@ -292,22 +294,22 @@ export default function AdminScreen() {
                 </View>
 
                 <View style={styles.chipsRow}>
-                  <Chip label="Tutti" active={filterChip === 'all'} onPress={() => setFilterChip('all')} />
-                  <Chip label={`Nuovi < ${NEW_USER_DAYS}gg`} active={filterChip === 'new'} onPress={() => setFilterChip('new')} />
-                  <Chip label="Premium ✦" active={filterChip === 'premium'} onPress={() => setFilterChip('premium')} />
-                  <Chip label="Admin 🛡️" active={filterChip === 'admin'} onPress={() => setFilterChip('admin')} />
+                  <Chip label={t('admin.filters.all')} active={filterChip === 'all'} onPress={() => setFilterChip('all')} />
+                  <Chip label={t('admin.filters.newUnder', { days: NEW_USER_DAYS })} active={filterChip === 'new'} onPress={() => setFilterChip('new')} />
+                  <Chip label={t('admin.filters.premium')} active={filterChip === 'premium'} onPress={() => setFilterChip('premium')} />
+                  <Chip label={t('admin.filters.admin')} active={filterChip === 'admin'} onPress={() => setFilterChip('admin')} />
                 </View>
 
                 <View style={styles.sortRow}>
-                  <SortBtn label="Più recenti" active={sortMode === 'newest'} onPress={() => setSortMode('newest')} />
-                  <SortBtn label="Meno recenti" active={sortMode === 'oldest'} onPress={() => setSortMode('oldest')} />
-                  <SortBtn label="A-Z" active={sortMode === 'az'} onPress={() => setSortMode('az')} />
-                  <SortBtn label="Z-A" active={sortMode === 'za'} onPress={() => setSortMode('za')} />
+                  <SortBtn label={t('admin.sort.newest')} active={sortMode === 'newest'} onPress={() => setSortMode('newest')} />
+                  <SortBtn label={t('admin.sort.oldest')} active={sortMode === 'oldest'} onPress={() => setSortMode('oldest')} />
+                  <SortBtn label={t('admin.sort.az')} active={sortMode === 'az'} onPress={() => setSortMode('az')} />
+                  <SortBtn label={t('admin.sort.za')} active={sortMode === 'za'} onPress={() => setSortMode('za')} />
                 </View>
 
-                <Text style={styles.resultCount}>{visibleUsers.length} risultat{visibleUsers.length === 1 ? 'o' : 'i'}</Text>
+                <Text style={styles.resultCount}>{t('admin.resultCount', { count: visibleUsers.length })}</Text>
 
-                {visibleUsers.length === 0 ? <Text style={styles.empty}>Nessun utente trovato.</Text> :
+                {visibleUsers.length === 0 ? <Text style={styles.empty}>{t('admin.noUsersFound')}</Text> :
                   visibleUsers.map((u) => {
                     const isNew = (() => { const d = daysSince(u.createdAt); return d !== null && d < NEW_USER_DAYS; })();
                     return (
@@ -316,21 +318,21 @@ export default function AdminScreen() {
                           <View style={styles.cardInfo}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                               <Text style={styles.name} numberOfLines={1}>{u.displayName || '—'}</Text>
-                              {isNew && <View style={styles.newBadge}><Text style={styles.newBadgeText}>Nuovo</Text></View>}
+                              {isNew && <View style={styles.newBadge}><Text style={styles.newBadgeText}>{t('admin.newBadge')}</Text></View>}
                             </View>
                             <Text style={styles.email} numberOfLines={1}>{u.email}</Text>
-                            {u.createdAt ? <Text style={styles.date}>Iscritto {formatRelative(u.createdAt)}</Text> : null}
+                            {u.createdAt ? <Text style={styles.date}>{t('admin.joined', { when: formatRelative(u.createdAt) })}</Text> : null}
                             {u.isPremium && (
                               <Text style={styles.subInfo}>
-                                {u.subscriptionType === 'annual' ? 'Annuale' : u.subscriptionType === 'monthly' ? 'Mensile' : 'Premium'}
-                                {u.subscriptionExpiresAt ? ` · rinnovo ${formatDate(u.subscriptionExpiresAt)}` : ''}
+                                {u.subscriptionType === 'annual' ? t('admin.subscriptionAnnual') : u.subscriptionType === 'monthly' ? t('admin.subscriptionMonthly') : t('admin.subscriptionGeneric')}
+                                {u.subscriptionExpiresAt ? t('admin.renewsOn', { date: formatDate(u.subscriptionExpiresAt) }) : ''}
                               </Text>
                             )}
                           </View>
                           <View style={styles.badges}>
-                            {u.isPremium && <View style={[styles.badge, styles.badgePremium]}><Text style={styles.badgeText}>Premium</Text></View>}
-                            {u.isAdmin && <View style={[styles.badge, styles.badgeAdmin]}><Text style={styles.badgeText}>Admin</Text></View>}
-                            {u.aiDisabled && <View style={[styles.badge, styles.badgeAiOff]}><Text style={[styles.badgeText, { color: T.urgent }]}>AI bloccata</Text></View>}
+                            {u.isPremium && <View style={[styles.badge, styles.badgePremium]}><Text style={styles.badgeText}>{t('admin.premiumBadge')}</Text></View>}
+                            {u.isAdmin && <View style={[styles.badge, styles.badgeAdmin]}><Text style={styles.badgeText}>{t('admin.adminBadge')}</Text></View>}
+                            {u.aiDisabled && <View style={[styles.badge, styles.badgeAiOff]}><Text style={[styles.badgeText, { color: T.urgent }]}>{t('admin.aiBlockedBadge')}</Text></View>}
                           </View>
                         </View>
 
@@ -343,7 +345,7 @@ export default function AdminScreen() {
                               onPress={() => togglePremium(u)}
                             >
                               <Text style={[styles.btnText, u.isPremium && styles.btnTextDanger]}>
-                                {u.isPremium ? 'Rimuovi Premium' : 'Abilita Premium'}
+                                {u.isPremium ? t('admin.removePremium') : t('admin.enablePremium')}
                               </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
@@ -351,7 +353,7 @@ export default function AdminScreen() {
                               onPress={() => toggleAdmin(u)}
                             >
                               <Text style={[styles.btnText, u.isAdmin ? styles.btnTextDanger : styles.btnTextSecondary]}>
-                                {u.isAdmin ? 'Rimuovi Admin' : 'Rendi Admin'}
+                                {u.isAdmin ? t('admin.removeAdmin') : t('admin.makeAdmin')}
                               </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
@@ -359,7 +361,7 @@ export default function AdminScreen() {
                               onPress={() => toggleUserAi(u)}
                             >
                               <Text style={[styles.btnText, u.aiDisabled ? styles.btnTextSecondary : styles.btnTextDanger]}>
-                                {u.aiDisabled ? 'Sblocca AI' : 'Blocca AI'}
+                                {u.aiDisabled ? t('admin.unblockAi') : t('admin.blockAiForUser')}
                               </Text>
                             </TouchableOpacity>
                           </View>
@@ -374,13 +376,13 @@ export default function AdminScreen() {
             {tab === 'feedback' && (
               <>
                 <View style={styles.chipsRow}>
-                  <Chip label="Tutti" active={feedbackFilter === 'all'} onPress={() => setFeedbackFilter('all')} />
-                  <Chip label="Nuovi" active={feedbackFilter === 'nuovo'} onPress={() => setFeedbackFilter('nuovo')} />
-                  <Chip label="Letti" active={feedbackFilter === 'letto'} onPress={() => setFeedbackFilter('letto')} />
-                  <Chip label="Risolti" active={feedbackFilter === 'risolto'} onPress={() => setFeedbackFilter('risolto')} />
+                  <Chip label={t('admin.feedbackFilters.all')} active={feedbackFilter === 'all'} onPress={() => setFeedbackFilter('all')} />
+                  <Chip label={t('admin.feedbackFilters.new')} active={feedbackFilter === 'nuovo'} onPress={() => setFeedbackFilter('nuovo')} />
+                  <Chip label={t('admin.feedbackFilters.read')} active={feedbackFilter === 'letto'} onPress={() => setFeedbackFilter('letto')} />
+                  <Chip label={t('admin.feedbackFilters.resolved')} active={feedbackFilter === 'risolto'} onPress={() => setFeedbackFilter('risolto')} />
                 </View>
 
-                {visibleFeedback.length === 0 ? <Text style={styles.empty}>Nessuna segnalazione.</Text> :
+                {visibleFeedback.length === 0 ? <Text style={styles.empty}>{t('admin.noFeedback')}</Text> :
                   visibleFeedback.map((f) => (
                     <View key={f.id} style={styles.card}>
                       <View style={styles.fbHeader}>
@@ -400,7 +402,7 @@ export default function AdminScreen() {
                         {f.createdAt ? <Text style={styles.date}>{formatDate(f.createdAt)}</Text> : null}
                       </View>
                       <Text style={styles.fbMessage}>{f.message}</Text>
-                      <Text style={styles.fbFrom}>{f.displayName || 'Anonimo'} · {f.email}</Text>
+                      <Text style={styles.fbFrom}>{f.displayName || t('admin.anonymous')} · {f.email}</Text>
 
                       {updatingFeedback === f.id ? (
                         <ActivityIndicator color={T.primary} style={{ marginTop: 10 }} />
@@ -408,17 +410,17 @@ export default function AdminScreen() {
                         <View style={styles.actions}>
                           {f.status !== 'nuovo' && (
                             <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={() => setFeedbackStatus(f, 'nuovo')}>
-                              <Text style={[styles.btnText, styles.btnTextSecondary]}>Riapri</Text>
+                              <Text style={[styles.btnText, styles.btnTextSecondary]}>{t('admin.reopen')}</Text>
                             </TouchableOpacity>
                           )}
                           {f.status === 'nuovo' && (
                             <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={() => setFeedbackStatus(f, 'letto')}>
-                              <Text style={[styles.btnText, styles.btnTextSecondary]}>Segna come letto</Text>
+                              <Text style={[styles.btnText, styles.btnTextSecondary]}>{t('admin.markRead')}</Text>
                             </TouchableOpacity>
                           )}
                           {f.status !== 'risolto' && (
                             <TouchableOpacity style={[styles.btn, styles.btnPrimary]} onPress={() => setFeedbackStatus(f, 'risolto')}>
-                              <Text style={styles.btnText}>Segna come risolto</Text>
+                              <Text style={styles.btnText}>{t('admin.markResolved')}</Text>
                             </TouchableOpacity>
                           )}
                         </View>
@@ -434,10 +436,9 @@ export default function AdminScreen() {
                 <View style={styles.card}>
                   <View style={styles.switchRow}>
                     <View style={{ flex: 1, marginRight: 12 }}>
-                      <Text style={styles.notifSectionTitle}>Ricette AI (tutti gli utenti)</Text>
+                      <Text style={styles.notifSectionTitle}>{t('admin.aiAllUsersTitle')}</Text>
                       <Text style={styles.notifSectionDesc}>
-                        Interruttore globale: da spento nessuno può generare ricette e le chiamate a Groq
-                        si fermano subito. Il blocco è applicato lato server, non solo nell'app.
+                        {t('admin.aiAllUsersDesc')}
                       </Text>
                     </View>
                     <Switch
@@ -450,16 +451,12 @@ export default function AdminScreen() {
                 </View>
 
                 <View style={styles.card}>
-                  <Text style={styles.notifSectionTitle}>Stato attuale</Text>
+                  <Text style={styles.notifSectionTitle}>{t('admin.currentStatus')}</Text>
                   <Text style={styles.notifSectionDesc}>
-                    {aiEnabled
-                      ? 'Attive · 1 generazione al giorno per utente (reset a mezzanotte, ora italiana).'
-                      : 'Disattivate · gli utenti vedono "Momentaneamente non disponibile".'}
+                    {aiEnabled ? t('admin.aiActiveStatus') : t('admin.aiInactiveStatus')}
                   </Text>
                   <Text style={[styles.notifSectionDesc, { marginTop: 10 }]}>
-                    {users.filter((u) => u.aiDisabled).length} utent
-                    {users.filter((u) => u.aiDisabled).length === 1 ? 'e bloccato' : 'i bloccati'} singolarmente
-                    (dalla scheda Utenti, pulsante “Blocca AI”).
+                    {t('admin.blockedUsersCount', { count: users.filter((u) => u.aiDisabled).length })}
                   </Text>
                 </View>
               </View>
@@ -468,9 +465,9 @@ export default function AdminScreen() {
             {tab === 'notifiche' && (
               <View style={{ gap: 12 }}>
                 <View style={styles.card}>
-                  <Text style={styles.notifSectionTitle}>Dispositivo</Text>
+                  <Text style={styles.notifSectionTitle}>{t('admin.deviceTitle')}</Text>
                   <Text style={styles.notifSectionDesc}>
-                    {user.pushToken ? 'Dispositivo registrato per le notifiche push.' : 'Nessun dispositivo registrato.'}
+                    {user.pushToken ? t('admin.deviceRegistered') : t('admin.deviceNotRegistered')}
                   </Text>
                   <TouchableOpacity
                     style={[styles.btn, styles.btnPrimary, { marginTop: 12 }]}
@@ -478,7 +475,7 @@ export default function AdminScreen() {
                     disabled={registeringPush}
                   >
                     {registeringPush ? <ActivityIndicator color="#fbfaf3" /> : (
-                      <Text style={styles.btnText}>{user.pushToken ? 'Ri-registra dispositivo' : 'Registra dispositivo'}</Text>
+                      <Text style={styles.btnText}>{user.pushToken ? t('admin.reRegisterDevice') : t('admin.registerDevice')}</Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -486,8 +483,8 @@ export default function AdminScreen() {
                 <View style={styles.card}>
                   <View style={styles.switchRow}>
                     <View style={{ flex: 1, marginRight: 12 }}>
-                      <Text style={styles.notifSectionTitle}>Nuovi Utenti Iscritti</Text>
-                      <Text style={styles.notifSectionDesc}>Ricevi un avviso push ogni volta che un nuovo utente si registra a Shelfy.</Text>
+                      <Text style={styles.notifSectionTitle}>{t('admin.newUsersTitle')}</Text>
+                      <Text style={styles.notifSectionDesc}>{t('admin.newUsersDesc')}</Text>
                     </View>
                     <Switch
                       value={user.adminNotifNewUsers ?? true}
@@ -500,8 +497,8 @@ export default function AdminScreen() {
                 <View style={styles.card}>
                   <View style={styles.switchRow}>
                     <View style={{ flex: 1, marginRight: 12 }}>
-                      <Text style={styles.notifSectionTitle}>Nuove Segnalazioni / Feedback</Text>
-                      <Text style={styles.notifSectionDesc}>Ricevi un avviso push per ogni nuovo feedback o segnalazione inviata.</Text>
+                      <Text style={styles.notifSectionTitle}>{t('admin.newFeedbackTitle')}</Text>
+                      <Text style={styles.notifSectionDesc}>{t('admin.newFeedbackDesc')}</Text>
                     </View>
                     <Switch
                       value={user.adminNotifFeedback ?? true}
@@ -512,15 +509,15 @@ export default function AdminScreen() {
                 </View>
 
                 <View style={styles.card}>
-                  <Text style={styles.notifSectionTitle}>Test</Text>
-                  <Text style={styles.notifSectionDesc}>Invia una notifica push di prova al tuo dispositivo registrato.</Text>
+                  <Text style={styles.notifSectionTitle}>{t('admin.testTitle')}</Text>
+                  <Text style={styles.notifSectionDesc}>{t('admin.testDesc')}</Text>
                   <TouchableOpacity
                     style={[styles.btn, styles.btnSecondary, { marginTop: 12 }]}
                     onPress={handleTestPush}
                     disabled={sendingTest}
                   >
                     {sendingTest ? <ActivityIndicator color={T.primaryInk} /> : (
-                      <Text style={[styles.btnText, styles.btnTextSecondary]}>Invia notifica di test</Text>
+                      <Text style={[styles.btnText, styles.btnTextSecondary]}>{t('admin.sendTestNotification')}</Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -558,10 +555,10 @@ function SortBtn({ label, active, onPress }: { label: string; active: boolean; o
 }
 
 function fbLabel(c: string) {
-  if (c === 'bug') return '🐞 Bug';
-  if (c === 'suggerimento') return '💡 Idea';
-  if (c === 'prodotto') return '📦 Barcode';
-  return '💬 Altro';
+  if (c === 'bug') return i18n.t('admin.fbCategoryBug');
+  if (c === 'suggerimento') return i18n.t('admin.fbCategoryIdea');
+  if (c === 'prodotto') return i18n.t('admin.fbCategoryBarcode');
+  return i18n.t('admin.fbCategoryOther');
 }
 function fbTagStyle(c: string) {
   if (c === 'bug') return { backgroundColor: T.urgentSoft };
@@ -571,9 +568,9 @@ function fbTagStyle(c: string) {
 }
 
 function fbStatusLabel(s: FeedbackStatus) {
-  if (s === 'letto') return 'Letto';
-  if (s === 'risolto') return '✓ Risolto';
-  return 'Nuovo';
+  if (s === 'letto') return i18n.t('admin.fbStatusRead');
+  if (s === 'risolto') return i18n.t('admin.fbStatusResolved');
+  return i18n.t('admin.fbStatusNew');
 }
 function fbStatusStyle(s: FeedbackStatus) {
   if (s === 'letto') return { backgroundColor: T.line };
