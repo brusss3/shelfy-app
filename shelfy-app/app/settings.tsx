@@ -233,14 +233,6 @@ export default function SettingsScreen() {
             />
           </Section>
 
-          {/* Strumenti ristorazione */}
-          <Section title={t('settings.restaurants.title')}>
-            <TouchableOpacity style={styles.linkRow} onPress={() => router.push('/labels')} activeOpacity={0.8}>
-              <Text style={styles.rowLabel}>{t('settings.restaurants.labels')}</Text>
-              <Text style={styles.chevron}>›</Text>
-            </TouchableOpacity>
-          </Section>
-
           {/* Logout */}
           <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.85}>
             <Text style={styles.logoutText}>{t('settings.logout.button')}</Text>
@@ -303,9 +295,6 @@ const styles = StyleSheet.create({
 
   smallBtn: { backgroundColor: T.primarySoft, borderRadius: RADIUS.md, paddingVertical: 9, paddingHorizontal: 14 },
   smallBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: T.primaryInk },
-
-  linkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  chevron: { fontSize: 22, color: T.mute },
 
   langRow: { flexDirection: 'row', gap: 8 },
   langOpt: {

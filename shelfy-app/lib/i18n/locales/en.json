@@ -613,40 +613,6 @@
     "addCount_one": "Add {{count}} product",
     "addCount_other": "Add {{count}} products"
   },
-  "labels": {
-    "headerTitle": "HACCP labels",
-    "printTitle": "Shelfy labels",
-    "packaged": "Packaged",
-    "expires": "Expires",
-    "intro": "Generate an A4 sheet of labels: packaging date/time and expiry already filled in, with a blank line to write the product name by hand.",
-    "packagedOnSection": "PACKAGED ON",
-    "editDate": "Edit ›",
-    "useNow": "Use current date/time",
-    "durationSection": "DURATION (calculated expiry)",
-    "durations": {
-      "h24": "24 hours",
-      "h48": "48 hours",
-      "h72": "3 days",
-      "h120": "5 days",
-      "h168": "7 days"
-    },
-    "expiresOnLabel": "Expires on",
-    "howManySection": "HOW MANY LABELS",
-    "sheetsCount_one": "{{count}} sheet",
-    "sheetsCount_other": "{{count}} sheets",
-    "labelsCount_one": "{{count}} label",
-    "labelsCount_other": "{{count}} labels",
-    "generateAndPrint": "Generate and print",
-    "pickerTitle": "Packaging date and time",
-    "day": "Day",
-    "month": "Month",
-    "year": "Year",
-    "hour": "Hour",
-    "minute": "Minute",
-    "popupBlockedTitle": "Popup blocked",
-    "popupBlockedBody": "Enable popups for this site to generate the PDF.",
-    "generateFailed": "Couldn't generate the labels."
-  },
   "pushNotifications": {
     "consumedAction": "✓ Consumed",
     "androidChannelExpiry": "Expiry alerts",
@@ -817,10 +783,6 @@
         "product": "📦 Food",
         "other": "💬 Other"
       }
-    },
-    "restaurants": {
-      "title": "Restaurants",
-      "labels": "🏷️  HACCP labels"
     },
     "logout": {
       "button": "Log out",

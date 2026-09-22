@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Shelfy — Privacy Policy</title>
+<style>
+  :root {
+    --ink: #2f2a20;
+    --ink2: #6b6353;
+    --bg: #f5f3ec;
+    --surface: #ffffff;
+    --primary: #2f4a31;
+    --line: rgba(47,42,32,0.12);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 48px 24px 80px; }
+  header { margin-bottom: 32px; }
+  .badge {
+    display: inline-block; background: var(--primary); color: #fbfaf3;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 100px; margin-bottom: 16px;
+  }
+  h1 { font-size: 30px; margin: 0 0 8px; color: var(--ink); }
+  .updated { color: var(--ink2); font-size: 13px; margin: 0; }
+  .langSwitch { margin-top: 20px; display: flex; gap: 8px; }
+  .langBtn {
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+    padding: 6px 14px; border-radius: 100px; font-size: 13px; font-weight: 600;
+    cursor: pointer;
+  }
+  .langBtn.active { background: var(--primary); color: #fbfaf3; border-color: var(--primary); }
+  section { margin-bottom: 28px; }
+  h2 { font-size: 18px; color: var(--ink); margin: 0 0 10px; }
+  p, li { color: var(--ink2); font-size: 15px; }
+  ul { padding-left: 20px; margin: 8px 0; }
+  a { color: var(--primary); font-weight: 600; }
+  .card {
+    background: var(--surface); border-radius: 16px; padding: 18px 20px;
+    margin-bottom: 10px; border: 1px solid var(--line);
+  }
+  .card h3 { font-size: 14px; margin: 0 0 6px; color: var(--ink); }
+  .card p { margin: 0; font-size: 13.5px; }
+  footer { border-top: 1px solid var(--line); margin-top: 40px; padding-top: 20px; }
+  footer p { font-size: 13px; }
+  [data-lang="en"] { display: none; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="badge">Shelfy</span>
+      <h1>Informativa sulla Privacy</h1>
+      <p class="updated" data-lang="it">Ultimo aggiornamento: 21 settembre 2026</p>
+      <p class="updated" data-lang="en">Last updated: September 21, 2026</p>
+      <div class="langSwitch">
+        <button class="langBtn active" onclick="setLang('it')" id="btn-it">Italiano</button>
+        <button class="langBtn" onclick="setLang('en')" id="btn-en">English</button>
+      </div>
+    </header>
+
+    <div data-lang="it">
+      <section>
+        <h2>1. Titolare del trattamento</h2>
+        <p>Shelfy è sviluppata e gestita da Andrea Casula. Per qualsiasi richiesta relativa ai
+        tuoi dati personali puoi scrivere a
+        <a href="mailto:andrea.casula96@gmail.com">andrea.casula96@gmail.com</a>.</p>
+      </section>
+
+      <section>
+        <h2>2. Quali dati raccogliamo</h2>
+        <div class="card">
+          <h3>Dati account</h3>
+          <p>Email e nome, forniti tramite registrazione con email/password o Accesso Google
+          (Firebase Authentication).</p>
+        </div>
+        <div class="card">
+          <h3>Contenuti che inserisci</h3>
+          <p>Prodotti, date di scadenza, ricette e note che aggiungi nella tua dispensa
+          (personale o condivisa).</p>
+        </div>
+        <div class="card">
+          <h3>Foto e scansioni</h3>
+          <p>Fotocamera usata per scansionare codici a barre, scontrini ed etichette. Il
+          riconoscimento testo avviene <strong>sul dispositivo</strong>: la foto non lascia il
+          telefono, viene inviato ai nostri server solo il testo estratto, per completare
+          l'inserimento del prodotto o generare suggerimenti di ricette.</p>
+        </div>
+        <div class="card">
+          <h3>Notifiche push</h3>
+          <p>Un token del dispositivo, usato per avvisarti quando un prodotto sta per scadere.</p>
+        </div>
+        <div class="card">
+          <h3>Dati di acquisto</h3>
+          <p>Se attivi un abbonamento Premium, lo stato dell'abbonamento (attivo/scaduto, tipo di
+          piano) viene gestito tramite RevenueCat e gli store (Google Play / App Store). Non
+          gestiamo né memorizziamo i dati della tua carta di pagamento.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>3. Come usiamo i tuoi dati</h2>
+        <ul>
+          <li>Farti usare l'app: tracciare i prodotti, calcolare le scadenze, inviarti promemoria.</li>
+          <li>Far funzionare la dispensa condivisa tra le persone che inviti tu stesso tramite
+          codice/QR — nessuno può essere aggiunto senza il tuo consenso esplicito.</li>
+          <li>Generare suggerimenti di ricette e interpretare scontrini tramite servizi di
+          intelligenza artificiale di terze parti (vedi sezione 4).</li>
+          <li>Gestire il tuo abbonamento Premium, se attivo.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>4. Servizi di terze parti</h2>
+        <ul>
+          <li><strong>Google Firebase</strong> — autenticazione, database, hosting, notifiche push.</li>
+          <li><strong>Google Sign-In</strong> — accesso opzionale con account Google.</li>
+          <li><strong>Groq</strong> — elabora il testo estratto da scontrini/richieste per generare
+          ricette e suggerimenti (non riceve foto, solo testo).</li>
+          <li><strong>RevenueCat</strong> — gestisce lo stato degli abbonamenti in-app.</li>
+        </ul>
+        <p>Questi servizi trattano i dati secondo le proprie policy, nella misura necessaria a
+        fornire le funzionalità dell'app.</p>
+      </section>
+
+      <section>
+        <h2>5. Conservazione dei dati</h2>
+        <p>Conserviamo i tuoi dati finché il tuo account è attivo. Puoi richiedere la cancellazione
+        completa del tuo account e dei dati associati scrivendo a
+        <a href="mailto:andrea.casula96@gmail.com">andrea.casula96@gmail.com</a>.</p>
+      </section>
+
+      <section>
+        <h2>6. I tuoi diritti</h2>
+        <p>In quanto utente nell'Unione Europea, hai diritto di accesso, rettifica, cancellazione,
+        limitazione e portabilità dei tuoi dati, oltre al diritto di opporti al trattamento.
+        Puoi esercitare questi diritti contattandoci via email.</p>
+      </section>
+
+      <section>
+        <h2>7. Minori</h2>
+        <p>Shelfy non è rivolta a minori di 13 anni e non raccogliamo consapevolmente dati di
+        minori di tale età.</p>
+      </section>
+
+      <section>
+        <h2>8. Sicurezza</h2>
+        <p>I dati sono trasmessi tramite connessioni cifrate (HTTPS) e archiviati su infrastruttura
+        Google Firebase.</p>
+      </section>
+
+      <section>
+        <h2>9. Modifiche a questa informativa</h2>
+        <p>Possiamo aggiornare questa informativa nel tempo. La data di "ultimo aggiornamento" in
+        alto riflette la versione più recente.</p>
+      </section>
+    </div>
+
+    <div data-lang="en">
+      <section>
+        <h2>1. Data controller</h2>
+        <p>Shelfy is developed and operated by Andrea Casula. For any request regarding your
+        personal data, write to
+        <a href="mailto:andrea.casula96@gmail.com">andrea.casula96@gmail.com</a>.</p>
+      </section>
+
+      <section>
+        <h2>2. What we collect</h2>
+        <div class="card">
+          <h3>Account data</h3>
+          <p>Email and name, provided via email/password sign-up or Google Sign-In (Firebase
+          Authentication).</p>
+        </div>
+        <div class="card">
+          <h3>Content you add</h3>
+          <p>Products, expiry dates, recipes and notes you add to your pantry (personal or
+          shared).</p>
+        </div>
+        <div class="card">
+          <h3>Photos and scans</h3>
+          <p>Camera access is used to scan barcodes, receipts and labels. Text recognition
+          happens <strong>on your device</strong>: the photo never leaves your phone, only the
+          extracted text is sent to our servers to complete a product entry or generate recipe
+          suggestions.</p>
+        </div>
+        <div class="card">
+          <h3>Push notifications</h3>
+          <p>A device token, used to notify you when a product is about to expire.</p>
+        </div>
+        <div class="card">
+          <h3>Purchase data</h3>
+          <p>If you subscribe to Premium, your subscription status (active/expired, plan type) is
+          managed via RevenueCat and the app stores (Google Play / App Store). We never handle or
+          store your payment card details.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>3. How we use your data</h2>
+        <ul>
+          <li>To run the app: tracking products, computing expiry dates, sending reminders.</li>
+          <li>To run the shared pantry between people you invite yourself via code/QR — no one can
+          be added without your explicit consent.</li>
+          <li>To generate recipe suggestions and parse receipts via third-party AI services (see
+          section 4).</li>
+          <li>To manage your Premium subscription, if active.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>4. Third-party services</h2>
+        <ul>
+          <li><strong>Google Firebase</strong> — authentication, database, hosting, push
+          notifications.</li>
+          <li><strong>Google Sign-In</strong> — optional sign-in with a Google account.</li>
+          <li><strong>Groq</strong> — processes text extracted from receipts/requests to generate
+          recipes and suggestions (never receives photos, only text).</li>
+          <li><strong>RevenueCat</strong> — manages in-app subscription status.</li>
+        </ul>
+        <p>These services process data according to their own policies, to the extent necessary to
+        provide the app's features.</p>
+      </section>
+
+      <section>
+        <h2>5. Data retention</h2>
+        <p>We keep your data for as long as your account is active. You can request full deletion
+        of your account and associated data by emailing
+        <a href="mailto:andrea.casula96@gmail.com">andrea.casula96@gmail.com</a>.</p>
+      </section>
+
+      <section>
+        <h2>6. Your rights</h2>
+        <p>As an EU user, you have the right to access, rectify, delete, restrict and port your
+        data, as well as the right to object to processing. You can exercise these rights by
+        contacting us via email.</p>
+      </section>
+
+      <section>
+        <h2>7. Children</h2>
+        <p>Shelfy is not directed at children under 13, and we do not knowingly collect data from
+        children under that age.</p>
+      </section>
+
+      <section>
+        <h2>8. Security</h2>
+        <p>Data is transmitted over encrypted connections (HTTPS) and stored on Google Firebase
+        infrastructure.</p>
+      </section>
+
+      <section>
+        <h2>9. Changes to this policy</h2>
+        <p>We may update this policy over time. The "last updated" date at the top reflects the
+        most recent version.</p>
+      </section>
+    </div>
+
+    <footer>
+      <p>Shelfy — <a href="mailto:andrea.casula96@gmail.com">andrea.casula96@gmail.com</a></p>
+    </footer>
+  </div>
+
+  <script>
+    function setLang(lang) {
+      document.querySelectorAll('[data-lang]').forEach(function (el) {
+        el.style.display = (el.getAttribute('data-lang') === lang) ? '' : 'none';
+      });
+      document.getElementById('btn-it').classList.toggle('active', lang === 'it');
+      document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+    }
+  </script>
+</body>
+</html>

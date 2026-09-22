@@ -613,40 +613,6 @@
     "addCount_one": "Aggiungi {{count}} prodotto",
     "addCount_other": "Aggiungi {{count}} prodotti"
   },
-  "labels": {
-    "headerTitle": "Etichette HACCP",
-    "printTitle": "Etichette Shelfy",
-    "packaged": "Confezionato",
-    "expires": "Scade",
-    "intro": "Genera un foglio A4 di etichette: data/ora di confezionamento e scadenza già compilate, con una riga vuota per scrivere il nome del prodotto a mano.",
-    "packagedOnSection": "CONFEZIONATO IL",
-    "editDate": "Modifica ›",
-    "useNow": "Usa data/ora attuale",
-    "durationSection": "DURATA (scadenza calcolata)",
-    "durations": {
-      "h24": "24 ore",
-      "h48": "48 ore",
-      "h72": "3 giorni",
-      "h120": "5 giorni",
-      "h168": "7 giorni"
-    },
-    "expiresOnLabel": "Scade il",
-    "howManySection": "QUANTE ETICHETTE",
-    "sheetsCount_one": "{{count}} foglio",
-    "sheetsCount_other": "{{count}} fogli",
-    "labelsCount_one": "{{count}} etichetta",
-    "labelsCount_other": "{{count}} etichette",
-    "generateAndPrint": "Genera e stampa",
-    "pickerTitle": "Data e ora confezionamento",
-    "day": "Giorno",
-    "month": "Mese",
-    "year": "Anno",
-    "hour": "Ore",
-    "minute": "Minuti",
-    "popupBlockedTitle": "Popup bloccato",
-    "popupBlockedBody": "Abilita i popup per questo sito per generare il PDF.",
-    "generateFailed": "Impossibile generare le etichette."
-  },
   "pushNotifications": {
     "consumedAction": "✓ Consumato",
     "androidChannelExpiry": "Avvisi scadenza",
@@ -817,10 +783,6 @@
         "product": "📦 Cibo",
         "other": "💬 Altro"
       }
-    },
-    "restaurants": {
-      "title": "Ristoranti",
-      "labels": "🏷️  Etichette HACCP"
     },
     "logout": {
       "button": "Esci dall'account",
