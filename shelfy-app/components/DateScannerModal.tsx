@@ -276,7 +276,7 @@ export default function DateScannerModal({ visible, onClose, onResult }: Props) 
             <CameraView
               key={camKey}
               ref={camRef}
-              style={StyleSheet.absoluteFillObject}
+              style={StyleSheet.absoluteFill}
               facing="back"
               zoom={zoom}
               onMountError={handleMountError}
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
   },
   grantBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: '#fbfaf3' },
 
-  overlay: { ...StyleSheet.absoluteFillObject, zIndex: 1 },
+  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 },
   dim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
   reticleRow: { flexDirection: 'row', height: 150 },
   dimSide: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },

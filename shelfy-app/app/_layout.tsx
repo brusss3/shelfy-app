@@ -44,12 +44,12 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    // Nasconde la barra di navigazione Android (tasti indietro/home/recenti):
-    // riappare temporaneamente con uno swipe dal bordo e si richiude da sola
-    // ("overlay-swipe" = immersive sticky). No-op su iOS/web.
+    // Nasconde la barra di navigazione Android (tasti indietro/home/recenti).
+    // Il comportamento "riappare con swipe e si richiude da sola" è ora
+    // imposto di default dal sistema (Android 16 non permette più di
+    // configurarlo via API — setBehaviorAsync è stata rimossa). No-op su iOS/web.
     if (Platform.OS === 'android') {
       NavigationBar.setVisibilityAsync('hidden');
-      NavigationBar.setBehaviorAsync('overlay-swipe');
     }
   }, []);
 
@@ -64,7 +64,7 @@ export default function RootLayout() {
         <Image
           source={require('@/assets/splashScreenNew.png')}
           resizeMode="cover"
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
         />
       </View>
     );
@@ -98,7 +98,7 @@ export default function RootLayout() {
             <Stack.Screen name="join/[code]" options={{ headerShown: false }} />
             <Stack.Screen name="settings" options={{ headerShown: false }} />
             <Stack.Screen name="admin" options={{ headerShown: false }} />
-            <Stack.Screen name="labels" options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="paywall" options={{ headerShown: false, presentation: 'modal' }} />
           </Stack>
           </CommunityProvider>
           </RecipesProvider>

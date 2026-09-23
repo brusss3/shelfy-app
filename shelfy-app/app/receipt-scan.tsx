@@ -96,7 +96,7 @@ export default function ReceiptScanScreen() {
         <CameraView
           key={camKey}
           ref={camRef}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
           facing="back"
           zoom={zoom}
           onMountError={handleMountError}

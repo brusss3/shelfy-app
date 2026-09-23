@@ -23,6 +23,7 @@
         "backgroundColor": "#2f4a31"
       },
       "package": "com.shelfy.sheflyapp",
+      "versionCode": 1,
       "permissions": [
         "CAMERA",
         "RECEIVE_BOOT_COMPLETED",
@@ -69,7 +70,8 @@
       "expo-web-browser",
       "@react-native-google-signin/google-signin",
       "expo-sharing",
-      "expo-localization"
+      "expo-localization",
+      "expo-status-bar"
     ],
     "scheme": "shelfy",
     "experiments": {
@@ -84,6 +86,11 @@
         "webClientId": "288975536587-1q7p528mc3t4i9plc9udsknfrc7s5u1m.apps.googleusercontent.com",
         "iosClientId": "",
         "androidClientId": "288975536587-c26i2ncmtbmcqr4c3rg3953eds7ofhit.apps.googleusercontent.com"
+      },
+      "revenueCat": {
+        "androidKey": "goog_vfsUpiZZELRATmrwMOmFDbWiGBD",
+        "webKey": "rcb_UUHrrtTHiztcxkcaWtjGcxJZURjt",
+        "webKeySandbox": "rcb_sb_WeRqKsMNgFTPmZxpjvtYnHFbd"
       }
     }
   }

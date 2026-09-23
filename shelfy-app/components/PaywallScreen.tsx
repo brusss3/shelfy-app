@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Platform, StyleSheet,
+  View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { getOfferings, purchasePackage, restorePurchases, getActiveSubscriptionInfo } from '@/lib/purchases';
 import { showAlert } from '@/lib/alert';
-import { SubscriptionType } from '@/types';
 import PrimaryButton from '@/components/PrimaryButton';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 
 const isExpoGo = Constants.executionEnvironment === 'storeClient';
-const isWeb = Platform.OS === 'web';
 
 export default function PaywallScreen() {
-  const { setPremium, setSubscription } = useAuth();
+  const { user, setPremium, setSubscription } = useAuth();
+  const router = useRouter();
   const { t, i18n } = useTranslation();
   const [offerings, setOfferings] = useState<any[]>([]);
   const [loadingOfferings, setLoadingOfferings] = useState(true);
@@ -41,24 +41,14 @@ export default function PaywallScreen() {
         await setPremium(true);
         const info = await getActiveSubscriptionInfo();
         if (info) await setSubscription(info);
+        // Senza questo si resta sui piani come se l'acquisto non fosse
+        // avvenuto: il checkout si chiude e la schermata sotto è identica.
+        showAlert(t('paywall.purchaseDoneTitle'), t('paywall.purchaseDoneBody'), [
+          { text: t('paywall.purchaseDoneCta'), onPress: () => router.back() },
+        ]);
       }
     } catch (e: any) {
       showAlert(t('paywall.purchaseErrorTitle'), e?.message ?? t('paywall.purchaseErrorFallback'));
-    } finally {
-      setPurchasing(false);
-    }
-  };
-
-  const handleWebTestPurchase = async (type: SubscriptionType) => {
-    setPurchasing(true);
-    try {
-      const now = new Date();
-      const expiresAt = type === 'annual'
-        ? new Date(now.setFullYear(now.getFullYear() + 1)).toISOString()
-        : new Date(now.setMonth(now.getMonth() + 1)).toISOString();
-      await setSubscription({ type, expiresAt });
-    } catch (e: any) {
-      alert(e?.message ?? t('paywall.webSimErrorFallback'));
     } finally {
       setPurchasing(false);
     }
@@ -109,47 +99,22 @@ export default function PaywallScreen() {
           ))}
         </View>
 
-        {isExpoGo ? (
+        {user?.isPremium ? (
+          <View style={styles.activeBox}>
+            <Text style={styles.activeText}>{t('paywall.alreadyPremium')}</Text>
+          </View>
+        ) : isExpoGo ? (
           <View style={styles.noteBox}>
             <Text style={styles.noteText}>
               {t('paywall.expoGoNotePrefix')}<Text style={{ fontFamily: FONTS.sansBold }}>expo-dev-client</Text>{t('paywall.expoGoNoteSuffix')}
             </Text>
-          </View>
-        ) : isWeb ? (
-          <View style={styles.webTestBox}>
-            <Text style={styles.webTestLabel}>{t('paywall.webTestLabel')}</Text>
-            <Text style={styles.webTestDesc}>
-              {t('paywall.webTestDesc')}
-            </Text>
-            <View style={styles.webTestBtns}>
-              <TouchableOpacity
-                style={[styles.webTestBtn, purchasing && { opacity: 0.55 }]}
-                disabled={purchasing}
-                onPress={() => handleWebTestPurchase('monthly')}
-                activeOpacity={0.85}
-              >
-                {purchasing
-                  ? <ActivityIndicator color="#fbfaf3" size="small" />
-                  : <Text style={styles.webTestBtnText}>{t('paywall.monthlyTest')}</Text>}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.webTestBtn, styles.webTestBtnAnnual, purchasing && { opacity: 0.55 }]}
-                disabled={purchasing}
-                onPress={() => handleWebTestPurchase('annual')}
-                activeOpacity={0.85}
-              >
-                {purchasing
-                  ? <ActivityIndicator color="#fbfaf3" size="small" />
-                  : <Text style={styles.webTestBtnText}>{t('paywall.annualTest')}</Text>}
-              </TouchableOpacity>
-            </View>
           </View>
         ) : loadingOfferings ? (
           <ActivityIndicator color={T.primary} style={{ marginVertical: 32 }} />
         ) : offerings.length === 0 ? (
           <View style={styles.noteBox}>
             <Text style={styles.noteText}>
-              {t('paywall.productsNotConfiguredPrefix')}<Text style={{ fontFamily: FONTS.sansBold }}>lib/purchases.ts</Text>{t('paywall.productsNotConfiguredSuffix')}
+              {t('paywall.productsNotConfiguredPrefix')}<Text style={{ fontFamily: FONTS.sansBold }}>app.json</Text>{t('paywall.productsNotConfiguredSuffix')}
             </Text>
           </View>
         ) : (
@@ -192,7 +157,7 @@ export default function PaywallScreen() {
           </View>
         )}
 
-        {!isExpoGo && !isWeb && offerings.length > 0 && (
+        {!isExpoGo && !user?.isPremium && offerings.length > 0 && (
           <PrimaryButton
             onPress={handlePurchase}
             disabled={!selectedPkg}
@@ -253,6 +218,16 @@ const styles = StyleSheet.create({
   },
   noteText: { fontSize: 13, color: T.ink2, lineHeight: 20, fontFamily: FONTS.sans },
 
+  activeBox: {
+    backgroundColor: T.okSoft, borderRadius: RADIUS.lg, padding: 16,
+    width: '100%', marginBottom: 20,
+    borderWidth: 1, borderColor: 'rgba(56,140,80,0.25)',
+  },
+  activeText: {
+    fontSize: 14, color: T.ok, lineHeight: 20, fontFamily: FONTS.sansSemiBold,
+    textAlign: 'center',
+  },
+
   packages: { flexDirection: 'row', gap: 12, width: '100%', marginBottom: 20 },
   packageCard: {
     flex: 1, backgroundColor: T.surface, borderRadius: RADIUS.lg,
@@ -272,20 +247,6 @@ const styles = StyleSheet.create({
 
   restoreBtn: { paddingVertical: 10, marginBottom: 16 },
   restoreText: { fontSize: 13, color: T.primary, fontFamily: FONTS.sansSemiBold, textAlign: 'center' },
-
-  webTestBox: {
-    width: '100%', backgroundColor: '#fdf6e3', borderRadius: RADIUS.lg,
-    padding: 20, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(180,140,40,0.2)',
-  },
-  webTestLabel: { fontFamily: FONTS.sansBold, fontSize: 13, color: T.warn, marginBottom: 8 },
-  webTestDesc: { fontFamily: FONTS.sans, fontSize: 13, color: T.ink2, lineHeight: 19, marginBottom: 16 },
-  webTestBtns: { flexDirection: 'row', gap: 10 },
-  webTestBtn: {
-    flex: 1, backgroundColor: T.primary, borderRadius: RADIUS.md,
-    paddingVertical: 12, alignItems: 'center',
-  },
-  webTestBtnAnnual: { backgroundColor: T.warn },
-  webTestBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: '#fbfaf3' },
 
   legal: {
     fontSize: 11, color: T.mute, textAlign: 'center', lineHeight: 16,

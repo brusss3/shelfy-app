@@ -16,6 +16,7 @@ import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
 import { tintForCategory } from '@/lib/urgency';
 import { ocrAvailable } from '@/lib/ocr';
 import { showAlert } from '@/lib/alert';
+import { handledProductLimit } from '@/lib/upsell';
 
 const ZONES: { id: Zone; labelKey: string; icon: string }[] = [
   { id: 'frigo',    labelKey: 'common.zones.frigo',    icon: '❄️' },
@@ -136,7 +137,9 @@ export default function AddScreen() {
       });
       router.back();
     } catch (e: any) {
-      showAlert(t('common.error'), e.message ?? t('add.errors.saveFailed'));
+      if (!handledProductLimit(e)) {
+        showAlert(t('common.error'), e.message ?? t('add.errors.saveFailed'));
+      }
     } finally {
       setSaving(false);
     }

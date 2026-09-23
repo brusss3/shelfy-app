@@ -120,6 +120,7 @@ export interface User {
   subscriptionExpiresAt?: string | null;
   notificationsEnabled?: boolean;
   pushToken?: string;
+  webPushToken?: string;
   adminNotifNewUsers?: boolean;
   adminNotifFeedback?: boolean;
   /** Blocco AI sul singolo account, impostabile solo dall'admin. */

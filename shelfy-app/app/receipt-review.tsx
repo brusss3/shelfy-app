@@ -11,6 +11,7 @@ import { Zone } from '@/types';
 import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
 import { tintForCategory } from '@/lib/urgency';
 import { showAlert } from '@/lib/alert';
+import { handledProductLimit } from '@/lib/upsell';
 import PrimaryButton from '@/components/PrimaryButton';
 
 const ZONES: { id: Zone; labelKey: string; icon: string }[] = [
@@ -135,7 +136,9 @@ export default function ReceiptReviewScreen() {
       );
       router.replace('/(tabs)');
     } catch (e: any) {
-      showAlert(t('common.error'), e?.message ?? t('receiptReview.saveFailed'));
+      if (!handledProductLimit(e)) {
+        showAlert(t('common.error'), e?.message ?? t('receiptReview.saveFailed'));
+      }
     } finally {
       setSaving(false);
     }

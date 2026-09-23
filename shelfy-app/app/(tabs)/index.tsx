@@ -30,7 +30,7 @@ const ZONES: { id: Zone; labelKey: string; icon: string }[] = [
 ];
 
 export default function HomeScreen() {
-  const { products, loading } = useProducts();
+  const { products, loading, productLimit, productsLeft } = useProducts();
   const { user } = useAuth();
   const { activePantry } = usePantry();
   const router = useRouter();
@@ -105,7 +105,9 @@ export default function HomeScreen() {
             riga rimanda invece di duplicare. */}
         <View style={styles.statsRow}>
           <Text style={styles.statsCount}>
-            {t('home.productCount', { count: products.length })}
+            {productLimit !== null
+              ? t('home.productCountLimited', { count: products.length, limit: productLimit })
+              : t('home.productCount', { count: products.length })}
           </Text>
           {urgentCount + expiredCount > 0 && (
             <TouchableOpacity
@@ -124,6 +126,27 @@ export default function HomeScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Piano base: il tetto si fa vedere solo quando è vicino, così non
+            diventa rumore per chi ha la dispensa mezza vuota. */}
+        {productsLeft !== null && productsLeft <= 5 && (
+          <TouchableOpacity
+            style={[styles.limitBanner, productsLeft === 0 && styles.limitBannerFull]}
+            onPress={() => router.push('/paywall')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.limitBannerIcon}>{productsLeft === 0 ? '🔒' : '✨'}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.limitBannerTitle}>
+                {productsLeft === 0
+                  ? t('home.limitReachedTitle', { limit: productLimit })
+                  : t('home.limitNearTitle', { count: productsLeft })}
+              </Text>
+              <Text style={styles.limitBannerDesc}>{t('home.limitUpsellDesc')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={T.primaryInk} />
+          </TouchableOpacity>
+        )}
 
         {/* Ricerca e filtri condividono la stessa riga invece di stare uno
             sopra l'altro sempre visibili: di default sono le zone (l'uso più
@@ -285,6 +308,22 @@ const styles = StyleSheet.create({
   },
   urgentPillIcon: { fontSize: 13 },
   urgentPillText: { fontFamily: FONTS.sansBold, fontSize: 12, color: '#7a5a26' },
+
+  limitBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    marginHorizontal: 20, marginBottom: 14,
+    backgroundColor: T.primarySoft, borderRadius: RADIUS.lg,
+    paddingVertical: 12, paddingHorizontal: 14,
+    borderWidth: 1, borderColor: 'rgba(56,120,74,0.18)',
+  },
+  limitBannerFull: {
+    backgroundColor: T.warnSoft, borderColor: 'rgba(180,140,40,0.28)',
+  },
+  limitBannerIcon: { fontSize: 18 },
+  limitBannerTitle: { fontFamily: FONTS.sansBold, fontSize: 13, color: T.primaryInk },
+  limitBannerDesc: {
+    fontFamily: FONTS.sans, fontSize: 12, color: T.ink2, marginTop: 2, lineHeight: 16,
+  },
 
   // Il campo di ricerca è l'unico elemento "scavato" della schermata: si
   // riempie, non si preme, e l'incavo lo distingue dalle superfici sollevate.

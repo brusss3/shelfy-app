@@ -4,6 +4,7 @@ import {
   runTransaction,
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { aiUsageKey } from './limits';
 import { Product, Zone, CommunityRecipe, RecipeRequest, RecipeProposal, MyRecipe } from '@/types';
 import { notifyAdminsNewFeedback } from './notifications';
 
@@ -67,6 +68,10 @@ export async function getAllUsers(): Promise<AdminUserRecord[]> {
 
 export async function saveUserPushToken(uid: string, token: string): Promise<void> {
   await setDoc(doc(db, 'users', uid), { pushToken: token }, { merge: true });
+}
+
+export async function saveUserWebPushToken(uid: string, token: string): Promise<void> {
+  await setDoc(doc(db, 'users', uid), { webPushToken: token }, { merge: true });
 }
 
 export async function updateAdminNotifPreferences(
@@ -553,14 +558,9 @@ export async function adminSetUserAiDisabled(uid: string, disabled: boolean): Pr
   await setDoc(doc(db, 'users', uid), { aiDisabled: disabled }, { merge: true });
 }
 
-// Data odierna nel fuso italiano: stessa chiave usata dalla Cloud Function per
-// il documento del credito giornaliero.
-export function todayKeyRome(): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(new Date());
-}
-
-// True se l'utente ha già speso la generazione AI di oggi.
-export async function hasUsedDailyAi(userId: string): Promise<boolean> {
-  const snap = await getDoc(doc(collection(db, 'users', userId, 'aiUsage'), todayKeyRome()));
+// True se l'utente ha già speso il credito AI del periodo corrente: la
+// settimana con il piano base, la giornata con Premium.
+export async function hasUsedAiCredit(userId: string, isPremium: boolean): Promise<boolean> {
+  const snap = await getDoc(doc(collection(db, 'users', userId, 'aiUsage'), aiUsageKey(isPremium)));
   return snap.exists();
 }

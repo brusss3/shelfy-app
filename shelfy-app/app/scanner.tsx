@@ -4,14 +4,14 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
-import { useRouter } from 'expo-router';
-import { useIsFocused } from '@react-navigation/native';
+import { useRouter, useIsFocused } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { T, FONTS, RADIUS, CLAY } from '@/constants/theme';
 import { ScannedProduct, Zone, NutritionInfo, ScoreGrade } from '@/types';
 import { tintForCategory } from '@/lib/urgency';
 import { useProducts } from '@/context/ProductsContext';
 import { showAlert } from '@/lib/alert';
+import { handledProductLimit } from '@/lib/upsell';
 import { ocrAvailable } from '@/lib/ocr';
 import DateScannerModal from '@/components/DateScannerModal';
 import PrimaryButton from '@/components/PrimaryButton';
@@ -277,7 +277,9 @@ export default function ScannerScreen() {
       });
       router.back();
     } catch (e: any) {
-      showAlert(t('common.error'), e?.message ?? t('add.errors.saveFailed'));
+      if (!handledProductLimit(e)) {
+        showAlert(t('common.error'), e?.message ?? t('add.errors.saveFailed'));
+      }
     } finally {
       setSaving(false);
     }
@@ -309,7 +311,7 @@ export default function ScannerScreen() {
       {isFocused && !mountError && (
         <CameraView
           key={camKey}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
           facing="back"
           zoom={zoom}
           onMountError={handleMountError}
@@ -562,7 +564,7 @@ export default function ScannerScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0a0d09' },
 
-  overlay: { ...StyleSheet.absoluteFillObject, zIndex: 1 },
+  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 },
   topOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
   middleRow: { flexDirection: 'row', height: 180 },
   sideOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },

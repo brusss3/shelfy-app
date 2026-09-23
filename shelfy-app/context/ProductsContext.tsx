@@ -5,6 +5,7 @@ import {
   deleteProduct, moveProductZone, consumeOneUnit, openOneUnit,
 } from '@/lib/firestore';
 import { subscribeToConsumedAction } from '@/lib/notifications';
+import { FREE_PRODUCT_LIMIT, ProductLimitError } from '@/lib/limits';
 import { daysTo } from '@/lib/urgency';
 import { useAuth } from './AuthContext';
 import { usePantry } from './PantryContext';
@@ -12,6 +13,11 @@ import { usePantry } from './PantryContext';
 interface ProductsContextType {
   products: Product[];
   loading: boolean;
+  /** Tetto prodotti dello scope attivo: `null` = nessun limite (Premium, o
+   *  dispensa condivisa, che non è mai limitata). */
+  productLimit: number | null;
+  /** Posti ancora liberi sotto il tetto; `null` se non c'è tetto. */
+  productsLeft: number | null;
   addNewProduct: (data: Omit<Product, 'id' | 'userId' | 'addedBy'>) => Promise<void>;
   addNewProducts: (data: Omit<Product, 'id' | 'userId' | 'addedBy'>[]) => Promise<void>;
   removeProduct: (id: string) => Promise<void>;
@@ -55,7 +61,10 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
       },
     );
     return unsub;
-  }, [user, activePantryId]);
+    // Solo l'uid: `user` è un oggetto nuovo a ogni snapshot del documento
+    // utente (anche per campi che non c'entrano nulla, es. pushToken), e
+    // rimetterebbe `loading` a true facendo lampeggiare tutta la schermata.
+  }, [user?.uid, activePantryId]);
 
   // Le notifiche di scadenza NON si schedulano qui: coprono tutte le dispense
   // dell'utente (personale + condivise), non solo quella attiva in questa
@@ -74,20 +83,30 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
     });
   }, [user]);
 
+  // Il tetto vale solo sulla dispensa personale di un account base: una casa
+  // condivisa è una risorsa di gruppo, bloccarla penalizzerebbe anche i membri
+  // Premium.
+  const productLimit = !user?.isPremium && activePantryId === null ? FREE_PRODUCT_LIMIT : null;
+  const productsLeft = productLimit === null ? null : Math.max(0, productLimit - products.length);
+
   const addNewProduct = useCallback(
     async (data: Omit<Product, 'id' | 'userId' | 'addedBy'>) => {
       if (!user) return;
+      if (productLimit !== null && products.length >= productLimit) throw new ProductLimitError();
       await addProduct(user.uid, activePantryId, data);
     },
-    [user, activePantryId],
+    [user, activePantryId, productLimit, products.length],
   );
 
   const addNewProducts = useCallback(
     async (data: Omit<Product, 'id' | 'userId' | 'addedBy'>[]) => {
       if (!user || data.length === 0) return;
+      if (productLimit !== null && products.length + data.length > productLimit) {
+        throw new ProductLimitError();
+      }
       await addProductsBulk(user.uid, activePantryId, data);
     },
-    [user, activePantryId],
+    [user, activePantryId, productLimit, products.length],
   );
 
   const removeProduct = useCallback(
@@ -140,7 +159,7 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ProductsContext.Provider
-      value={{ products, loading, addNewProduct, addNewProducts, removeProduct, changeZone, editProduct, consumeOne, consumeAll, markOpened, daysTo }}
+      value={{ products, loading, productLimit, productsLeft, addNewProduct, addNewProducts, removeProduct, changeZone, editProduct, consumeOne, consumeAll, markOpened, daysTo }}
     >
       {children}
     </ProductsContext.Provider>

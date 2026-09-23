@@ -8,8 +8,9 @@ import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
-import { submitFeedback, FeedbackCategory } from '@/lib/firestore';
+import { submitFeedback, FeedbackCategory, saveUserWebPushToken } from '@/lib/firestore';
 import { openSubscriptionManagement } from '@/lib/purchases';
+import { registerWebPush, needsHomeScreenInstall } from '@/lib/webPush';
 import { showAlert } from '@/lib/alert';
 import { LanguageOption, getStoredLanguageOption, setAppLanguage } from '@/lib/i18n';
 import PrimaryButton from '@/components/PrimaryButton';
@@ -60,18 +61,22 @@ export default function SettingsScreen() {
   const onToggleNotif = async (value: boolean) => {
     setSavingNotif(true);
     try {
+      if (Platform.OS === 'web' && value && user) {
+        const token = await registerWebPush();
+        if (!token) {
+          showAlert(t('settings.notifications.webBlockedTitle'), t('settings.notifications.webBlockedBody'));
+          return;
+        }
+        await saveUserWebPushToken(user.uid, token);
+      }
       await setNotificationsEnabled(value);
     } finally {
       setSavingNotif(false);
     }
   };
 
-  const handleManageSub = () => {
-    if (Platform.OS === 'web') {
-      alert(t('settings.subscription.manageWebAlert'));
-      return;
-    }
-    openSubscriptionManagement();
+  const handleManageSub = async () => {
+    await openSubscriptionManagement();
   };
 
   const handleLogout = () => {
@@ -154,6 +159,20 @@ export default function SettingsScreen() {
             </Section>
           )}
 
+          {!isPremium && (
+            <TouchableOpacity
+              style={styles.upsellCard}
+              onPress={() => router.push('/paywall')}
+              activeOpacity={0.85}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.upsellTitle}>{t('settings.upsell.title')}</Text>
+                <Text style={styles.upsellDesc}>{t('settings.upsell.desc')}</Text>
+              </View>
+              <Text style={styles.chevronLarge}>›</Text>
+            </TouchableOpacity>
+          )}
+
           {/* Lingua */}
           <Section title={t('settings.language.title')}>
             <View style={styles.langRow}>
@@ -175,25 +194,26 @@ export default function SettingsScreen() {
 
           {/* Notifiche */}
           <Section title={t('settings.notifications.title')}>
-            <View style={styles.row}>
-              <View style={{ flex: 1, marginRight: 12 }}>
-                <Text style={styles.rowLabel}>{t('settings.notifications.push')}</Text>
-                <Text style={styles.rowSub}>
-                  {t('settings.notifications.desc')}
-                  {Platform.OS === 'web' ? t('settings.notifications.webOnly') : ''}
-                </Text>
+            {Platform.OS === 'web' && needsHomeScreenInstall() ? (
+              <Text style={styles.rowSub}>{t('settings.notifications.iosInstallHint')}</Text>
+            ) : (
+              <View style={styles.row}>
+                <View style={{ flex: 1, marginRight: 12 }}>
+                  <Text style={styles.rowLabel}>{t('settings.notifications.push')}</Text>
+                  <Text style={styles.rowSub}>{t('settings.notifications.desc')}</Text>
+                </View>
+                {savingNotif ? (
+                  <ActivityIndicator color={T.primary} />
+                ) : (
+                  <Switch
+                    value={notifEnabled}
+                    onValueChange={onToggleNotif}
+                    trackColor={{ false: T.line, true: T.primary }}
+                    thumbColor="#fff"
+                  />
+                )}
               </View>
-              {savingNotif ? (
-                <ActivityIndicator color={T.primary} />
-              ) : (
-                <Switch
-                  value={notifEnabled}
-                  onValueChange={onToggleNotif}
-                  trackColor={{ false: T.line, true: T.primary }}
-                  thumbColor="#fff"
-                />
-              )}
-            </View>
+            )}
           </Section>
 
           {/* Feedback */}
@@ -295,6 +315,14 @@ const styles = StyleSheet.create({
 
   smallBtn: { backgroundColor: T.primarySoft, borderRadius: RADIUS.md, paddingVertical: 9, paddingHorizontal: 14 },
   smallBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: T.primaryInk },
+
+  upsellCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: T.primary, borderRadius: RADIUS.lg, padding: 16, ...SHADOW.card,
+  },
+  upsellTitle: { fontFamily: FONTS.sansBold, fontSize: 15, color: '#fbfaf3' },
+  upsellDesc: { fontFamily: FONTS.sans, fontSize: 12, color: 'rgba(251,250,243,0.8)', marginTop: 2 },
+  chevronLarge: { fontSize: 22, color: '#fbfaf3' },
 
   langRow: { flexDirection: 'row', gap: 8 },
   langOpt: {

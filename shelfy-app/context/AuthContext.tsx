@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import {
   onAuthStateChanged,
@@ -15,7 +15,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-// import { initPurchases, checkPremiumStatus } from '@/lib/purchases'; // RC disabilitato
+import { initPurchases, checkPremiumStatus } from '@/lib/purchases';
 import { User, SubscriptionType } from '@/types';
 import { notifyAdminsNewUser } from '@/lib/notifications';
 
@@ -53,6 +53,9 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  // Stato premium secondo RevenueCat, fonte di verità finché il webhook non
+  // allinea Firestore. Sopravvive agli snapshot del documento utente.
+  const rcPremiumRef = useRef(false);
 
   useEffect(() => {
     // Completa un eventuale login via redirect (fallback PWA). Su successo
@@ -74,8 +77,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('[AuthContext] onAuthStateChanged uid:', firebaseUser?.uid ?? 'null');
 
       if (firebaseUser) {
-        // initPurchases(firebaseUser.uid); // RC disabilitato
-        const rcPremium = false; // checkPremiumStatus() disabilitato
+        initPurchases(firebaseUser.uid);
+        // In un ref, non in una const catturata dalla closure: dopo un acquisto
+        // va aggiornato, altrimenti il primo snapshot del documento utente
+        // ricalcolerebbe isPremium con il valore letto al login (false) e
+        // spegnerebbe il premium appena acquistato.
+        rcPremiumRef.current = await checkPremiumStatus();
 
         // Ascolta il documento utente in tempo reale — aggiorna isPremium senza rilogin
         unsubFirestore = onSnapshot(
@@ -103,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             const data = snap.data();
             const firestorePremium: boolean = data?.isPremium ?? false;
-            const isPremium = firestorePremium || rcPremium;
+            const isPremium = firestorePremium || rcPremiumRef.current;
             const isAdmin: boolean = data?.isAdmin ?? false;
             const subscriptionType = data?.subscriptionType ?? null;
             const subscriptionExpiresAt = data?.subscriptionExpiresAt ?? null;
@@ -114,7 +121,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Blocco AI per singolo utente, impostato solo dall'admin.
             const aiDisabled: boolean = data?.aiDisabled ?? false;
 
-            // RC sync disabilitato: if (rcPremium && !firestorePremium) { ... }
+            // `isPremium` su Firestore lo scrive SOLO il webhook RevenueCat
+            // (Cloud Function, Admin SDK): le regole lo proteggono, e un
+            // tentativo dal client verrebbe applicato in locale e poi rifiutato
+            // dal server, facendo rimbalzare lo snapshot all'infinito.
+            // Qui RevenueCat serve solo a sbloccare subito la sessione
+            // corrente, in attesa che il webhook allinei il documento.
 
             setUser({
               uid: firebaseUser.uid,
@@ -138,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               uid: firebaseUser.uid,
               email: firebaseUser.email,
               displayName: firebaseUser.displayName,
-              isPremium: rcPremium,
+              isPremium: rcPremiumRef.current,
             });
             setLoading(false);
           },
@@ -233,22 +245,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signOut(auth);
   };
 
+  // Stato abbonamento: aggiorna SOLO la sessione locale, così la UI reagisce
+  // subito dopo un acquisto. La verità su Firestore la scrive il webhook
+  // RevenueCat lato server — le regole vietano al client di toccare
+  // isPremium/subscription*, e provarci fa rimbalzare lo snapshot.
   const setPremium = async (value: boolean) => {
-    if (!user) return;
-    try {
-      await setDoc(doc(db, 'users', user.uid), { isPremium: value }, { merge: true });
-    } catch {}
+    rcPremiumRef.current = value;
     setUser((prev) => prev ? { ...prev, isPremium: value } : null);
   };
 
   const setSubscription = async (info: { type: SubscriptionType; expiresAt: string | null } | null) => {
-    if (!user) return;
     const patch = info
       ? { isPremium: true, subscriptionType: info.type, subscriptionExpiresAt: info.expiresAt }
       : { subscriptionType: null, subscriptionExpiresAt: null };
-    try {
-      await setDoc(doc(db, 'users', user.uid), patch, { merge: true });
-    } catch {}
+    if (info) rcPremiumRef.current = true;
     setUser((prev) => prev ? { ...prev, ...patch } : null);
   };
 

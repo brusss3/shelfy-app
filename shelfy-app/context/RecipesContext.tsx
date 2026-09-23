@@ -4,7 +4,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import {
   subscribeToMyRecipes, createMyRecipe, deleteMyRecipe, markMyRecipePublished,
-  createCommunityRecipe, hasUsedDailyAi, subscribeToAiEnabled,
+  createCommunityRecipe, hasUsedAiCredit, subscribeToAiEnabled,
 } from '@/lib/firestore';
 import { CommunityRecipe, SavedRecipe, MyRecipe } from '@/types';
 
@@ -14,8 +14,9 @@ interface RecipesContextType {
   /** Ricette scritte dall'utente o generate dall'AI, private finché non pubblicate. */
   myRecipes: MyRecipe[];
   loading: boolean;
-  /** True se la generazione AI di oggi è già stata usata. */
-  aiUsedToday: boolean;
+  /** True se il credito AI del periodo corrente è già stato speso: la
+   *  settimana con il piano base, la giornata con Premium. */
+  aiCreditUsed: boolean;
   /** False se l'admin ha spento l'AI globalmente o su questo account. */
   aiEnabled: boolean;
   refreshAiUsage: () => Promise<void>;
@@ -33,11 +34,11 @@ export function RecipesProvider({ children }: { children: React.ReactNode }) {
   const [savedRecipes, setSavedRecipes] = useState<SavedRecipe[]>([]);
   const [myRecipes, setMyRecipes] = useState<MyRecipe[]>([]);
   const [loading, setLoading] = useState(false);
-  const [aiUsedToday, setAiUsedToday] = useState(false);
+  const [aiCreditUsed, setAiCreditUsed] = useState(false);
   const [aiGloballyEnabled, setAiGloballyEnabled] = useState(true);
 
   useEffect(() => {
-    if (!user) { setSavedRecipes([]); setMyRecipes([]); setAiUsedToday(false); return; }
+    if (!user) { setSavedRecipes([]); setMyRecipes([]); setAiCreditUsed(false); return; }
     setLoading(true);
 
     const savedRef = collection(db, 'users', user.uid, 'savedRecipes');
@@ -51,15 +52,15 @@ export function RecipesProvider({ children }: { children: React.ReactNode }) {
     const unsubMine = subscribeToMyRecipes(user.uid, setMyRecipes, () => {});
     const unsubAi = subscribeToAiEnabled(setAiGloballyEnabled, () => {});
 
-    hasUsedDailyAi(user.uid).then(setAiUsedToday).catch(() => {});
+    hasUsedAiCredit(user.uid, !!user.isPremium).then(setAiCreditUsed).catch(() => {});
 
     return () => { unsubSaved(); unsubMine(); unsubAi(); };
-  }, [user?.uid]);
+  }, [user?.uid, user?.isPremium]);
 
   const refreshAiUsage = useCallback(async () => {
     if (!user) return;
-    setAiUsedToday(await hasUsedDailyAi(user.uid).catch(() => false));
-  }, [user?.uid]);
+    setAiCreditUsed(await hasUsedAiCredit(user.uid, !!user.isPremium).catch(() => false));
+  }, [user?.uid, user?.isPremium]);
 
   const saveRecipe = async (recipe: CommunityRecipe) => {
     if (!user) return;
@@ -115,7 +116,7 @@ export function RecipesProvider({ children }: { children: React.ReactNode }) {
   return (
     <RecipesContext.Provider
       value={{
-        savedRecipes, myRecipes, loading, aiUsedToday,
+        savedRecipes, myRecipes, loading, aiCreditUsed,
         aiEnabled: aiGloballyEnabled && !user?.aiDisabled,
         refreshAiUsage,
         saveRecipe, markCompleted, addMyRecipe, removeMyRecipe, publishMyRecipe,

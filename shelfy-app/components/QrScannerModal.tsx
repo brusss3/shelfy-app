@@ -89,7 +89,7 @@ export default function QrScannerModal({ visible, onClose, onResult }: Props) {
         ) : (
           <>
             <CameraView
-              style={StyleSheet.absoluteFillObject}
+              style={StyleSheet.absoluteFill}
               facing="back"
               onMountError={handleMountError}
               barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   },
   grantBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: '#fbfaf3' },
 
-  overlay: { ...StyleSheet.absoluteFillObject, zIndex: 1 },
+  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 },
   dim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
   reticleRow: { flexDirection: 'row', height: 240 },
   dimSide: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },

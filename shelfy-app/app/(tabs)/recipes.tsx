@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/context/AuthContext';
 import { useProducts } from '@/context/ProductsContext';
 import { useCommunity } from '@/context/CommunityContext';
 import { useRecipes } from '@/context/RecipesContext';
@@ -28,9 +29,11 @@ function matchCount(recipe: CommunityRecipe, expiringNames: string[]): number {
 }
 
 export default function RecipesScreen() {
+  const { user } = useAuth();
+  const isPremium = !!user?.isPremium;
   const { products } = useProducts();
   const { recipes, requests, loading } = useCommunity();
-  const { myRecipes, savedRecipes, aiUsedToday, aiEnabled, refreshAiUsage } = useRecipes();
+  const { myRecipes, savedRecipes, aiCreditUsed, aiEnabled, refreshAiUsage } = useRecipes();
   const router = useRouter();
   const { t } = useTranslation();
   const [view, setView] = useState<View_>('recipes');
@@ -280,9 +283,9 @@ export default function RecipesScreen() {
               )}
 
               <TouchableOpacity
-                style={[styles.aiBtn, (generating || aiUsedToday || !aiEnabled) && { opacity: 0.6 }]}
+                style={[styles.aiBtn, (generating || aiCreditUsed || !aiEnabled) && { opacity: 0.6 }]}
                 onPress={handleGenerate}
-                disabled={generating || aiUsedToday || !aiEnabled}
+                disabled={generating || aiCreditUsed || !aiEnabled}
                 activeOpacity={0.85}
               >
                 {generating ? (
@@ -291,12 +294,29 @@ export default function RecipesScreen() {
                   <Text style={styles.aiBtnText}>
                     {!aiEnabled
                       ? t('recipes.aiUnavailable')
-                      : aiUsedToday
-                        ? t('recipes.aiAlreadyToday')
+                      : aiCreditUsed
+                        ? (isPremium ? t('recipes.aiAlreadyToday') : t('recipes.aiAlreadyThisWeek'))
                         : t('recipes.aiGenerate')}
                   </Text>
                 )}
               </TouchableOpacity>
+
+              {/* Piano attivo: quante ricette AI spettano, e come sbloccarne di più */}
+              {isPremium ? (
+                <Text style={styles.aiPlanNote}>{t('recipes.planPremiumNote')}</Text>
+              ) : (
+                <TouchableOpacity
+                  style={styles.aiUpsell}
+                  onPress={() => router.push('/paywall')}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.aiUpsellText}>
+                    <Text style={styles.aiUpsellStrong}>{t('recipes.planFreeLabel')}</Text>
+                    {t('recipes.planFreeNote')}
+                  </Text>
+                  <Text style={styles.aiUpsellCta}>{t('recipes.planUpgradeCta')}</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {aiFallback.length > 0 && (
@@ -462,6 +482,22 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginTop: 12,
   },
   aiBtnText: { color: '#1a2018', fontFamily: FONTS.sansBold, fontSize: 15 },
+
+  aiPlanNote: {
+    color: 'rgba(255,255,255,0.65)', fontSize: 12, fontFamily: FONTS.sans,
+    marginTop: 10, textAlign: 'center',
+  },
+  aiUpsell: {
+    marginTop: 12, paddingTop: 12,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.15)',
+  },
+  aiUpsellText: {
+    color: 'rgba(255,255,255,0.75)', fontSize: 12, fontFamily: FONTS.sans, lineHeight: 17,
+  },
+  aiUpsellStrong: { color: '#fbfaf3', fontFamily: FONTS.sansBold },
+  aiUpsellCta: {
+    color: '#fbfaf3', fontSize: 13, fontFamily: FONTS.sansBold, marginTop: 6,
+  },
 
   publishedBadge: {
     backgroundColor: T.okSoft, borderRadius: RADIUS.tag, paddingVertical: 4, paddingHorizontal: 8,

@@ -1,11 +1,16 @@
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onCall, onRequest, HttpsError } from 'firebase-functions/v2/https';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { defineSecret } from 'firebase-functions/params';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue, Transaction } from 'firebase-admin/firestore';
+import { getMessaging } from 'firebase-admin/messaging';
+import { timingSafeEqual } from 'node:crypto';
 
 initializeApp();
 
 const GROQ_API_KEY = defineSecret('GROQ_API_KEY');
+// Valore dell'header Authorization configurato su RevenueCat → Webhooks.
+const RC_WEBHOOK_SECRET = defineSecret('RC_WEBHOOK_SECRET');
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL = 'openai/gpt-oss-120b';
@@ -26,6 +31,23 @@ interface GeneratedRecipe {
 // "2026-09-14". Il client usa la stessa formula per sapere se ha già generato.
 function todayKeyRome(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(new Date());
+}
+
+function tomorrowKeyRome(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(d);
+}
+
+// Lunedì della settimana corrente in data civile italiana: chiave del credito
+// AI settimanale del piano base.
+// ⚠️ Duplicata identica in lib/limits.ts lato app — vanno tenute allineate.
+function weekKeyRome(): string {
+  const [y, m, d] = todayKeyRome().split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  const mondayOffset = (date.getUTCDay() + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - mondayOffset);
+  return `w:${date.toISOString().slice(0, 10)}`;
 }
 
 function buildPrompt(ingredients: string[]): string {
@@ -136,7 +158,15 @@ export const generateDailyRecipe = onCall(
       throw new HttpsError('permission-denied', 'Le ricette AI non sono attive sul tuo account');
     }
 
-    const usageRef = db.collection('users').doc(uid).collection('aiUsage').doc(todayKeyRome());
+    // Il piano base ha un credito settimanale, il Premium uno giornaliero: le
+    // due chiavi vivono in documenti diversi, quindi chi passa a Premium dopo
+    // aver speso il credito della settimana può generare subito.
+    const isPremium = userSnap.data()?.isPremium === true;
+    const usageRef = db
+      .collection('users')
+      .doc(uid)
+      .collection('aiUsage')
+      .doc(isPremium ? todayKeyRome() : weekKeyRome());
 
     // Prenota il credito PRIMA di chiamare Groq: due richieste in parallelo non
     // possono generare due ricette. Se poi Groq fallisce la prenotazione viene
@@ -144,7 +174,12 @@ export const generateDailyRecipe = onCall(
     await db.runTransaction(async (tx: Transaction) => {
       const snap = await tx.get(usageRef);
       if (snap.exists) {
-        throw new HttpsError('resource-exhausted', 'Hai già generato la ricetta di oggi');
+        throw new HttpsError(
+          'resource-exhausted',
+          isPremium
+            ? 'Hai già generato la ricetta di oggi'
+            : 'Hai già generato la ricetta di questa settimana',
+        );
       }
       tx.set(usageRef, { createdAt: FieldValue.serverTimestamp() });
     });
@@ -446,5 +481,245 @@ export const deletePantry = onCall(
     await finalBatch.commit();
 
     return { ok: true };
+  },
+);
+
+// --- Webhook RevenueCat: unico scrittore di `isPremium` ---
+//
+// Le regole Firestore vietano al client di toccare isPremium/subscription*:
+// un utente non deve potersi regalare il premium. L'unica fonte che scrive
+// quei campi è questo webhook, che gira con l'Admin SDK (bypassa le regole) e
+// riceve gli eventi direttamente da RevenueCat — quindi vale per acquisti da
+// Play Store e da Stripe allo stesso modo.
+//
+// Su RevenueCat: Project settings → Integrations → Webhooks, URL di questa
+// function e come Authorization header lo stesso valore del secret
+// RC_WEBHOOK_SECRET.
+
+// Eventi che lasciano l'abbonamento attivo. CANCELLATION non c'è: significa
+// solo "non si rinnoverà", l'accesso resta fino alla scadenza (arriverà poi
+// EXPIRATION). BILLING_ISSUE idem: l'utente ha un periodo di grazia.
+const RC_GRANTING_EVENTS = new Set([
+  'INITIAL_PURCHASE',
+  'RENEWAL',
+  'UNCANCELLATION',
+  'PRODUCT_CHANGE',
+  'SUBSCRIPTION_EXTENDED',
+  'TRANSFER',
+  'NON_RENEWING_PURCHASE',
+]);
+
+const RC_REVOKING_EVENTS = new Set(['EXPIRATION', 'SUBSCRIPTION_PAUSED', 'REFUND']);
+
+// Confronto a tempo costante: su un segreto condiviso un `===` perde byte per
+// byte e permette, in linea di principio, di indovinarlo un carattere alla volta.
+function secretMatches(provided: string, expected: string): boolean {
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+export const revenueCatWebhook = onRequest(
+  { region: 'europe-west1', secrets: [RC_WEBHOOK_SECRET] },
+  async (req, res) => {
+    if (req.method !== 'POST') {
+      res.status(405).send('Method Not Allowed');
+      return;
+    }
+    // Su RevenueCat il campo Authorization si può compilare sia col solo
+    // segreto sia in forma "Bearer <segreto>": accettiamo entrambe, così una
+    // svista non si traduce in 401 silenziosi e premium che non si attivano.
+    const header = req.headers.authorization ?? '';
+    const provided = header.replace(/^Bearer\s+/i, '');
+    if (!secretMatches(provided, RC_WEBHOOK_SECRET.value())) {
+      console.warn('[revenueCatWebhook] Authorization non valida');
+      res.status(401).send('Unauthorized');
+      return;
+    }
+
+    const event = req.body?.event;
+    const type: string = event?.type ?? '';
+    // app_user_id è l'uid Firebase: lo passiamo noi a Purchases.configure().
+    const uid: string = event?.app_user_id ?? '';
+    if (!uid) {
+      console.warn('[revenueCatWebhook] evento senza app_user_id:', type);
+      res.status(200).send('ignored');
+      return;
+    }
+
+    const entitlements: string[] = event?.entitlement_ids ?? [];
+    if (entitlements.length > 0 && !entitlements.includes('premium')) {
+      res.status(200).send('ignored');
+      return;
+    }
+
+    const expiresAtMs: number | null = event?.expiration_at_ms ?? null;
+    const stillValid = expiresAtMs === null || expiresAtMs > Date.now();
+    const granting = RC_GRANTING_EVENTS.has(type) && stillValid;
+    const revoking = RC_REVOKING_EVENTS.has(type) || (RC_GRANTING_EVENTS.has(type) && !stillValid);
+
+    if (!granting && !revoking) {
+      res.status(200).send('ignored');
+      return;
+    }
+
+    const productId: string = event?.product_id ?? '';
+    const lower = productId.toLowerCase();
+    const patch = granting
+      ? {
+          isPremium: true,
+          subscriptionType: lower.includes('annual') || lower.includes('yearly') ? 'annual' : 'monthly',
+          subscriptionExpiresAt: expiresAtMs ? new Date(expiresAtMs).toISOString() : null,
+        }
+      : { isPremium: false, subscriptionType: null, subscriptionExpiresAt: null };
+
+    try {
+      await getFirestore().collection('users').doc(uid).set(patch, { merge: true });
+      console.log('[revenueCatWebhook]', type, uid, granting ? 'premium ON' : 'premium OFF');
+      res.status(200).send('ok');
+    } catch (e) {
+      // 500 → RevenueCat riprova da solo.
+      console.error('[revenueCatWebhook] scrittura fallita', uid, e);
+      res.status(500).send('error');
+    }
+  },
+);
+
+// --- Promemoria scadenza per il web (PWA) ---
+//
+// Su nativo i promemoria sono schedulati IN LOCALE sul device (vedi
+// lib/notifications.ts scheduleExpiryNotifications) e non passano da qui: un
+// telefono può pianificare una notifica futura anche ad app chiusa, un
+// browser no. Questa funzione copre solo chi ha attivato le notifiche dal
+// web (campo `webPushToken` sull'utente) e non tocca in alcun modo il flusso
+// nativo già funzionante.
+
+// Stessa logica di lib/urgency.ts effectiveExpiry() lato client: la
+// scadenza "vera" è la più vicina tra quella di fabbrica e quella dopo
+// apertura, se presente.
+function effectiveExpiryDate(data: FirebaseFirestore.DocumentData): string {
+  const expiry: string = data.expiry;
+  const openExpiry: string | undefined = data.openExpiry;
+  return openExpiry && openExpiry < expiry ? openExpiry : expiry;
+}
+
+interface ReminderGroup {
+  uid: string;
+  when: 'oggi' | 'domani';
+  pantryName: string | null; // null = dispensa personale
+  names: string[];
+}
+
+export const sendExpiryReminders = onSchedule(
+  { schedule: '0 8 * * *', timeZone: 'Europe/Rome', region: 'europe-west1' },
+  async () => {
+    const db = getFirestore();
+    const today = todayKeyRome();
+    const tomorrow = tomorrowKeyRome();
+    const dates = [today, tomorrow];
+
+    // Un prodotto rientra se scade lui o la sua scadenza-dopo-apertura cade
+    // oggi/domani: due query separate perché Firestore non fa OR tra campi
+    // diversi nella stessa query.
+    const [byExpiry, byOpenExpiry] = await Promise.all([
+      db.collectionGroup('products').where('expiry', 'in', dates).get(),
+      db.collectionGroup('products').where('openExpiry', 'in', dates).get(),
+    ]);
+
+    const seen = new Set<string>();
+    const docs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+    for (const snap of [byExpiry, byOpenExpiry]) {
+      for (const doc of snap.docs) {
+        if (seen.has(doc.ref.path)) continue;
+        seen.add(doc.ref.path);
+        docs.push(doc);
+      }
+    }
+    if (docs.length === 0) return;
+
+    const groups = new Map<string, ReminderGroup>();
+    const pantryCache = new Map<string, { name: string; memberIds: string[] } | null>();
+
+    for (const doc of docs) {
+      const data = doc.data();
+      const dateIso = effectiveExpiryDate(data);
+      if (!dates.includes(dateIso)) continue;
+      const when: 'oggi' | 'domani' = dateIso === today ? 'oggi' : 'domani';
+      const name: string = data.name ?? '';
+
+      // users/{uid}/products/{id} oppure pantries/{id}/products/{id}
+      const ownerDoc = doc.ref.parent.parent;
+      const ownerCollectionId = ownerDoc?.parent?.id;
+      if (!ownerDoc) continue;
+
+      let recipients: string[];
+      let pantryName: string | null = null;
+
+      if (ownerCollectionId === 'pantries') {
+        let cached = pantryCache.get(ownerDoc.id);
+        if (cached === undefined) {
+          const snap = await ownerDoc.get();
+          const pData = snap.data();
+          cached = snap.exists
+            ? { name: pData?.name ?? '', memberIds: pData?.memberIds ?? [] }
+            : null;
+          pantryCache.set(ownerDoc.id, cached);
+        }
+        if (!cached) continue;
+        recipients = cached.memberIds;
+        pantryName = cached.name;
+      } else {
+        recipients = [ownerDoc.id];
+      }
+
+      for (const uid of recipients) {
+        const key = `${uid}::${when}::${pantryName ?? ''}`;
+        const existing = groups.get(key);
+        if (existing) existing.names.push(name);
+        else groups.set(key, { uid, when, pantryName, names: [name] });
+      }
+    }
+    if (groups.size === 0) return;
+
+    // Una sola lettura per destinatario, anche se compare in più gruppi.
+    const uids = [...new Set([...groups.values()].map((g) => g.uid))];
+    const userRefs = uids.map((uid) => db.collection('users').doc(uid));
+    const userSnaps = userRefs.length > 0 ? await db.getAll(...userRefs) : [];
+    const userInfo = new Map<string, { token?: string; enabled: boolean }>();
+    userSnaps.forEach((snap, i) => {
+      const data = snap.data();
+      userInfo.set(uids[i], {
+        token: data?.webPushToken,
+        enabled: data?.notificationsEnabled !== false,
+      });
+    });
+
+    const messaging = getMessaging();
+    const sends: Promise<unknown>[] = [];
+
+    for (const g of groups.values()) {
+      const info = userInfo.get(g.uid);
+      if (!info?.token || !info.enabled) continue;
+
+      const where = g.pantryName
+        ? `nella casa "${g.pantryName}"`
+        : 'nella tua dispensa personale';
+      const whenLabel = g.when === 'oggi' ? 'oggi' : 'domani';
+      const title = g.when === 'oggi' ? '⏰ Shelfy — Scade oggi' : '⏰ Shelfy — Scadenza vicina';
+      const body = g.names.length === 1
+        ? `${g.names[0]} scade ${whenLabel} ${where}.`
+        : `Hai ${g.names.length} prodotti in scadenza ${whenLabel} ${where}.`;
+
+      sends.push(
+        messaging.send({
+          token: info.token,
+          notification: { title, body },
+          webpush: { fcmOptions: { link: '/' } },
+        }).catch((e) => console.warn('[sendExpiryReminders] invio fallito per', g.uid, e)),
+      );
+    }
+
+    await Promise.all(sends);
   },
 );

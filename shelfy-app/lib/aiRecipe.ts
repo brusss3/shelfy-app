@@ -24,7 +24,10 @@ export async function generateDailyRecipe(ingredients: string[]): Promise<AiReci
   } catch (e) {
     const code = (e as FunctionsError)?.code ?? '';
     if (code.includes('resource-exhausted')) {
-      throw new AiRecipeError('quota', 'Hai già creato la tua ricetta di oggi. Torna domani!');
+      // Il messaggio arriva dalla function: sa se il credito era giornaliero
+      // (Premium) o settimanale (piano base).
+      const serverMessage = (e as FunctionsError)?.message;
+      throw new AiRecipeError('quota', serverMessage || 'Credito ricette AI esaurito.');
     }
     if (code.includes('unauthenticated')) {
       throw new AiRecipeError('auth', 'Devi accedere per generare una ricetta.');

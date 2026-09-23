@@ -290,41 +290,6 @@ export default function FeedbackScreen() {
               label={t('feedback.submit')}
               fullWidth
             />
-
-            {/* Roadmap / Prossime novità */}
-            <View style={styles.roadmapCard}>
-              <Text style={styles.roadmapHeader}>{t('feedback.roadmapHeader')}</Text>
-              <Text style={styles.roadmapSub}>
-                {t('feedback.roadmapSub')}
-              </Text>
-              <View style={styles.roadmapList}>
-                <View style={styles.roadmapItem}>
-                  <Text style={styles.roadmapStatusTag}>{t('feedback.comingSoon')}</Text>
-                  <Text style={styles.roadmapText}>
-                    👨‍👩‍👧 <Text style={styles.roadmapBold}>{t('feedback.roadmapSharedHomes')}</Text> {t('feedback.roadmapSharedHomesDesc')}
-                  </Text>
-                </View>
-                <View style={styles.roadmapItem}>
-                  <Text style={[styles.roadmapStatusTag, { backgroundColor: T.okSoft }]}>{t('feedback.active')}</Text>
-                  <Text style={styles.roadmapText}>
-                    🍳 <Text style={styles.roadmapBold}>{t('feedback.roadmapAiRecipe')}</Text> {t('feedback.roadmapAiRecipeDesc')}
-                  </Text>
-                </View>
-                <View style={styles.roadmapItem}>
-                  <Text style={[styles.roadmapStatusTag, { backgroundColor: T.okSoft }]}>{t('feedback.active')}</Text>
-                  <Text style={styles.roadmapText}>
-                    🧾 <Text style={styles.roadmapBold}>{t('feedback.roadmapReceiptScan')}</Text> {t('feedback.roadmapReceiptScanDesc')}
-                  </Text>
-                </View>
-                <View style={styles.roadmapItem}>
-                  <Text style={[styles.roadmapStatusTag, { backgroundColor: T.okSoft }]}>{t('feedback.active')}</Text>
-                  <Text style={styles.roadmapText}>
-                    🔔 <Text style={styles.roadmapBold}>{t('feedback.roadmapNotifications')}</Text> {t('feedback.roadmapNotificationsDesc')}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -597,57 +562,5 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.sansMedium,
     fontSize: 12,
     color: T.urgent,
-  },
-
-
-  roadmapCard: {
-    backgroundColor: T.surface,
-    borderRadius: RADIUS.lg,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: T.line,
-    marginTop: 6,
-    ...SHADOW.card,
-  },
-  roadmapHeader: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 15,
-    color: T.ink,
-  },
-  roadmapSub: {
-    fontFamily: FONTS.sans,
-    fontSize: 12,
-    color: T.mute,
-    marginTop: 4,
-    marginBottom: 12,
-  },
-  roadmapList: {
-    gap: 10,
-  },
-  roadmapItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  roadmapStatusTag: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 10,
-    color: T.primaryInk,
-    backgroundColor: T.warnSoft,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: RADIUS.sm,
-    overflow: 'hidden',
-  },
-  roadmapText: {
-    flex: 1,
-    fontFamily: FONTS.sans,
-    fontSize: 12,
-    color: T.ink2,
-    lineHeight: 16,
-  },
-  roadmapBold: {
-    fontFamily: FONTS.sansSemiBold,
-    color: T.ink,
   },
 });
