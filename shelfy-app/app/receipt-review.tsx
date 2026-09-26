@@ -11,7 +11,7 @@ import { Zone } from '@/types';
 import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
 import { tintForCategory } from '@/lib/urgency';
 import { showAlert } from '@/lib/alert';
-import { handledProductLimit } from '@/lib/upsell';
+import { usePremiumGate, isProductLimitError } from '@/lib/premiumGate';
 import PrimaryButton from '@/components/PrimaryButton';
 
 const ZONES: { id: Zone; labelKey: string; icon: string }[] = [
@@ -42,6 +42,7 @@ export default function ReceiptReviewScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { addNewProducts } = useProducts();
+  const { onProductLimit } = usePremiumGate();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
@@ -136,7 +137,7 @@ export default function ReceiptReviewScreen() {
       );
       router.replace('/(tabs)');
     } catch (e: any) {
-      if (!handledProductLimit(e)) {
+      if (isProductLimitError(e)) { onProductLimit(); } else {
         showAlert(t('common.error'), e?.message ?? t('receiptReview.saveFailed'));
       }
     } finally {

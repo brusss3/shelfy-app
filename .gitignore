@@ -3,3 +3,10 @@
 *-adminsdk-*.json
 shelfy-632e0-*.json
 *.pem
+
+# Keystore di firma Android: perderlo impedisce per sempre di aggiornare
+# l'app su Play, committarlo permette a chiunque di firmare al posto tuo.
+# Va tenuto fuori dal repo, in un backup separato.
+*.jks
+*.keystore
+google-play-key.json

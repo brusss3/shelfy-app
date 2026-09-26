@@ -12,12 +12,16 @@ import {
   getAllUsers, adminSetPremium, adminSetAdmin, AdminUserRecord,
   getAllFeedback, FeedbackRecord, FeedbackStatus, updateFeedbackStatus, saveUserPushToken,
   subscribeToAiEnabled, adminSetAiEnabled, adminSetUserAiDisabled,
+  subscribeToMonetizationEnabled, adminSetMonetizationEnabled,
+  subscribeToSurveys, adminCreateSurvey, adminSetSurveyActive, adminDeleteSurvey,
+  adminGetSurveyResults,
 } from '@/lib/firestore';
+import { Survey } from '@/types';
 import { registerForPushNotifications, sendAdminTestPushNotification } from '@/lib/notifications';
 import { showAlert } from '@/lib/alert';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 
-type Tab = 'users' | 'feedback' | 'notifiche' | 'ai';
+type Tab = 'users' | 'feedback' | 'notifiche' | 'ai' | 'sondaggi';
 type SortMode = 'newest' | 'oldest' | 'az' | 'za';
 type FilterChip = 'all' | 'new' | 'premium' | 'admin';
 type FeedbackFilterChip = 'all' | FeedbackStatus;
@@ -75,6 +79,14 @@ export default function AdminScreen() {
   const [aiEnabled, setAiEnabled] = useState(true);
   const [togglingAi, setTogglingAi] = useState(false);
 
+  const [monetization, setMonetization] = useState(false);
+  const [togglingMonetization, setTogglingMonetization] = useState(false);
+  const [surveys, setSurveys] = useState<Survey[]>([]);
+  const [surveyResults, setSurveyResults] = useState<Record<string, { counts: number[]; dismissed: number }>>({});
+  const [newQuestion, setNewQuestion] = useState('');
+  const [newOptions, setNewOptions] = useState<string[]>(['', '']);
+  const [creatingSurvey, setCreatingSurvey] = useState(false);
+
   const load = useCallback(async () => {
     try {
       const [u, f] = await Promise.all([getAllUsers(), getAllFeedback().catch(() => [])]);
@@ -98,6 +110,57 @@ export default function AdminScreen() {
   }, [user, load]);
 
   useEffect(() => subscribeToAiEnabled(setAiEnabled, () => {}), []);
+  useEffect(() => subscribeToMonetizationEnabled(setMonetization, () => {}), []);
+  useEffect(() => subscribeToSurveys(setSurveys, () => {}), []);
+
+  // I conteggi si ricaricano a ogni cambio nella lista: sono letture puntuali
+  // sulla sottocollezione risposte, non un listener permanente.
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all(
+      surveys.map(async (s) => [s.id, await adminGetSurveyResults(s.id, s.options.length)] as const),
+    )
+      .then((entries) => { if (!cancelled) setSurveyResults(Object.fromEntries(entries)); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [surveys]);
+
+  const toggleMonetization = (next: boolean) => {
+    confirm(
+      next ? t('admin.enableMonetizationTitle') : t('admin.disableMonetizationTitle'),
+      next ? t('admin.enableMonetizationBody') : t('admin.disableMonetizationBody'),
+      async () => {
+        setTogglingMonetization(true);
+        try {
+          await adminSetMonetizationEnabled(next);
+        } catch (e: any) {
+          showAlert(t('common.error'), e?.message ?? t('admin.updateFailed'));
+        } finally {
+          setTogglingMonetization(false);
+        }
+      },
+    );
+  };
+
+  const handleCreateSurvey = async () => {
+    const question = newQuestion.trim();
+    const options = newOptions.map((o) => o.trim()).filter(Boolean);
+    if (!question || options.length < 2) {
+      showAlert(t('common.error'), t('admin.surveyIncomplete'));
+      return;
+    }
+    setCreatingSurvey(true);
+    try {
+      await adminCreateSurvey(question, options);
+      setNewQuestion('');
+      setNewOptions(['', '']);
+      showAlert(t('admin.surveyCreatedTitle'), t('admin.surveyCreatedHint'));
+    } catch (e: any) {
+      showAlert(t('common.error'), e?.message ?? t('admin.updateFailed'));
+    } finally {
+      setCreatingSurvey(false);
+    }
+  };
 
   const onRefresh = () => { setRefreshing(true); load(); };
 
@@ -262,6 +325,7 @@ export default function AdminScreen() {
             <TabBtn label={t('admin.tabs.feedback')} active={tab === 'feedback'} onPress={() => setTab('feedback')} />
             <TabBtn label={t('admin.tabs.notifications')} active={tab === 'notifiche'} onPress={() => setTab('notifiche')} />
             <TabBtn label={aiEnabled ? t('admin.tabs.ai') : `${t('admin.tabs.ai')} ⛔`} active={tab === 'ai'} onPress={() => setTab('ai')} />
+            <TabBtn label={t('admin.tabs.surveys')} active={tab === 'sondaggi'} onPress={() => setTab('sondaggi')} />
           </View>
         </View>
       </View>
@@ -462,6 +526,140 @@ export default function AdminScreen() {
               </View>
             )}
 
+            {tab === 'sondaggi' && (
+              <View style={{ gap: 12 }}>
+                {/* Interruttore dei pagamenti: acceso qui, il paywall e gli
+                    inviti all'acquisto compaiono nell'app senza ripubblicarla. */}
+                <View style={styles.card}>
+                  <View style={styles.switchRow}>
+                    <View style={{ flex: 1, marginRight: 12 }}>
+                      <Text style={styles.notifSectionTitle}>{t('admin.monetizationTitle')}</Text>
+                      <Text style={styles.notifSectionDesc}>{t('admin.monetizationDesc')}</Text>
+                    </View>
+                    <Switch
+                      value={monetization}
+                      onValueChange={toggleMonetization}
+                      disabled={togglingMonetization}
+                      trackColor={{ false: T.line, true: T.primary }}
+                    />
+                  </View>
+                  <Text style={[styles.notifSectionDesc, { marginTop: 10 }]}>
+                    {t('admin.waitlistCount', { count: users.filter((u) => u.premiumWaitlist).length })}
+                  </Text>
+                </View>
+
+                {/* Nuovo sondaggio */}
+                <View style={styles.card}>
+                  <Text style={styles.notifSectionTitle}>{t('admin.newSurveyTitle')}</Text>
+                  <TextInput
+                    style={styles.surveyInput}
+                    value={newQuestion}
+                    onChangeText={setNewQuestion}
+                    placeholder={t('admin.surveyQuestionPlaceholder')}
+                    placeholderTextColor={T.mute}
+                    multiline
+                  />
+                  {newOptions.map((opt, i) => (
+                    <View key={i} style={styles.surveyOptionRow}>
+                      <TextInput
+                        style={[styles.surveyInput, { flex: 1, marginTop: 0 }]}
+                        value={opt}
+                        onChangeText={(v) => setNewOptions((prev) => prev.map((o, j) => (j === i ? v : o)))}
+                        placeholder={t('admin.surveyOptionPlaceholder', { n: i + 1 })}
+                        placeholderTextColor={T.mute}
+                      />
+                      {newOptions.length > 2 && (
+                        <TouchableOpacity
+                          onPress={() => setNewOptions((prev) => prev.filter((_, j) => j !== i))}
+                          style={styles.surveyRemoveBtn}
+                        >
+                          <Text style={styles.surveyRemoveText}>✕</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ))}
+                  <View style={styles.surveyActions}>
+                    <TouchableOpacity
+                      onPress={() => setNewOptions((prev) => [...prev, ''])}
+                      style={styles.smallBtn}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.smallBtnText}>{t('admin.surveyAddOption')}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={handleCreateSurvey}
+                      disabled={creatingSurvey}
+                      style={[styles.primaryAction, creatingSurvey && { opacity: 0.6 }]}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.primaryActionText}>{t('admin.surveyCreate')}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Elenco con risultati */}
+                {surveys.map((s) => {
+                  const res = surveyResults[s.id];
+                  const answered = res ? res.counts.reduce((a, b) => a + b, 0) : 0;
+                  return (
+                    <View key={s.id} style={styles.card}>
+                      <View style={styles.switchRow}>
+                        <View style={{ flex: 1, marginRight: 12 }}>
+                          {/* Senza questo non si capisce perché un sondaggio
+                              appena creato non compaia agli utenti. */}
+                          <View style={[styles.surveyState, s.active && styles.surveyStateOn]}>
+                            <Text style={[styles.surveyStateText, s.active && styles.surveyStateTextOn]}>
+                              {s.active ? t('admin.surveyActive') : t('admin.surveyDraft')}
+                            </Text>
+                          </View>
+                          <Text style={styles.notifSectionTitle}>{s.question}</Text>
+                          <Text style={styles.notifSectionDesc}>
+                            {t('admin.surveyAnswers', { count: answered })}
+                            {res && res.dismissed > 0 ? ` · ${t('admin.surveyDismissed', { count: res.dismissed })}` : ''}
+                          </Text>
+                        </View>
+                        <Switch
+                          value={s.active}
+                          onValueChange={(v) => adminSetSurveyActive(s.id, v).catch(() => {})}
+                          trackColor={{ false: T.line, true: T.primary }}
+                        />
+                      </View>
+
+                      <View style={{ gap: 6, marginTop: 10 }}>
+                        {s.options.map((opt, i) => {
+                          const count = res?.counts[i] ?? 0;
+                          const pct = answered > 0 ? Math.round((count / answered) * 100) : 0;
+                          return (
+                            <View key={i}>
+                              <View style={styles.resultRow}>
+                                <Text style={styles.resultLabel} numberOfLines={1}>{opt}</Text>
+                                <Text style={styles.resultValue}>{count} · {pct}%</Text>
+                              </View>
+                              <View style={styles.resultBarTrack}>
+                                <View style={[styles.resultBarFill, { width: `${pct}%` }]} />
+                              </View>
+                            </View>
+                          );
+                        })}
+                      </View>
+
+                      <TouchableOpacity
+                        onPress={() => confirm(
+                          t('admin.surveyDeleteTitle'),
+                          t('admin.surveyDeleteBody'),
+                          () => { adminDeleteSurvey(s.id).catch(() => {}); },
+                          true,
+                        )}
+                        style={{ marginTop: 12 }}
+                      >
+                        <Text style={styles.surveyDeleteText}>{t('admin.surveyDelete')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
             {tab === 'notifiche' && (
               <View style={{ gap: 12 }}>
                 <View style={styles.card}>
@@ -655,5 +853,46 @@ const styles = StyleSheet.create({
 
   notifSectionTitle: { fontFamily: FONTS.sansSemiBold, fontSize: 15, color: T.ink },
   notifSectionDesc: { fontFamily: FONTS.sans, fontSize: 13, color: T.mute, marginTop: 4, lineHeight: 18 },
+
+  surveyInput: {
+    backgroundColor: T.bg, borderRadius: RADIUS.md, borderWidth: 1, borderColor: T.line,
+    paddingVertical: 10, paddingHorizontal: 12, marginTop: 10,
+    fontFamily: FONTS.sans, fontSize: 14, color: T.ink,
+  },
+  surveyOptionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
+  surveyRemoveBtn: {
+    width: 34, height: 34, borderRadius: RADIUS.md, backgroundColor: T.urgentSoft,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  surveyRemoveText: { fontFamily: FONTS.sansBold, fontSize: 14, color: T.urgent },
+  surveyActions: { flexDirection: 'row', gap: 10, marginTop: 14, alignItems: 'center' },
+  smallBtn: {
+    backgroundColor: T.primarySoft, borderRadius: RADIUS.md,
+    paddingVertical: 10, paddingHorizontal: 14,
+  },
+  smallBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: T.primaryInk },
+  primaryAction: {
+    flex: 1, backgroundColor: T.primary, borderRadius: RADIUS.md,
+    paddingVertical: 11, alignItems: 'center',
+  },
+  primaryActionText: { fontFamily: FONTS.sansBold, fontSize: 14, color: '#fbfaf3' },
+
+  resultRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
+  resultLabel: { flex: 1, fontFamily: FONTS.sans, fontSize: 13, color: T.ink2 },
+  resultValue: { fontFamily: FONTS.sansSemiBold, fontSize: 12, color: T.ink },
+  resultBarTrack: {
+    height: 6, borderRadius: 3, backgroundColor: T.line, marginTop: 4, overflow: 'hidden',
+  },
+  resultBarFill: { height: 6, borderRadius: 3, backgroundColor: T.primary },
+  surveyDeleteText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: T.urgent },
+  surveyState: {
+    alignSelf: 'flex-start', backgroundColor: T.line, borderRadius: RADIUS.tag,
+    paddingVertical: 3, paddingHorizontal: 8, marginBottom: 6,
+  },
+  surveyStateOn: { backgroundColor: T.okSoft },
+  surveyStateText: {
+    fontFamily: FONTS.sansBold, fontSize: 10, color: T.mute, letterSpacing: 0.6,
+  },
+  surveyStateTextOn: { color: T.ok },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 });

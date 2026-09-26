@@ -3,7 +3,7 @@
 // lato client, perché superarlo non costa nulla se non spazio su Firestore.
 
 /** Prodotti massimi nella dispensa personale per un account base. */
-export const FREE_PRODUCT_LIMIT = 30;
+export const FREE_PRODUCT_LIMIT = 50;
 
 /** Sollevato quando un account base prova a superare FREE_PRODUCT_LIMIT. */
 export class ProductLimitError extends Error {

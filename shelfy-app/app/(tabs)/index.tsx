@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useProducts } from '@/context/ProductsContext';
+import { usePremiumGate } from '@/lib/premiumGate';
 import { useAuth } from '@/context/AuthContext';
 import { usePantry } from '@/context/PantryContext';
 import { urgencyOf, effectiveDays } from '@/lib/urgency';
@@ -31,6 +32,7 @@ const ZONES: { id: Zone; labelKey: string; icon: string }[] = [
 
 export default function HomeScreen() {
   const { products, loading, productLimit, productsLeft } = useProducts();
+  const { monetizationEnabled, onUpgradeIntent } = usePremiumGate();
   const { user } = useAuth();
   const { activePantry } = usePantry();
   const router = useRouter();
@@ -132,7 +134,7 @@ export default function HomeScreen() {
         {productsLeft !== null && productsLeft <= 5 && (
           <TouchableOpacity
             style={[styles.limitBanner, productsLeft === 0 && styles.limitBannerFull]}
-            onPress={() => router.push('/paywall')}
+            onPress={onUpgradeIntent}
             activeOpacity={0.85}
           >
             <Text style={styles.limitBannerIcon}>{productsLeft === 0 ? '🔒' : '✨'}</Text>
@@ -142,7 +144,9 @@ export default function HomeScreen() {
                   ? t('home.limitReachedTitle', { limit: productLimit })
                   : t('home.limitNearTitle', { count: productsLeft })}
               </Text>
-              <Text style={styles.limitBannerDesc}>{t('home.limitUpsellDesc')}</Text>
+              <Text style={styles.limitBannerDesc}>
+                {monetizationEnabled ? t('home.limitUpsellDesc') : t('home.limitSoonDesc')}
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={T.primaryInk} />
           </TouchableOpacity>

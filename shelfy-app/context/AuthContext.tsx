@@ -18,6 +18,7 @@ import { auth, db } from '@/lib/firebase';
 import { initPurchases, checkPremiumStatus } from '@/lib/purchases';
 import { User, SubscriptionType } from '@/types';
 import { notifyAdminsNewUser } from '@/lib/notifications';
+import { subscribeToMonetizationEnabled } from '@/lib/firestore';
 
 interface AuthContextType {
   user: User | null;
@@ -31,6 +32,9 @@ interface AuthContextType {
   setPremium: (value: boolean) => Promise<void>;
   setSubscription: (info: { type: SubscriptionType; expiresAt: string | null } | null) => Promise<void>;
   setNotificationsEnabled: (value: boolean) => Promise<void>;
+  /** False finché l'admin non mette in vendita i piani: nasconde paywall e
+   *  inviti all'acquisto, lasciando attivi i limiti del piano base. */
+  monetizationEnabled: boolean;
   updateAdminNotifSettings: (prefs: { adminNotifNewUsers?: boolean; adminNotifFeedback?: boolean }) => Promise<void>;
 }
 
@@ -47,6 +51,7 @@ const AuthContext = createContext<AuthContextType>({
   setPremium: stub,
   setSubscription: stub,
   setNotificationsEnabled: stub,
+  monetizationEnabled: false,
   updateAdminNotifSettings: stub,
 });
 
@@ -56,6 +61,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Stato premium secondo RevenueCat, fonte di verità finché il webhook non
   // allinea Firestore. Sopravvive agli snapshot del documento utente.
   const rcPremiumRef = useRef(false);
+  const [monetizationEnabled, setMonetizationEnabled] = useState(false);
+
+  useEffect(() => subscribeToMonetizationEnabled(setMonetizationEnabled, () => {}), []);
 
   useEffect(() => {
     // Completa un eventuale login via redirect (fallback PWA). Su successo
@@ -279,7 +287,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, resetPassword, signInWithGoogleWeb, signInWithGoogleCredential, logOut, setPremium, setSubscription, setNotificationsEnabled, updateAdminNotifSettings }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, resetPassword, signInWithGoogleWeb, signInWithGoogleCredential, logOut, setPremium, setSubscription, setNotificationsEnabled, updateAdminNotifSettings, monetizationEnabled }}>
       {children}
     </AuthContext.Provider>
   );

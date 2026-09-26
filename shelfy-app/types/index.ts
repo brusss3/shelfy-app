@@ -127,6 +127,16 @@ export interface User {
   aiDisabled?: boolean;
 }
 
+/** Sondaggio mostrato in popup: una domanda, più opzioni, una risposta sola. */
+export interface Survey {
+  id: string;
+  question: string;
+  options: string[];
+  /** Ne esiste al massimo uno attivo per volta. */
+  active: boolean;
+  createdAt: string;
+}
+
 export type UrgencyKey = 'scaduto' | 'oggi' | 'domani' | 'urgente' | 'prossimo' | 'ok' | 'lungo';
 
 export interface Urgency {

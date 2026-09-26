@@ -11,7 +11,7 @@ import { ScannedProduct, Zone, NutritionInfo, ScoreGrade } from '@/types';
 import { tintForCategory } from '@/lib/urgency';
 import { useProducts } from '@/context/ProductsContext';
 import { showAlert } from '@/lib/alert';
-import { handledProductLimit } from '@/lib/upsell';
+import { usePremiumGate, isProductLimitError } from '@/lib/premiumGate';
 import { ocrAvailable } from '@/lib/ocr';
 import DateScannerModal from '@/components/DateScannerModal';
 import PrimaryButton from '@/components/PrimaryButton';
@@ -107,6 +107,7 @@ export default function ScannerScreen() {
   const isFocused = useIsFocused();
   const { t } = useTranslation();
   const { addNewProduct } = useProducts();
+  const { onProductLimit } = usePremiumGate();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -277,7 +278,7 @@ export default function ScannerScreen() {
       });
       router.back();
     } catch (e: any) {
-      if (!handledProductLimit(e)) {
+      if (isProductLimitError(e)) { onProductLimit(); } else {
         showAlert(t('common.error'), e?.message ?? t('add.errors.saveFailed'));
       }
     } finally {

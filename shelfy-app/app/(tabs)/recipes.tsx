@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
+import { usePremiumGate } from '@/lib/premiumGate';
 import { useProducts } from '@/context/ProductsContext';
 import { useCommunity } from '@/context/CommunityContext';
 import { useRecipes } from '@/context/RecipesContext';
@@ -31,6 +32,7 @@ function matchCount(recipe: CommunityRecipe, expiringNames: string[]): number {
 export default function RecipesScreen() {
   const { user } = useAuth();
   const isPremium = !!user?.isPremium;
+  const { monetizationEnabled, onUpgradeIntent } = usePremiumGate();
   const { products } = useProducts();
   const { recipes, requests, loading } = useCommunity();
   const { myRecipes, savedRecipes, aiCreditUsed, aiEnabled, refreshAiUsage } = useRecipes();
@@ -305,16 +307,14 @@ export default function RecipesScreen() {
               {isPremium ? (
                 <Text style={styles.aiPlanNote}>{t('recipes.planPremiumNote')}</Text>
               ) : (
-                <TouchableOpacity
-                  style={styles.aiUpsell}
-                  onPress={() => router.push('/paywall')}
-                  activeOpacity={0.85}
-                >
+                <TouchableOpacity style={styles.aiUpsell} onPress={onUpgradeIntent} activeOpacity={0.85}>
                   <Text style={styles.aiUpsellText}>
                     <Text style={styles.aiUpsellStrong}>{t('recipes.planFreeLabel')}</Text>
-                    {t('recipes.planFreeNote')}
+                    {monetizationEnabled ? t('recipes.planFreeNote') : t('recipes.planFreeNoteSoon')}
                   </Text>
-                  <Text style={styles.aiUpsellCta}>{t('recipes.planUpgradeCta')}</Text>
+                  <Text style={styles.aiUpsellCta}>
+                    {monetizationEnabled ? t('recipes.planUpgradeCta') : t('recipes.planNotifyCta')}
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>

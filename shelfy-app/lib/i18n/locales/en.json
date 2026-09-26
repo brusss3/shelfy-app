@@ -87,7 +87,8 @@
       "addManually": "Add manually",
       "scanProduct": "Scan a product",
       "scanReceipt": "Scan a receipt"
-    }
+    },
+    "limitSoonDesc": "A plan to go beyond the limit is coming. Tap to be notified."
   },
   "auth": {
     "emailPlaceholder": "you@example.com",
@@ -413,7 +414,9 @@
     "noIngredientTitle": "No ingredients",
     "noIngredientBody": "Select at least one ingredient from your pantry.",
     "aiErrorTitle": "AI recipe",
-    "aiErrorFallback": "Try again later."
+    "aiErrorFallback": "Try again later.",
+    "planFreeNoteSoon": "1 AI recipe per week. A plan for more is coming.",
+    "planNotifyCta": "Notify me when it is out ›"
   },
   "recipeCreate": {
     "titleNew": "New recipe",
@@ -614,7 +617,14 @@
   "limits": {
     "productLimitTitle": "Pantry full",
     "productLimitBody": "The free plan holds up to {{limit}} products. Go Premium for an unlimited pantry.",
-    "unlockCta": "Unlock Premium"
+    "unlockCta": "Unlock Premium",
+    "productLimitSoonBody": "The free plan holds up to {{limit}} products. We are working on a plan to go beyond it — want to be notified when it is ready?",
+    "comingSoonTitle": "Coming soon",
+    "comingSoonBody": "We are preparing a plan with an unlimited pantry and more AI recipes. Want us to let you know when it is ready?",
+    "notifyMeCta": "Notify me",
+    "waitlistDoneTitle": "Great!",
+    "waitlistDoneBody": "We will let you know as soon as the plan is available.",
+    "waitlistFailed": "We could not register your request. Try again."
   },
   "pushNotifications": {
     "consumedAction": "✓ Consumed",
@@ -642,7 +652,13 @@
     "title": "Admin dashboard",
     "subtitle": "{{users}} users · {{premium}} premium · {{feedback}} reports",
     "newFeedbackSuffix": " ({{count}} new)",
-    "tabs": { "users": "Users", "feedback": "Feedback", "notifications": "Notifications", "ai": "AI" },
+    "tabs": {
+      "users": "Users",
+      "feedback": "Feedback",
+      "notifications": "Notifications",
+      "ai": "AI",
+      "surveys": "Surveys"
+    },
     "confirm": "Confirm",
     "enableAiTitle": "Re-enable AI recipes",
     "disableAiTitle": "Disable AI recipes",
@@ -657,8 +673,18 @@
     "cantChangeOwnRoleTitle": "Heads up",
     "cantChangeOwnRoleBody": "You can't change your own admin role.",
     "searchPlaceholder": "Search by name, email or UID...",
-    "filters": { "all": "All", "newUnder": "New < {{days}}d", "premium": "Premium ✦", "admin": "Admin 🛡️" },
-    "sort": { "newest": "Newest", "oldest": "Oldest", "az": "A-Z", "za": "Z-A" },
+    "filters": {
+      "all": "All",
+      "newUnder": "New < {{days}}d",
+      "premium": "Premium ✦",
+      "admin": "Admin 🛡️"
+    },
+    "sort": {
+      "newest": "Newest",
+      "oldest": "Oldest",
+      "az": "A-Z",
+      "za": "Z-A"
+    },
     "resultCount_one": "{{count}} result",
     "resultCount_other": "{{count}} results",
     "noUsersFound": "No users found.",
@@ -671,7 +697,12 @@
     "premiumBadge": "Premium",
     "adminBadge": "Admin",
     "aiBlockedBadge": "AI blocked",
-    "feedbackFilters": { "all": "All", "new": "New", "read": "Read", "resolved": "Resolved" },
+    "feedbackFilters": {
+      "all": "All",
+      "new": "New",
+      "read": "Read",
+      "resolved": "Resolved"
+    },
     "noFeedback": "No reports.",
     "anonymous": "Anonymous",
     "reopen": "Reopen",
@@ -712,7 +743,29 @@
     "fbStatusNew": "New",
     "relativeToday": "Today",
     "relativeYesterday": "Yesterday",
-    "relativeDaysAgo": "{{count}} days ago"
+    "relativeDaysAgo": "{{count}} days ago",
+    "monetizationTitle": "Paid plans",
+    "monetizationDesc": "On: paywall and purchase prompts appear in the app. Off: free-plan limits stay, but nothing can be bought.",
+    "enableMonetizationTitle": "Turn payments on?",
+    "enableMonetizationBody": "The paywall becomes visible to all users and purchases will be real.",
+    "disableMonetizationTitle": "Turn payments off?",
+    "disableMonetizationBody": "The paywall disappears from the app. Existing subscriptions stay valid.",
+    "waitlistCount": "On the waitlist: {{count}}",
+    "newSurveyTitle": "New survey",
+    "surveyQuestionPlaceholder": "The question to ask users",
+    "surveyOptionPlaceholder": "Option {{n}}",
+    "surveyAddOption": "+ Option",
+    "surveyCreate": "Create survey",
+    "surveyIncomplete": "A question and at least two options are required.",
+    "surveyAnswers": "{{count}} answers",
+    "surveyDismissed": "{{count}} dismissed",
+    "surveyDelete": "Delete survey",
+    "surveyDeleteTitle": "Delete the survey?",
+    "surveyDeleteBody": "All collected answers will be deleted too.",
+    "surveyActive": "LIVE",
+    "surveyDraft": "DRAFT",
+    "surveyCreatedHint": "Created as a draft: flip the switch to show it to users.",
+    "surveyCreatedTitle": "Survey created"
   },
   "paywall": {
     "purchaseErrorTitle": "Purchase error",
@@ -798,5 +851,9 @@
       "confirm": "Log out"
     },
     "version": "Shelfy v{{version}}"
+  },
+  "survey": {
+    "badge": "Survey",
+    "skip": "Not now"
   }
 }

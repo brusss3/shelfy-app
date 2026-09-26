@@ -1,11 +1,11 @@
 import {
   collection, doc, addDoc, updateDoc, deleteDoc,
-  onSnapshot, query, orderBy, serverTimestamp, Timestamp, getDocs, getDoc, setDoc, writeBatch,
+  onSnapshot, query, orderBy, where, limit, serverTimestamp, Timestamp, getDocs, getDoc, setDoc, writeBatch,
   runTransaction,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { aiUsageKey } from './limits';
-import { Product, Zone, CommunityRecipe, RecipeRequest, RecipeProposal, MyRecipe } from '@/types';
+import { Product, Zone, CommunityRecipe, RecipeRequest, RecipeProposal, MyRecipe, Survey } from '@/types';
 import { notifyAdminsNewFeedback } from './notifications';
 
 function tsToIso(ts: unknown): string {
@@ -41,6 +41,8 @@ export interface AdminUserRecord {
   adminNotifNewUsers: boolean;
   adminNotifFeedback: boolean;
   aiDisabled: boolean;
+  /** Ha chiesto di essere avvisato quando i piani saranno in vendita. */
+  premiumWaitlist: boolean;
 }
 
 export async function getAllUsers(): Promise<AdminUserRecord[]> {
@@ -60,6 +62,7 @@ export async function getAllUsers(): Promise<AdminUserRecord[]> {
       adminNotifNewUsers: data.adminNotifNewUsers ?? true,
       adminNotifFeedback: data.adminNotifFeedback ?? true,
       aiDisabled: data.aiDisabled ?? false,
+      premiumWaitlist: data.premiumWaitlist === true,
     };
   });
   users.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
@@ -558,9 +561,142 @@ export async function adminSetUserAiDisabled(uid: string, disabled: boolean): Pr
   await setDoc(doc(db, 'users', uid), { aiDisabled: disabled }, { merge: true });
 }
 
+// --- Monetizzazione ---
+
+const monetizationConfigRef = () => doc(db, 'config', 'monetization');
+
+// Al contrario dell'AI, qui l'assenza del documento vale "piani NON in
+// vendita": al lancio i pagamenti restano nascosti, e si accendono solo con
+// un gesto esplicito dell'admin. Essendo su Firestore, accenderli non richiede
+// una nuova build né una review sullo store.
+export function subscribeToMonetizationEnabled(
+  onData: (enabled: boolean) => void,
+  onError?: (err: Error) => void,
+) {
+  return onSnapshot(
+    monetizationConfigRef(),
+    (snap) => onData(snap.exists() ? snap.data().enabled === true : false),
+    onError,
+  );
+}
+
+export async function adminSetMonetizationEnabled(enabled: boolean): Promise<void> {
+  await setDoc(monetizationConfigRef(), { enabled }, { merge: true });
+}
+
+// Interesse per il premium raccolto mentre i piani non sono ancora in
+// vendita: serve a stimare quanti utenti pagherebbero davvero.
+export async function joinPremiumWaitlist(uid: string): Promise<void> {
+  await setDoc(
+    doc(db, 'users', uid),
+    { premiumWaitlist: true, premiumWaitlistAt: new Date().toISOString() },
+    { merge: true },
+  );
+}
+
 // True se l'utente ha già speso il credito AI del periodo corrente: la
 // settimana con il piano base, la giornata con Premium.
 export async function hasUsedAiCredit(userId: string, isPremium: boolean): Promise<boolean> {
   const snap = await getDoc(doc(collection(db, 'users', userId, 'aiUsage'), aiUsageKey(isPremium)));
   return snap.exists();
+}
+
+// --- Sondaggi ---
+//
+// Un sondaggio = una domanda con opzioni. La risposta vive in
+// surveys/{id}/responses/{uid}: la chiave è l'uid, quindi un utente può
+// rispondere una volta sola senza bisogno di controlli aggiuntivi.
+// `optionIndex: null` significa "ha chiuso il popup senza rispondere": serve
+// a non riproporglielo più, distinguendo il rifiuto dalla risposta.
+
+export function subscribeToActiveSurvey(
+  onData: (survey: Survey | null) => void,
+  onError?: (err: Error) => void,
+) {
+  const q = query(collection(db, 'surveys'), where('active', '==', true), limit(1));
+  return onSnapshot(
+    q,
+    (snap) => {
+      const d = snap.docs[0];
+      onData(d ? ({ id: d.id, ...(d.data() as Omit<Survey, 'id'>) }) : null);
+    },
+    onError,
+  );
+}
+
+export async function hasRespondedToSurvey(surveyId: string, uid: string): Promise<boolean> {
+  const snap = await getDoc(doc(db, 'surveys', surveyId, 'responses', uid));
+  return snap.exists();
+}
+
+export async function submitSurveyResponse(
+  surveyId: string,
+  uid: string,
+  optionIndex: number | null,
+): Promise<void> {
+  await setDoc(doc(db, 'surveys', surveyId, 'responses', uid), {
+    optionIndex,
+    answeredAt: new Date().toISOString(),
+  });
+}
+
+export function subscribeToSurveys(
+  onData: (surveys: Survey[]) => void,
+  onError?: (err: Error) => void,
+) {
+  return onSnapshot(
+    query(collection(db, 'surveys'), orderBy('createdAt', 'desc')),
+    (snap) => onData(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Survey, 'id'>) }))),
+    onError,
+  );
+}
+
+export async function adminCreateSurvey(question: string, options: string[]): Promise<string> {
+  const ref = await addDoc(collection(db, 'surveys'), {
+    question,
+    options,
+    active: false,
+    createdAt: new Date().toISOString(),
+  });
+  return ref.id;
+}
+
+// Un solo sondaggio attivo per volta: attivandone uno gli altri si spengono,
+// altrimenti il popup non saprebbe quale mostrare.
+export async function adminSetSurveyActive(surveyId: string, active: boolean): Promise<void> {
+  if (!active) {
+    await updateDoc(doc(db, 'surveys', surveyId), { active: false });
+    return;
+  }
+  const all = await getDocs(collection(db, 'surveys'));
+  const batch = writeBatch(db);
+  all.docs.forEach((d) => {
+    if (d.id === surveyId) batch.update(d.ref, { active: true });
+    else if (d.data().active === true) batch.update(d.ref, { active: false });
+  });
+  await batch.commit();
+}
+
+export async function adminDeleteSurvey(surveyId: string): Promise<void> {
+  const responses = await getDocs(collection(db, 'surveys', surveyId, 'responses'));
+  const batch = writeBatch(db);
+  responses.docs.forEach((d) => batch.delete(d.ref));
+  batch.delete(doc(db, 'surveys', surveyId));
+  await batch.commit();
+}
+
+/** Conteggi per opzione + quante volte il popup è stato chiuso senza rispondere. */
+export async function adminGetSurveyResults(
+  surveyId: string,
+  optionCount: number,
+): Promise<{ counts: number[]; dismissed: number }> {
+  const snap = await getDocs(collection(db, 'surveys', surveyId, 'responses'));
+  const counts = new Array(optionCount).fill(0);
+  let dismissed = 0;
+  snap.docs.forEach((d) => {
+    const idx = d.data().optionIndex;
+    if (typeof idx === 'number' && idx >= 0 && idx < optionCount) counts[idx]++;
+    else dismissed++;
+  });
+  return { counts, dismissed };
 }

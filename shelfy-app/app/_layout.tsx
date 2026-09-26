@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Image, Platform, StyleSheet, View } from 'react-native';
+import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts,
@@ -16,7 +16,7 @@ import { CommunityProvider } from '@/context/CommunityContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { setupNotificationHandler } from '@/lib/notifications';
 import NotificationsScheduler from '@/components/NotificationsScheduler';
-import { T } from '@/constants/theme';
+import SurveyModal from '@/components/SurveyModal';
 
 SplashScreen.preventAutoHideAsync();
 setupNotificationHandler();
@@ -33,15 +33,14 @@ export default function RootLayout() {
     initI18n().then(() => setI18nReady(true));
   }, []);
 
+  const appReady = (fontsLoaded || fontError) && i18nReady;
+
   useEffect(() => {
-    // Nasconde lo splash NATIVO (icona piccola centrata) appena montato il
-    // primo frame JS, non quando i font sono pronti: prima lo tenevamo su
-    // fino a fontsLoaded, così restava sopra alla nostra immagine a schermo
-    // intero per tutta la durata del caricamento — l'utente vedeva solo
-    // l'icona piccola e mai il vero splash, comparso per un solo frame
-    // proprio nell'istante in cui i font finivano di caricare.
-    SplashScreen.hideAsync();
-  }, []);
+    // Lo splash nativo resta su finché font e lingua non sono pronti: ora
+    // mostra l'icona dell'app, quindi non serve più duplicarlo con
+    // un'immagine a schermo intero lato JS (che causava un doppio splash).
+    if (appReady) SplashScreen.hideAsync();
+  }, [appReady]);
 
   useEffect(() => {
     // Nasconde la barra di navigazione Android (tasti indietro/home/recenti).
@@ -53,28 +52,16 @@ export default function RootLayout() {
     }
   }, []);
 
-  // Lo splash nativo Android 12+ mostra solo un'icona centrata su sfondo
-  // colorato (vincolo della Splash Screen API di sistema, non aggirabile via
-  // config): per un vero splash a tutto schermo, dopo il breve lampo nativo
-  // mostriamo qui la stessa immagine a piena pagina finché font e lingua non
-  // sono pronti, poi passiamo alla UI reale.
-  if (!((fontsLoaded || fontError) && i18nReady)) {
-    return (
-      <View style={styles.splash}>
-        <Image
-          source={require('@/assets/splashScreenNew.png')}
-          resizeMode="cover"
-          style={StyleSheet.absoluteFill}
-        />
-      </View>
-    );
-  }
+  // Niente da disegnare finché non siamo pronti: sopra c'è ancora lo splash
+  // nativo, che si chiude da solo nell'effect qui sopra.
+  if (!appReady) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
         <PantryProvider>
         <NotificationsScheduler />
+        <SurveyModal />
         <ProductsProvider>
           <RecipesProvider>
           <CommunityProvider>
@@ -109,6 +96,3 @@ export default function RootLayout() {
   );
 }
 
-const styles = StyleSheet.create({
-  splash: { flex: 1, backgroundColor: T.bg },
-});

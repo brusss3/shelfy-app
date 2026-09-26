@@ -87,7 +87,8 @@
       "addManually": "Aggiungi manualmente",
       "scanProduct": "Scansiona un prodotto",
       "scanReceipt": "Scansiona uno scontrino"
-    }
+    },
+    "limitSoonDesc": "Presto un piano per superare il limite. Tocca per essere avvisato."
   },
   "auth": {
     "emailPlaceholder": "tu@esempio.com",
@@ -413,7 +414,9 @@
     "noIngredientTitle": "Nessun ingrediente",
     "noIngredientBody": "Seleziona almeno un ingrediente dalla tua dispensa.",
     "aiErrorTitle": "Ricetta AI",
-    "aiErrorFallback": "Riprova più tardi."
+    "aiErrorFallback": "Riprova più tardi.",
+    "planFreeNoteSoon": "1 ricetta AI a settimana. Presto un piano per averne di più.",
+    "planNotifyCta": "Avvisami quando esce ›"
   },
   "recipeCreate": {
     "titleNew": "Nuova ricetta",
@@ -614,7 +617,14 @@
   "limits": {
     "productLimitTitle": "Dispensa piena",
     "productLimitBody": "Il piano base arriva a {{limit}} prodotti. Passa a Premium per una dispensa illimitata.",
-    "unlockCta": "Sblocca Premium"
+    "unlockCta": "Sblocca Premium",
+    "productLimitSoonBody": "Il piano base arriva a {{limit}} prodotti. Stiamo lavorando a un piano per superarlo: vuoi essere avvisato quando sarà pronto?",
+    "comingSoonTitle": "Presto disponibile",
+    "comingSoonBody": "Stiamo preparando un piano per avere dispensa illimitata e più ricette AI. Vuoi che ti avvisiamo quando sarà pronto?",
+    "notifyMeCta": "Avvisami",
+    "waitlistDoneTitle": "Perfetto!",
+    "waitlistDoneBody": "Ti avviseremo appena il piano sarà disponibile.",
+    "waitlistFailed": "Non siamo riusciti a registrare la richiesta. Riprova."
   },
   "pushNotifications": {
     "consumedAction": "✓ Consumato",
@@ -642,7 +652,13 @@
     "title": "Dashboard admin",
     "subtitle": "{{users}} utenti · {{premium}} premium · {{feedback}} segnalazioni",
     "newFeedbackSuffix": " ({{count}} nuove)",
-    "tabs": { "users": "Utenti", "feedback": "Feedback", "notifications": "Notifiche", "ai": "AI" },
+    "tabs": {
+      "users": "Utenti",
+      "feedback": "Feedback",
+      "notifications": "Notifiche",
+      "ai": "AI",
+      "surveys": "Sondaggi"
+    },
     "confirm": "Conferma",
     "enableAiTitle": "Riattiva ricette AI",
     "disableAiTitle": "Disattiva ricette AI",
@@ -657,8 +673,18 @@
     "cantChangeOwnRoleTitle": "Attenzione",
     "cantChangeOwnRoleBody": "Non puoi modificare il tuo ruolo admin.",
     "searchPlaceholder": "Cerca per nome, email o UID...",
-    "filters": { "all": "Tutti", "newUnder": "Nuovi < {{days}}gg", "premium": "Premium ✦", "admin": "Admin 🛡️" },
-    "sort": { "newest": "Più recenti", "oldest": "Meno recenti", "az": "A-Z", "za": "Z-A" },
+    "filters": {
+      "all": "Tutti",
+      "newUnder": "Nuovi < {{days}}gg",
+      "premium": "Premium ✦",
+      "admin": "Admin 🛡️"
+    },
+    "sort": {
+      "newest": "Più recenti",
+      "oldest": "Meno recenti",
+      "az": "A-Z",
+      "za": "Z-A"
+    },
     "resultCount_one": "{{count}} risultato",
     "resultCount_other": "{{count}} risultati",
     "noUsersFound": "Nessun utente trovato.",
@@ -671,7 +697,12 @@
     "premiumBadge": "Premium",
     "adminBadge": "Admin",
     "aiBlockedBadge": "AI bloccata",
-    "feedbackFilters": { "all": "Tutti", "new": "Nuovi", "read": "Letti", "resolved": "Risolti" },
+    "feedbackFilters": {
+      "all": "Tutti",
+      "new": "Nuovi",
+      "read": "Letti",
+      "resolved": "Risolti"
+    },
     "noFeedback": "Nessuna segnalazione.",
     "anonymous": "Anonimo",
     "reopen": "Riapri",
@@ -712,7 +743,29 @@
     "fbStatusNew": "Nuovo",
     "relativeToday": "Oggi",
     "relativeYesterday": "Ieri",
-    "relativeDaysAgo": "{{count}} giorni fa"
+    "relativeDaysAgo": "{{count}} giorni fa",
+    "monetizationTitle": "Piani a pagamento",
+    "monetizationDesc": "Acceso: paywall e inviti all'acquisto compaiono nell'app. Spento: restano i limiti del piano base, ma non si può comprare nulla.",
+    "enableMonetizationTitle": "Attivare i pagamenti?",
+    "enableMonetizationBody": "Il paywall diventerà visibile a tutti gli utenti e gli acquisti saranno reali.",
+    "disableMonetizationTitle": "Disattivare i pagamenti?",
+    "disableMonetizationBody": "Il paywall sparirà dall'app. Gli abbonamenti già attivi restano validi.",
+    "waitlistCount": "In lista d'attesa: {{count}}",
+    "newSurveyTitle": "Nuovo sondaggio",
+    "surveyQuestionPlaceholder": "La domanda da fare agli utenti",
+    "surveyOptionPlaceholder": "Opzione {{n}}",
+    "surveyAddOption": "+ Opzione",
+    "surveyCreate": "Crea sondaggio",
+    "surveyIncomplete": "Servono una domanda e almeno due opzioni.",
+    "surveyAnswers": "{{count}} risposte",
+    "surveyDismissed": "{{count}} chiusi senza rispondere",
+    "surveyDelete": "Elimina sondaggio",
+    "surveyDeleteTitle": "Eliminare il sondaggio?",
+    "surveyDeleteBody": "Verranno cancellate anche tutte le risposte raccolte.",
+    "surveyActive": "ATTIVO",
+    "surveyDraft": "BOZZA",
+    "surveyCreatedHint": "Creato come bozza: accendi l'interruttore per mostrarlo agli utenti.",
+    "surveyCreatedTitle": "Sondaggio creato"
   },
   "paywall": {
     "purchaseErrorTitle": "Errore acquisto",
@@ -798,5 +851,9 @@
       "confirm": "Esci"
     },
     "version": "Shelfy v{{version}}"
+  },
+  "survey": {
+    "badge": "Sondaggio",
+    "skip": "Non ora"
   }
 }

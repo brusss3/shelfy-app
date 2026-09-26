@@ -66,6 +66,24 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Sondaggi: il testo lo legge chiunque sia loggato (serve al popup),
+    // crearli e attivarli è roba da admin.
+    match /surveys/{surveyId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+
+      // Una risposta per utente, con l'uid come id del documento: così il
+      // vincolo "una sola volta" è strutturale e non serve controllarlo.
+      // Immutabile: l'utente non può correggersi né ritrattare, l'admin non
+      // può riscrivere le risposte altrui.
+      match /responses/{uid} {
+        allow read: if request.auth != null && (request.auth.uid == uid || isAdmin());
+        allow create: if request.auth != null && request.auth.uid == uid;
+        allow update: if false;
+        allow delete: if isAdmin();
+      }
+    }
+
     // Feedback: ogni utente autenticato può inviarlo; solo l'admin può leggerlo
     // e aggiornarne lo stato (nuovo/letto/risolto).
     match /feedback/{docId} {

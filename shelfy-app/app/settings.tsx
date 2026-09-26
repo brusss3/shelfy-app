@@ -30,7 +30,7 @@ const LANGUAGE_OPTIONS: { id: LanguageOption; labelKey: string }[] = [
 ];
 
 export default function SettingsScreen() {
-  const { user, logOut, setNotificationsEnabled } = useAuth();
+  const { user, logOut, setNotificationsEnabled, monetizationEnabled } = useAuth();
   const router = useRouter();
   const { t, i18n } = useTranslation();
 
@@ -159,7 +159,10 @@ export default function SettingsScreen() {
             </Section>
           )}
 
-          {!isPremium && (
+          {/* Senza piani in vendita l'invito sparisce del tutto: in
+              Impostazioni non c'è un limite da spiegare, sarebbe solo una
+              promessa di qualcosa che non si può ancora comprare. */}
+          {!isPremium && monetizationEnabled && (
             <TouchableOpacity
               style={styles.upsellCard}
               onPress={() => router.push('/paywall')}

@@ -1,13 +1,23 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '@/context/AuthContext';
 import PaywallScreen from '@/components/PaywallScreen';
 import { T, SHADOW } from '@/constants/theme';
 
 export default function PaywallRoute() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { monetizationEnabled } = useAuth();
+
+  // Su web la rotta è raggiungibile digitando /paywall: senza piani in
+  // vendita va chiusa comunque, non basta nascondere i pulsanti che ci portano.
+  useEffect(() => {
+    if (!monetizationEnabled) router.replace('/(tabs)');
+  }, [monetizationEnabled]);
+
+  if (!monetizationEnabled) return null;
 
   return (
     <View style={{ flex: 1 }}>
