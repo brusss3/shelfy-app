@@ -31,3 +31,5 @@ google-play-key.json
 
 expo-env.d.ts
 # @end expo-cli
+# Credenziali di firma EAS (upload keystore): mai nel repo
+credentials.json

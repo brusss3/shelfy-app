@@ -3,8 +3,8 @@ import Constants from 'expo-constants';
 // OAuth Client ID di Google. Vanno creati nella Google Cloud Console del
 // progetto Firebase (shelfy-632e0) e inseriti in app.json → extra.googleAuth.
 // - web:     "Web application" client ID (usato anche da Firebase per il web)
-// - ios:     "iOS" client ID (bundle com.shelfy.sheflyapp)
-// - android: "Android" client ID (package com.shelfy.sheflyapp + SHA-1)
+// - ios:     "iOS" client ID (bundle it.shelfyapp)
+// - android: "Android" client ID (package it.shelfyapp + SHA-1)
 const extra = (Constants.expoConfig?.extra as any)?.googleAuth ?? {};
 
 export const GOOGLE_CLIENT_IDS = {

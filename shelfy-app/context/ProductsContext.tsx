@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { Product, Zone } from '@/types';
 import {
   subscribeToProducts, addProduct, addProductsBulk, updateProduct,
-  deleteProduct, moveProductZone, consumeOneUnit, openOneUnit,
+  deleteProduct, moveProductZone, consumeOneUnit, openOneUnit, recordProductsAdded,
 } from '@/lib/firestore';
 import { subscribeToConsumedAction } from '@/lib/notifications';
 import { FREE_PRODUCT_LIMIT, ProductLimitError } from '@/lib/limits';
@@ -94,6 +94,7 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
       if (!user) return;
       if (productLimit !== null && products.length >= productLimit) throw new ProductLimitError();
       await addProduct(user.uid, activePantryId, data);
+      recordProductsAdded(user.uid, 1).catch(() => {});
     },
     [user, activePantryId, productLimit, products.length],
   );
@@ -105,6 +106,7 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
         throw new ProductLimitError();
       }
       await addProductsBulk(user.uid, activePantryId, data);
+      recordProductsAdded(user.uid, data.length).catch(() => {});
     },
     [user, activePantryId, productLimit, products.length],
   );

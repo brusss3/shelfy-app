@@ -121,6 +121,7 @@
       "or": "oppure",
       "noAccount": "Non hai un account? ",
       "registerLink": "Registrati",
+      "guidesLink": "Guide: organizzare il frigo e controllare le scadenze",
       "missingFieldsError": "Inserisci email e password",
       "failedTitle": "Accesso fallito",
       "failedFallback": "Controlla le tue credenziali e riprova."
@@ -657,7 +658,8 @@
       "feedback": "Feedback",
       "notifications": "Notifiche",
       "ai": "AI",
-      "surveys": "Sondaggi"
+      "surveys": "Sondaggi",
+      "guides": "Guide"
     },
     "confirm": "Conferma",
     "enableAiTitle": "Riattiva ricette AI",
@@ -765,7 +767,14 @@
     "surveyActive": "ATTIVO",
     "surveyDraft": "BOZZA",
     "surveyCreatedHint": "Creato come bozza: accendi l'interruttore per mostrarlo agli utenti.",
-    "surveyCreatedTitle": "Sondaggio creato"
+    "surveyCreatedTitle": "Sondaggio creato",
+    "funnelIntro": "Iscritti dal {{date}}, divisi per guida di provenienza. Visite e clic dalle ricerche si leggono in Google Search Console.",
+    "funnelEmpty": "Ancora nessun iscritto da quando è attivo il tracciamento.",
+    "funnelOtherChannels": "Altri canali (nessuna guida)",
+    "funnelSignups": "Iscritti",
+    "funnelFirstProduct": "Hanno aggiunto il 1° prodotto",
+    "funnelThirdProduct": "Hanno aggiunto il 3° prodotto",
+    "funnelReturned7": "Tornati dopo 7 giorni (su {{count}} iscritti da 7+ giorni)"
   },
   "paywall": {
     "purchaseErrorTitle": "Errore acquisto",

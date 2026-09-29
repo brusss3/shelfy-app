@@ -1,7 +1,7 @@
 import {
   collection, doc, addDoc, updateDoc, deleteDoc,
   onSnapshot, query, orderBy, where, limit, serverTimestamp, Timestamp, getDocs, getDoc, setDoc, writeBatch,
-  runTransaction,
+  runTransaction, increment,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { aiUsageKey } from './limits';
@@ -43,6 +43,11 @@ export interface AdminUserRecord {
   aiDisabled: boolean;
   /** Ha chiesto di essere avvisato quando i piani saranno in vendita. */
   premiumWaitlist: boolean;
+  /** Slug della guida da cui è arrivato (vedi lib/acquisition.ts), se c'è. */
+  acquisitionSource: string | null;
+  /** Prodotti aggiunti in totale (cancellati inclusi): misura l'attivazione. */
+  productsAdded: number;
+  lastActiveAt: string | null;
 }
 
 export async function getAllUsers(): Promise<AdminUserRecord[]> {
@@ -63,10 +68,25 @@ export async function getAllUsers(): Promise<AdminUserRecord[]> {
       adminNotifFeedback: data.adminNotifFeedback ?? true,
       aiDisabled: data.aiDisabled ?? false,
       premiumWaitlist: data.premiumWaitlist === true,
+      acquisitionSource: data.acquisition?.source ?? null,
+      productsAdded: data.productsAdded ?? 0,
+      lastActiveAt: data.lastActiveAt ?? null,
     };
   });
   users.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   return users;
+}
+
+// Metriche di attivazione sul documento utente: contatore cumulativo dei
+// prodotti aggiunti (non cala se poi li cancella) e ultimo giorno di utilizzo.
+// Servono solo alla dashboard admin, quindi un errore non deve mai bloccare
+// l'azione dell'utente.
+export async function recordProductsAdded(uid: string, count: number): Promise<void> {
+  await setDoc(doc(db, 'users', uid), { productsAdded: increment(count) }, { merge: true });
+}
+
+export async function recordActiveNow(uid: string): Promise<void> {
+  await setDoc(doc(db, 'users', uid), { lastActiveAt: new Date().toISOString() }, { merge: true });
 }
 
 export async function saveUserPushToken(uid: string, token: string): Promise<void> {

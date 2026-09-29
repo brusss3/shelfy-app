@@ -18,7 +18,15 @@ import { auth, db } from '@/lib/firebase';
 import { initPurchases, checkPremiumStatus } from '@/lib/purchases';
 import { User, SubscriptionType } from '@/types';
 import { notifyAdminsNewUser } from '@/lib/notifications';
-import { subscribeToMonetizationEnabled } from '@/lib/firestore';
+import { subscribeToMonetizationEnabled, recordActiveNow } from '@/lib/firestore';
+import { getAcquisition } from '@/lib/acquisition';
+
+// Guida da cui è arrivato un nuovo utente (solo web), da salvare alla
+// creazione del documento: vedi lib/acquisition.ts.
+function acquisitionField() {
+  const acquisition = getAcquisition();
+  return acquisition ? { acquisition } : {};
+}
 
 interface AuthContextType {
   user: User | null;
@@ -108,6 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 isPremium: false,
                 notificationsEnabled: true,
                 createdAt: new Date().toISOString(),
+                ...acquisitionField(),
               }, { merge: true }).catch((e) => console.warn('[AuthContext] auto-provision failed:', e));
 
               notifyAdminsNewUser({
@@ -117,6 +126,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
 
             const data = snap.data();
+
+            // Un utilizzo al giorno basta per misurare chi torna dopo la prima
+            // settimana. Il confronto sulla data evita il ciclo: la scrittura
+            // fa ripartire lo snapshot, che trova già la data di oggi.
+            if (snap.exists() && (data?.lastActiveAt ?? '').slice(0, 10) !== new Date().toISOString().slice(0, 10)) {
+              recordActiveNow(firebaseUser.uid).catch(() => {});
+            }
+
             const firestorePremium: boolean = data?.isPremium ?? false;
             const isPremium = firestorePremium || rcPremiumRef.current;
             const isAdmin: boolean = data?.isAdmin ?? false;
@@ -202,6 +219,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isPremium: false,
         notificationsEnabled: true,
         createdAt: new Date().toISOString(),
+        ...acquisitionField(),
       });
       notifyAdminsNewUser({ email, displayName: name }).catch((e) =>
         console.warn('[AuthContext] notifyAdminsNewUser failed:', e),

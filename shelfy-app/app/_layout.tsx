@@ -17,9 +17,12 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { setupNotificationHandler } from '@/lib/notifications';
 import NotificationsScheduler from '@/components/NotificationsScheduler';
 import SurveyModal from '@/components/SurveyModal';
+import { captureAcquisitionSource } from '@/lib/acquisition';
 
 SplashScreen.preventAutoHideAsync();
 setupNotificationHandler();
+// Prima di qualsiasi redirect, finché `?src=` è ancora nell'URL.
+captureAcquisitionSource();
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({

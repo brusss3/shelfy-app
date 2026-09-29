@@ -121,6 +121,7 @@
       "or": "or",
       "noAccount": "Don't have an account? ",
       "registerLink": "Sign up",
+      "guidesLink": "Guides: organising your fridge and tracking expiry dates (Italian)",
       "missingFieldsError": "Enter email and password",
       "failedTitle": "Login failed",
       "failedFallback": "Check your credentials and try again."
@@ -657,7 +658,8 @@
       "feedback": "Feedback",
       "notifications": "Notifications",
       "ai": "AI",
-      "surveys": "Surveys"
+      "surveys": "Surveys",
+      "guides": "Guides"
     },
     "confirm": "Confirm",
     "enableAiTitle": "Re-enable AI recipes",
@@ -765,7 +767,14 @@
     "surveyActive": "LIVE",
     "surveyDraft": "DRAFT",
     "surveyCreatedHint": "Created as a draft: flip the switch to show it to users.",
-    "surveyCreatedTitle": "Survey created"
+    "surveyCreatedTitle": "Survey created",
+    "funnelIntro": "Sign-ups since {{date}}, split by the guide they came from. Search visits and clicks are in Google Search Console.",
+    "funnelEmpty": "No sign-ups yet since tracking started.",
+    "funnelOtherChannels": "Other channels (no guide)",
+    "funnelSignups": "Sign-ups",
+    "funnelFirstProduct": "Added 1st product",
+    "funnelThirdProduct": "Added 3rd product",
+    "funnelReturned7": "Came back after 7 days (of {{count}} signed up 7+ days ago)"
   },
   "paywall": {
     "purchaseErrorTitle": "Purchase error",

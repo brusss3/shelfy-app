@@ -21,12 +21,52 @@ import { registerForPushNotifications, sendAdminTestPushNotification } from '@/l
 import { showAlert } from '@/lib/alert';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 
-type Tab = 'users' | 'feedback' | 'notifiche' | 'ai' | 'sondaggi';
+type Tab = 'users' | 'feedback' | 'notifiche' | 'ai' | 'sondaggi' | 'guide';
 type SortMode = 'newest' | 'oldest' | 'az' | 'za';
 type FilterChip = 'all' | 'new' | 'premium' | 'admin';
 type FeedbackFilterChip = 'all' | FeedbackStatus;
 
 const NEW_USER_DAYS = 7;
+
+// Da questa data i documenti utente hanno origine (acquisition) e contatori di
+// attivazione (productsAdded, lastActiveAt): gli iscritti precedenti non li
+// hanno e falserebbero il confronto fra i canali.
+const ACTIVATION_TRACKING_SINCE = '2026-09-29';
+const DAY_MS = 1000 * 60 * 60 * 24;
+
+interface FunnelRow {
+  source: string | null; // null = nessuna guida (altri canali)
+  signups: number;
+  firstProduct: number;
+  thirdProduct: number;
+  eligible7: number; // iscritti da almeno 7 giorni
+  returned7: number; // di questi, usato l'app 7+ giorni dopo l'iscrizione
+}
+
+function buildFunnel(users: AdminUserRecord[]): FunnelRow[] {
+  const rows = new Map<string | null, FunnelRow>();
+  for (const u of users) {
+    if (!u.createdAt || u.createdAt < ACTIVATION_TRACKING_SINCE) continue;
+    const key = u.acquisitionSource;
+    const row = rows.get(key) ?? { source: key, signups: 0, firstProduct: 0, thirdProduct: 0, eligible7: 0, returned7: 0 };
+    row.signups += 1;
+    if (u.productsAdded >= 1) row.firstProduct += 1;
+    if (u.productsAdded >= 3) row.thirdProduct += 1;
+    const created = new Date(u.createdAt).getTime();
+    if (Date.now() - created >= 7 * DAY_MS) {
+      row.eligible7 += 1;
+      if (u.lastActiveAt && new Date(u.lastActiveAt).getTime() - created >= 7 * DAY_MS) row.returned7 += 1;
+    }
+    rows.set(key, row);
+  }
+  // Guide in ordine di iscritti, "altri canali" sempre in fondo come riferimento.
+  return [...rows.values()].sort((a, b) =>
+    a.source === null ? 1 : b.source === null ? -1 : b.signups - a.signups);
+}
+
+function pct(part: number, total: number): string {
+  return total > 0 ? `${part} (${Math.round((part / total) * 100)}%)` : '—';
+}
 
 function confirm(title: string, message: string, onYes: () => void, destructive = false) {
   showAlert(title, message, [
@@ -305,6 +345,7 @@ export default function AdminScreen() {
   if (!user?.isAdmin) return null;
 
   const premiumCount = users.filter((u) => u.isPremium).length;
+  const funnel = useMemo(() => buildFunnel(users), [users]);
   const newFeedbackCount = feedback.filter((f) => f.status === 'nuovo').length;
 
   return (
@@ -326,6 +367,7 @@ export default function AdminScreen() {
             <TabBtn label={t('admin.tabs.notifications')} active={tab === 'notifiche'} onPress={() => setTab('notifiche')} />
             <TabBtn label={aiEnabled ? t('admin.tabs.ai') : `${t('admin.tabs.ai')} ⛔`} active={tab === 'ai'} onPress={() => setTab('ai')} />
             <TabBtn label={t('admin.tabs.surveys')} active={tab === 'sondaggi'} onPress={() => setTab('sondaggi')} />
+            <TabBtn label={t('admin.tabs.guides')} active={tab === 'guide'} onPress={() => setTab('guide')} />
           </View>
         </View>
       </View>
@@ -523,6 +565,37 @@ export default function AdminScreen() {
                     {t('admin.blockedUsersCount', { count: users.filter((u) => u.aiDisabled).length })}
                   </Text>
                 </View>
+              </View>
+            )}
+
+            {tab === 'guide' && (
+              <View style={{ gap: 12 }}>
+                <Text style={styles.notifSectionDesc}>
+                  {t('admin.funnelIntro', { date: formatDate(ACTIVATION_TRACKING_SINCE) })}
+                </Text>
+                {funnel.length === 0 ? (
+                  <Text style={styles.empty}>{t('admin.funnelEmpty')}</Text>
+                ) : funnel.map((r) => (
+                  <View key={r.source ?? '_other'} style={[styles.card, { gap: 6 }]}>
+                    <Text style={styles.notifSectionTitle}>{r.source ?? t('admin.funnelOtherChannels')}</Text>
+                    <View style={styles.resultRow}>
+                      <Text style={styles.resultLabel}>{t('admin.funnelSignups')}</Text>
+                      <Text style={styles.resultValue}>{r.signups}</Text>
+                    </View>
+                    <View style={styles.resultRow}>
+                      <Text style={styles.resultLabel}>{t('admin.funnelFirstProduct')}</Text>
+                      <Text style={styles.resultValue}>{pct(r.firstProduct, r.signups)}</Text>
+                    </View>
+                    <View style={styles.resultRow}>
+                      <Text style={styles.resultLabel}>{t('admin.funnelThirdProduct')}</Text>
+                      <Text style={styles.resultValue}>{pct(r.thirdProduct, r.signups)}</Text>
+                    </View>
+                    <View style={styles.resultRow}>
+                      <Text style={styles.resultLabel}>{t('admin.funnelReturned7', { count: r.eligible7 })}</Text>
+                      <Text style={styles.resultValue}>{pct(r.returned7, r.eligible7)}</Text>
+                    </View>
+                  </View>
+                ))}
               </View>
             )}
 
@@ -787,7 +860,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: FONTS.display, fontSize: 24, color: T.ink, letterSpacing: -0.5 },
   subtitle: { fontFamily: FONTS.sans, fontSize: 13, color: T.mute, marginTop: 2 },
 
-  tabs: { flexDirection: 'row', gap: 8, marginTop: 14 },
+  tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
   tab: { paddingVertical: 10, paddingHorizontal: 16, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   tabActive: { borderBottomColor: T.primary },
   tabText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.mute },

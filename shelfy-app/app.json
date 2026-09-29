@@ -11,7 +11,7 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.shelfy.sheflyapp",
+      "bundleIdentifier": "it.shelfyapp",
       "infoPlist": {
         "NSCameraUsageDescription": "Shelfy usa la fotocamera per scansionare i codici a barre dei prodotti.",
         "NSUserNotificationsUsageDescription": "Shelfy invia notifiche quando i tuoi prodotti stanno per scadere."
@@ -22,7 +22,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#fff9ed"
       },
-      "package": "com.shelfy.sheflyapp",
+      "package": "it.shelfyapp",
       "permissions": [
         "CAMERA",
         "RECEIVE_BOOT_COMPLETED",
@@ -84,7 +84,7 @@
       "googleAuth": {
         "webClientId": "288975536587-1q7p528mc3t4i9plc9udsknfrc7s5u1m.apps.googleusercontent.com",
         "iosClientId": "",
-        "androidClientId": "288975536587-c26i2ncmtbmcqr4c3rg3953eds7ofhit.apps.googleusercontent.com"
+        "androidClientId": "288975536587-c03grc9acs72v3ksbk4aj2ar2k1sqten.apps.googleusercontent.com"
       },
       "revenueCat": {
         "androidKey": "goog_vfsUpiZZELRATmrwMOmFDbWiGBD",

@@ -285,7 +285,7 @@ export async function openSubscriptionManagement(): Promise<void> {
     return;
   }
 
-  const pkgName = (Constants.expoConfig?.android as any)?.package || 'com.shelfy.sheflyapp';
+  const pkgName = (Constants.expoConfig?.android as any)?.package || 'it.shelfyapp';
   const url =
     Platform.OS === 'ios'
       ? 'itms-apps://apps.apple.com/account/subscriptions'

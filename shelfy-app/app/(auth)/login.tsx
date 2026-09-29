@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, Image, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView,
+  KeyboardAvoidingView, Platform, ScrollView, Linking,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +11,16 @@ import GoogleAuthButton from '@/components/GoogleAuthButton';
 import PrimaryButton from '@/components/PrimaryButton';
 import { showAlert } from '@/lib/alert';
 import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
+
+// Le guide sono pagine statiche fuori dalla SPA (public/guide/): sul web si
+// naviga nella stessa scheda, su nativo si apre il sito.
+const GUIDES_PATH = '/guide/';
+const SITE_URL = 'https://shelfy-app.it';
+
+function openGuides() {
+  if (Platform.OS === 'web') window.location.assign(GUIDES_PATH);
+  else Linking.openURL(SITE_URL + GUIDES_PATH);
+}
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -107,6 +117,10 @@ export default function LoginScreen() {
             {t('auth.login.registerLink')}
           </Link>
         </View>
+
+        <Text style={styles.guidesLink} onPress={openGuides} accessibilityRole="link">
+          {t('auth.login.guidesLink')}
+        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -151,6 +165,10 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
   footerText: { fontFamily: FONTS.sans, fontSize: 14, color: T.mute },
   footerLink: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.primary },
+  guidesLink: {
+    fontFamily: FONTS.sansMedium, fontSize: 13, color: T.ink2,
+    textAlign: 'center', marginTop: 16, textDecorationLine: 'underline',
+  },
   forgotLink: {
     fontFamily: FONTS.sansMedium, fontSize: 13, color: T.primary,
     textAlign: 'right', marginTop: 10,
