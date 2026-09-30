@@ -11,12 +11,10 @@ import { useCommunity } from '@/context/CommunityContext';
 import { useRecipes } from '@/context/RecipesContext';
 import { createProposal } from '@/lib/firestore';
 import { showAlert } from '@/lib/alert';
+import { RECIPE_TINTS as TINTS, RECIPE_DIFFICULTIES as DIFFICULTIES } from '@/lib/recipePrompt';
 import PrimaryButton from '@/components/PrimaryButton';
 import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
 import { RecipeIngredient } from '@/types';
-
-const TINTS = ['#e6efde', '#f1ede0', '#f3e9e0', '#f4e9c8', '#e8dcc6', '#eceee5', '#f4dad0', '#e6dfd1'];
-const DIFFICULTIES = ['Facile', 'Media', 'Difficile'];
 
 export default function CreateRecipeScreen() {
   const router = useRouter();

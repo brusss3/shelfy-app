@@ -1,17 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '@/context/AuthContext';
-import { usePremiumGate } from '@/lib/premiumGate';
+import * as Clipboard from 'expo-clipboard';
 import { useProducts } from '@/context/ProductsContext';
 import { useCommunity } from '@/context/CommunityContext';
 import { useRecipes } from '@/context/RecipesContext';
-import { generateDailyRecipe, AiRecipeError } from '@/lib/aiRecipe';
+import { buildRecipePrompt, MAX_PROMPT_RECIPES } from '@/lib/recipePrompt';
 import { effectiveDays } from '@/lib/urgency';
 import { showAlert } from '@/lib/alert';
 import ProfileButton from '@/components/ProfileButton';
@@ -30,12 +29,9 @@ function matchCount(recipe: CommunityRecipe, expiringNames: string[]): number {
 }
 
 export default function RecipesScreen() {
-  const { user } = useAuth();
-  const isPremium = !!user?.isPremium;
-  const { monetizationEnabled, onUpgradeIntent } = usePremiumGate();
   const { products } = useProducts();
   const { recipes, requests, loading } = useCommunity();
-  const { myRecipes, savedRecipes, aiCreditUsed, aiEnabled, refreshAiUsage } = useRecipes();
+  const { myRecipes, savedRecipes } = useRecipes();
   const router = useRouter();
   const { t } = useTranslation();
   const [view, setView] = useState<View_>('recipes');
@@ -49,47 +45,52 @@ export default function RecipesScreen() {
   const openRequests = useMemo(() => requests.filter((r) => r.status === 'open'), [requests]);
   const closedRequests = useMemo(() => requests.filter((r) => r.status === 'closed'), [requests]);
 
-  // ─── Generazione AI ──────────────────────────────────────────────────────
-  const [aiSelection, setAiSelection] = useState<string[] | null>(null);
-  const [generating, setGenerating] = useState(false);
-  const [aiFallback, setAiFallback] = useState<CommunityRecipe[]>([]);
+  // ─── Prompt per l'assistente AI dell'utente ──────────────────────────────
+  // Niente API a pagamento: l'app compone il prompt, l'utente lo passa a
+  // ChatGPT (o simili) e reincolla la risposta JSON in /recipe/import.
+  const [promptSelection, setPromptSelection] = useState<string[] | null>(null);
+  const [recipeCount, setRecipeCount] = useState(1);
+
+  // Tutta la dispensa è selezionabile, i più urgenti per primi.
+  const pantryNames = useMemo(
+    () => Array.from(new Set(
+      [...products].sort((a, b) => effectiveDays(a) - effectiveDays(b)).map((p) => p.name),
+    )),
+    [products],
+  );
 
   // Preselezione: i più urgenti in scadenza, al massimo 5.
-  const selectedIngredients = aiSelection ?? expiringNames.slice(0, 5);
+  const selectedIngredients = promptSelection ?? expiringNames.slice(0, 5);
 
   const toggleIngredient = (name: string) => {
     const next = selectedIngredients.includes(name)
       ? selectedIngredients.filter((n) => n !== name)
       : [...selectedIngredients, name];
-    setAiSelection(next);
+    setPromptSelection(next);
   };
 
-  const handleGenerate = async () => {
+  const buildPromptOrWarn = (): string | null => {
     if (selectedIngredients.length === 0) {
       showAlert(t('recipes.noIngredientTitle'), t('recipes.noIngredientBody'));
-      return;
+      return null;
     }
-    setGenerating(true);
-    setAiFallback([]);
+    return buildRecipePrompt(selectedIngredients, recipeCount);
+  };
+
+  const handleCopyPrompt = async () => {
+    const prompt = buildPromptOrWarn();
+    if (!prompt) return;
+    await Clipboard.setStringAsync(prompt);
+    showAlert(t('recipes.promptCopiedTitle'), t('recipes.promptCopiedBody'));
+  };
+
+  const handleSharePrompt = async () => {
+    const prompt = buildPromptOrWarn();
+    if (!prompt) return;
     try {
-      const recipe = await generateDailyRecipe(selectedIngredients);
-      await refreshAiUsage();
-      router.push(`/recipe/mine/${recipe.id}`);
-    } catch (e) {
-      const err = e as AiRecipeError;
-      if (err.kind === 'quota') await refreshAiUsage();
-      // Se l'AI non è disponibile proponiamo ricette della community che usano
-      // gli stessi ingredienti, così la richiesta non resta senza risposta.
-      if (err.kind === 'unavailable') {
-        setAiFallback(
-          recipes
-            .filter((r) => matchCount(r, selectedIngredients) > 0)
-            .slice(0, 5),
-        );
-      }
-      showAlert(t('recipes.aiErrorTitle'), err.message ?? t('recipes.aiErrorFallback'));
-    } finally {
-      setGenerating(false);
+      await Share.share({ message: prompt });
+    } catch {
+      // Foglio di condivisione chiuso o non supportato (web): nessuna azione.
     }
   };
 
@@ -254,94 +255,74 @@ export default function RecipesScreen() {
 
         {view === 'mine' && (
           <>
-            {/* Ricetta AI del giorno */}
+            {/* Ricette dal proprio assistente AI, via prompt copiato */}
             <View style={styles.aiCard}>
               <View style={styles.aiBadge}>
-                <Text style={styles.aiBadgeText}>{t('recipes.aiDailyBadge')}</Text>
+                <Text style={styles.aiBadgeText}>{t('recipes.promptBadge')}</Text>
               </View>
-              <Text style={styles.aiTitle}>{t('recipes.aiDailyTitle')}</Text>
-              <Text style={styles.aiDesc}>
-                {t('recipes.aiDailyDesc')}
-              </Text>
+              <Text style={styles.aiTitle}>{t('recipes.promptTitle')}</Text>
+              <Text style={styles.aiDesc}>{t('recipes.promptDesc')}</Text>
 
-              {expiringProducts.length > 0 ? (
+              <Text style={styles.aiStepLabel}>{t('recipes.promptStepIngredients')}</Text>
+              {pantryNames.length > 0 ? (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.aiChips}>
-                  {expiringProducts.map((p) => {
-                    const active = selectedIngredients.includes(p.name);
+                  {pantryNames.map((name) => {
+                    const active = selectedIngredients.includes(name);
                     return (
                       <TouchableOpacity
-                        key={p.id}
-                        onPress={() => toggleIngredient(p.name)}
+                        key={name}
+                        onPress={() => toggleIngredient(name)}
                         activeOpacity={0.85}
                         style={[styles.aiChip, active && styles.aiChipActive]}
                       >
-                        <Text style={[styles.aiChipText, active && styles.aiChipTextActive]}>{p.name}</Text>
+                        <Text style={[styles.aiChipText, active && styles.aiChipTextActive]}>{name}</Text>
                       </TouchableOpacity>
                     );
                   })}
                 </ScrollView>
               ) : (
-                <Text style={styles.aiEmpty}>{t('recipes.aiEmptyIngredients')}</Text>
+                <Text style={styles.aiEmpty}>{t('recipes.promptEmptyPantry')}</Text>
               )}
+
+              <Text style={styles.aiStepLabel}>{t('recipes.promptStepCount')}</Text>
+              <View style={styles.countRow}>
+                {Array.from({ length: MAX_PROMPT_RECIPES }, (_, i) => i + 1).map((n) => {
+                  const active = recipeCount === n;
+                  return (
+                    <TouchableOpacity
+                      key={n}
+                      onPress={() => setRecipeCount(n)}
+                      activeOpacity={0.85}
+                      style={[styles.countChip, active && styles.aiChipActive]}
+                    >
+                      <Text style={[styles.aiChipText, active && styles.aiChipTextActive]}>{n}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <View style={styles.promptActions}>
+                <TouchableOpacity style={[styles.aiBtn, { flex: 1, marginTop: 0 }]} onPress={handleCopyPrompt} activeOpacity={0.85}>
+                  <Text style={styles.aiBtnText}>{t('recipes.promptCopy')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.aiShareBtn}
+                  onPress={handleSharePrompt}
+                  activeOpacity={0.85}
+                  accessibilityLabel={t('recipes.promptShareA11y')}
+                >
+                  <Ionicons name="share-outline" size={20} color="#1a2018" />
+                </TouchableOpacity>
+              </View>
 
               <TouchableOpacity
-                style={[styles.aiBtn, (generating || aiCreditUsed || !aiEnabled) && { opacity: 0.6 }]}
-                onPress={handleGenerate}
-                disabled={generating || aiCreditUsed || !aiEnabled}
+                style={styles.aiImportBtn}
+                onPress={() => router.push('/recipe/import')}
                 activeOpacity={0.85}
               >
-                {generating ? (
-                  <ActivityIndicator color="#1a2018" />
-                ) : (
-                  <Text style={styles.aiBtnText}>
-                    {!aiEnabled
-                      ? t('recipes.aiUnavailable')
-                      : aiCreditUsed
-                        ? (isPremium ? t('recipes.aiAlreadyToday') : t('recipes.aiAlreadyThisWeek'))
-                        : t('recipes.aiGenerate')}
-                  </Text>
-                )}
+                <Text style={styles.aiImportBtnText}>{t('recipes.promptImport')}</Text>
               </TouchableOpacity>
-
-              {/* Piano attivo: quante ricette AI spettano, e come sbloccarne di più */}
-              {isPremium ? (
-                <Text style={styles.aiPlanNote}>{t('recipes.planPremiumNote')}</Text>
-              ) : (
-                <TouchableOpacity style={styles.aiUpsell} onPress={onUpgradeIntent} activeOpacity={0.85}>
-                  <Text style={styles.aiUpsellText}>
-                    <Text style={styles.aiUpsellStrong}>{t('recipes.planFreeLabel')}</Text>
-                    {monetizationEnabled ? t('recipes.planFreeNote') : t('recipes.planFreeNoteSoon')}
-                  </Text>
-                  <Text style={styles.aiUpsellCta}>
-                    {monetizationEnabled ? t('recipes.planUpgradeCta') : t('recipes.planNotifyCta')}
-                  </Text>
-                </TouchableOpacity>
-              )}
             </View>
-
-            {aiFallback.length > 0 && (
-              <>
-                <Text style={styles.sectionLabel}>{t('recipes.fromCommunity')}</Text>
-                <View style={styles.list}>
-                  {aiFallback.map((recipe) => (
-                    <TouchableOpacity
-                      key={recipe.id}
-                      style={styles.recipeRow}
-                      onPress={() => router.push(`/recipe/${recipe.id}`)}
-                      activeOpacity={0.85}
-                    >
-                      <View style={[styles.tileBox, { backgroundColor: recipe.tint }]}>
-                        <Text style={styles.tileLetter}>{recipe.title.charAt(0).toUpperCase()}</Text>
-                      </View>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={styles.recipeRowTitle} numberOfLines={1}>{recipe.title}</Text>
-                        <Text style={styles.metaSub}>{t('recipes.byAuthor', { name: recipe.authorName })}</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </>
-            )}
 
             <Text style={styles.sectionLabel}>{t('recipes.createdByMe')}</Text>
             {myRecipes.length === 0 ? (
@@ -468,7 +449,7 @@ const styles = StyleSheet.create({
   aiBadgeText: { color: '#fbfaf3', fontSize: 10, fontFamily: FONTS.sansBold, letterSpacing: 0.8 },
   aiTitle: { fontFamily: FONTS.serifItalic, fontSize: 26, color: '#fbfaf3', letterSpacing: -0.4 },
   aiDesc: { color: 'rgba(255,255,255,0.75)', fontSize: 13, marginTop: 6, lineHeight: 18, fontFamily: FONTS.sans },
-  aiChips: { gap: 8, paddingVertical: 14 },
+  aiChips: { gap: 8, paddingTop: 10 },
   aiChip: {
     backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: RADIUS.md,
     paddingVertical: 6, paddingHorizontal: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
@@ -476,28 +457,33 @@ const styles = StyleSheet.create({
   aiChipActive: { backgroundColor: '#fbfaf3', borderColor: '#fbfaf3' },
   aiChipText: { color: '#fbfaf3', fontSize: 12, fontFamily: FONTS.sansMedium },
   aiChipTextActive: { color: '#1a2018', fontFamily: FONTS.sansBold },
-  aiEmpty: { color: 'rgba(255,255,255,0.6)', fontSize: 12, fontFamily: FONTS.sans, marginTop: 12 },
+  aiEmpty: { color: 'rgba(255,255,255,0.6)', fontSize: 12, fontFamily: FONTS.sans, marginTop: 10 },
   aiBtn: {
     backgroundColor: '#fbfaf3', borderRadius: RADIUS.lg, paddingVertical: 14,
     alignItems: 'center', marginTop: 12,
   },
   aiBtnText: { color: '#1a2018', fontFamily: FONTS.sansBold, fontSize: 15 },
 
-  aiPlanNote: {
-    color: 'rgba(255,255,255,0.65)', fontSize: 12, fontFamily: FONTS.sans,
-    marginTop: 10, textAlign: 'center',
+  aiStepLabel: {
+    color: 'rgba(255,255,255,0.65)', fontSize: 11, fontFamily: FONTS.sansBold,
+    letterSpacing: 0.6, marginTop: 16,
   },
-  aiUpsell: {
-    marginTop: 12, paddingTop: 12,
-    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.15)',
+  countRow: { flexDirection: 'row', gap: 8, paddingTop: 10 },
+  countChip: {
+    minWidth: 48, alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: RADIUS.md,
+    paddingVertical: 8, paddingHorizontal: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
   },
-  aiUpsellText: {
-    color: 'rgba(255,255,255,0.75)', fontSize: 12, fontFamily: FONTS.sans, lineHeight: 17,
+  promptActions: { flexDirection: 'row', gap: 8, marginTop: 18 },
+  aiShareBtn: {
+    width: 52, backgroundColor: '#fbfaf3', borderRadius: RADIUS.lg, paddingVertical: 14,
+    alignItems: 'center', justifyContent: 'center',
   },
-  aiUpsellStrong: { color: '#fbfaf3', fontFamily: FONTS.sansBold },
-  aiUpsellCta: {
-    color: '#fbfaf3', fontSize: 13, fontFamily: FONTS.sansBold, marginTop: 6,
+  aiImportBtn: {
+    borderRadius: RADIUS.lg, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)',
+    paddingVertical: 13, alignItems: 'center', marginTop: 10,
   },
+  aiImportBtnText: { color: '#fbfaf3', fontFamily: FONTS.sansBold, fontSize: 14 },
 
   publishedBadge: {
     backgroundColor: T.okSoft, borderRadius: RADIUS.tag, paddingVertical: 4, paddingHorizontal: 8,

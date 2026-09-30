@@ -14,7 +14,7 @@ import { ProductsProvider } from '@/context/ProductsContext';
 import { RecipesProvider } from '@/context/RecipesContext';
 import { CommunityProvider } from '@/context/CommunityContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { setupNotificationHandler } from '@/lib/notifications';
+import { setupNotificationHandler, setupNotificationCategories } from '@/lib/notifications';
 import NotificationsScheduler from '@/components/NotificationsScheduler';
 import SurveyModal from '@/components/SurveyModal';
 import { captureAcquisitionSource } from '@/lib/acquisition';
@@ -33,7 +33,12 @@ export default function RootLayout() {
   const [i18nReady, setI18nReady] = useState(false);
 
   useEffect(() => {
-    initI18n().then(() => setI18nReady(true));
+    initI18n().then(() => {
+      // Il titolo del pulsante "Consumato" è tradotto: si registra solo a
+      // lingua caricata, altrimenti arriva undefined e Android rifiuta la categoria.
+      setupNotificationCategories();
+      setI18nReady(true);
+    });
   }, []);
 
   const appReady = (fontsLoaded || fontError) && i18nReady;
@@ -80,6 +85,7 @@ export default function RootLayout() {
             <Stack.Screen name="recipe/[id]" />
             <Stack.Screen name="recipe/mine/[id]" />
             <Stack.Screen name="recipe/create" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="recipe/import" options={{ presentation: 'modal' }} />
             <Stack.Screen name="recipe/request-new" options={{ presentation: 'modal' }} />
             <Stack.Screen name="recipe/request/[id]" />
             <Stack.Screen name="pantry/index" options={{ headerShown: false, presentation: 'modal' }} />

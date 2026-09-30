@@ -29,9 +29,12 @@ export function setupNotificationHandler(): void {
       shouldSetBadge: true,
     }),
   });
+}
+
+function registerExpiryCategory(): void {
   // Fire-and-forget: se fallisce (es. piattaforma non supportata) la notifica
   // resta comunque valida, solo senza il pulsante.
-  Notifications.setNotificationCategoryAsync(EXPIRY_CATEGORY, [
+  N().setNotificationCategoryAsync(EXPIRY_CATEGORY, [
     {
       identifier: 'consumed',
       buttonTitle: i18n.t('pushNotifications.consumedAction'),
@@ -39,6 +42,14 @@ export function setupNotificationHandler(): void {
       options: { opensAppToForeground: true },
     },
   ]).catch((e: unknown) => console.warn('[notifications] setNotificationCategoryAsync failed:', e));
+}
+
+// Va chiamata dopo initI18n(): il titolo del pulsante è tradotto. Si
+// ri-registra al cambio lingua così il pulsante segue la lingua dell'app.
+export function setupNotificationCategories(): void {
+  if (isExpoGo || Platform.OS === 'web') return;
+  registerExpiryCategory();
+  i18n.on('languageChanged', registerExpiryCategory);
 }
 
 // Registra un listener che intercetta il tap sul pulsante "Consumato" della
