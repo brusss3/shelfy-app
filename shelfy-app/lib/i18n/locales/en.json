@@ -274,7 +274,13 @@
       "frigo": "4 °C",
       "freezer": "-18 °C",
       "dispensa": "Dry"
-    }
+    },
+    "addToList": "Add to list",
+    "addedToList": "{{name}} is on your shopping list",
+    "finishedTitle": "You've finished {{name}}",
+    "finishedBody": "Add it to your shopping list?",
+    "finishedAdd": "Add",
+    "finishedNo": "No"
   },
   "pantry": {
     "hub": {
@@ -887,5 +893,96 @@
   "survey": {
     "badge": "Survey",
     "skip": "Not now"
+  },
+  "shopping": {
+    "title": "Shopping",
+    "openCount_one": "{{count}} to buy",
+    "openCount_other": "{{count}} to buy",
+    "allInCart": "Everything in the cart",
+    "toBuy": "To buy",
+    "inCart": "In the cart ({{count}})",
+    "clearCart": "Clear cart",
+    "clearCartTitle": "Clear the cart?",
+    "clearCartBody_one": "{{count}} item in the cart will be removed from the list.",
+    "clearCartBody_other": "{{count}} items in the cart will be removed from the list.",
+    "emptyTitle": "Your list is empty",
+    "emptyBody": "Type what you need below, scan a barcode, or tap “Add to list” on a pantry product.",
+    "addPlaceholder": "What do you need to buy?",
+    "addFree": "Add “{{text}}”",
+    "fromPantry": "In your pantry",
+    "searching": "Searching the catalog…",
+    "addedToast": "Added: {{name}}",
+    "incrementedToast": "{{name}} was already on the list: quantity increased",
+    "addFailed": "Couldn't add the item. Try again.",
+    "a11y": {
+      "add": "Add to list",
+      "scan": "Scan a barcode",
+      "remove": "Remove from list",
+      "decrease": "Decrease quantity",
+      "increase": "Increase quantity"
+    },
+    "scan": {
+      "title": "Add to list",
+      "hint": "Point at the product's barcode",
+      "notFoundTitle": "Product not found",
+      "notFoundBody": "This code isn't in the catalog. Type the name on the list instead.",
+      "cancel": "Type the name",
+      "offlineBody": "Couldn't look the product up: check your connection and try again."
+    }
+  },
+  "prices": {
+    "age": {
+      "today": "today",
+      "yesterday": "yesterday",
+      "days_one": "{{count}} day ago",
+      "days_other": "{{count}} days ago",
+      "weeks_one": "{{count}} week ago",
+      "weeks_other": "{{count}} weeks ago",
+      "months_one": "{{count}} month ago",
+      "months_other": "{{count}} months ago"
+    },
+    "lowest": "Lowest",
+    "updated": "Seen {{age}}",
+    "staleNote": "Last seen {{age}} · may be out of date",
+    "confirmed_one": "confirmed",
+    "confirmed_other": "confirmed {{count}} times",
+    "recencyHint": "A price is current within {{recent}} days; after {{stale}} it's history only.",
+    "emptyTitle": "No prices yet",
+    "emptyBody": "If you're at the store, add the price you see on the shelf: you'll help whoever shops after you.",
+    "add": "Add price",
+    "addShort": "Add price",
+    "priceLabel": "Price",
+    "cityLabel": "City",
+    "cityPlaceholder": "E.g. Pisa",
+    "storeLabel": "Where did you see it?",
+    "newStore": "Other store",
+    "otherChain": "Other chain",
+    "chainPlaceholder": "Chain name",
+    "areaPlaceholder": "Area or street (optional)",
+    "dateLabel": "When?",
+    "date": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "threeDays": "3 days ago",
+      "week": "1 week ago"
+    },
+    "save": "Save price",
+    "privacy": "The price is visible to all Shelfy users, without your name.",
+    "savedTitle": "Price saved",
+    "savedBody": "Thanks! It's now visible to people looking for this product.",
+    "heldTitle": "Price needs a check",
+    "heldBody": "This price is very different from the ones we already know, so we're not publishing it right away. If it's right, another report will confirm it.",
+    "saveFailed": "Couldn't save the price. Try again."
+  },
+  "catalog": {
+    "title": "Product not found",
+    "body": "Nobody has added the code {{barcode}} yet. Give it a name: the next person who scans it will find it here.",
+    "namePlaceholder": "Product name",
+    "brandPlaceholder": "Brand (optional)",
+    "qtyPlaceholder": "Size",
+    "note": "The name is visible to all Shelfy users, without your name. Make sure it's right: it can't be changed afterwards.",
+    "save": "Save and continue",
+    "skipRescan": "Scan another",
+    "skipPantry": "Skip, I'll enter details later"
   }
 }

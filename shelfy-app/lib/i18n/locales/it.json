@@ -274,7 +274,13 @@
       "frigo": "4 °C",
       "freezer": "-18 °C",
       "dispensa": "Asciutto"
-    }
+    },
+    "addToList": "Aggiungi alla lista",
+    "addedToList": "{{name}} è nella lista della spesa",
+    "finishedTitle": "Hai finito {{name}}",
+    "finishedBody": "Vuoi aggiungerlo alla lista della spesa?",
+    "finishedAdd": "Aggiungi",
+    "finishedNo": "No"
   },
   "pantry": {
     "hub": {
@@ -887,5 +893,96 @@
   "survey": {
     "badge": "Sondaggio",
     "skip": "Non ora"
+  },
+  "shopping": {
+    "title": "Spesa",
+    "openCount_one": "{{count}} da comprare",
+    "openCount_other": "{{count}} da comprare",
+    "allInCart": "Tutto nel carrello",
+    "toBuy": "Da comprare",
+    "inCart": "Nel carrello ({{count}})",
+    "clearCart": "Svuota carrello",
+    "clearCartTitle": "Svuotare il carrello?",
+    "clearCartBody_one": "{{count}} voce nel carrello verrà tolta dalla lista.",
+    "clearCartBody_other": "{{count}} voci nel carrello verranno tolte dalla lista.",
+    "emptyTitle": "La lista è vuota",
+    "emptyBody": "Scrivi cosa ti serve qui sotto, scansiona un codice a barre o tocca «Aggiungi alla lista» su un prodotto della dispensa.",
+    "addPlaceholder": "Cosa devi comprare?",
+    "addFree": "Aggiungi «{{text}}»",
+    "fromPantry": "In dispensa",
+    "searching": "Cerco nel catalogo…",
+    "addedToast": "Aggiunto: {{name}}",
+    "incrementedToast": "{{name}} era già in lista: quantità aumentata",
+    "addFailed": "Non sono riuscito ad aggiungere la voce. Riprova.",
+    "a11y": {
+      "add": "Aggiungi alla lista",
+      "scan": "Scansiona un codice a barre",
+      "remove": "Togli dalla lista",
+      "decrease": "Diminuisci quantità",
+      "increase": "Aumenta quantità"
+    },
+    "scan": {
+      "title": "Aggiungi alla lista",
+      "hint": "Inquadra il codice a barre del prodotto",
+      "notFoundTitle": "Prodotto non trovato",
+      "notFoundBody": "Questo codice non è nel catalogo. Scrivi il nome nella lista.",
+      "cancel": "Scrivi il nome",
+      "offlineBody": "Non riesco a cercare il prodotto: controlla la connessione e riprova."
+    }
+  },
+  "prices": {
+    "age": {
+      "today": "oggi",
+      "yesterday": "ieri",
+      "days_one": "{{count}} giorno fa",
+      "days_other": "{{count}} giorni fa",
+      "weeks_one": "{{count}} settimana fa",
+      "weeks_other": "{{count}} settimane fa",
+      "months_one": "{{count}} mese fa",
+      "months_other": "{{count}} mesi fa"
+    },
+    "lowest": "Più basso",
+    "updated": "Visto {{age}}",
+    "staleNote": "Ultima volta {{age}} · potrebbe non essere aggiornato",
+    "confirmed_one": "confermato",
+    "confirmed_other": "confermato {{count}} volte",
+    "recencyHint": "Un prezzo è attuale entro {{recent}} giorni; oltre {{stale}} è solo storico.",
+    "emptyTitle": "Nessun prezzo per ora",
+    "emptyBody": "Se sei al supermercato, aggiungi il prezzo che vedi sullo scaffale: aiuti chi fa la spesa dopo di te.",
+    "add": "Aggiungi prezzo",
+    "addShort": "Aggiungi prezzo",
+    "priceLabel": "Prezzo",
+    "cityLabel": "Comune",
+    "cityPlaceholder": "Es. Pisa",
+    "storeLabel": "Dove l'hai visto?",
+    "newStore": "Altro negozio",
+    "otherChain": "Altra catena",
+    "chainPlaceholder": "Nome della catena",
+    "areaPlaceholder": "Zona o via (facoltativo)",
+    "dateLabel": "Quando?",
+    "date": {
+      "today": "Oggi",
+      "yesterday": "Ieri",
+      "threeDays": "3 giorni fa",
+      "week": "1 settimana fa"
+    },
+    "save": "Salva prezzo",
+    "privacy": "Il prezzo è visibile a tutti gli utenti di Shelfy, senza il tuo nome.",
+    "savedTitle": "Prezzo salvato",
+    "savedBody": "Grazie! Ora è visibile a chi cerca questo prodotto.",
+    "heldTitle": "Prezzo da controllare",
+    "heldBody": "Questo prezzo è molto diverso da quelli già noti, quindi non lo pubblichiamo subito. Se è giusto, un'altra segnalazione lo confermerà.",
+    "saveFailed": "Non sono riuscito a salvare il prezzo. Riprova."
+  },
+  "catalog": {
+    "title": "Prodotto non trovato",
+    "body": "Nessuno ha ancora aggiunto il codice {{barcode}}. Dagli un nome: la prossima persona che lo scansiona lo troverà già qui.",
+    "namePlaceholder": "Nome del prodotto",
+    "brandPlaceholder": "Marca (facoltativa)",
+    "qtyPlaceholder": "Formato",
+    "note": "Il nome è visibile a tutti gli utenti di Shelfy, senza il tuo nome. Controlla che sia giusto: non si può cambiare dopo.",
+    "save": "Salva e continua",
+    "skipRescan": "Scansiona un altro",
+    "skipPantry": "Salta, inserisco i dati dopo"
   }
 }

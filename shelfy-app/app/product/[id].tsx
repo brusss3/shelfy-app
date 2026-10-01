@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useProducts } from '@/context/ProductsContext';
 import { useAuth } from '@/context/AuthContext';
 import { usePantry } from '@/context/PantryContext';
+import { useShopping } from '@/context/ShoppingContext';
 import { urgencyOf, shortDate, daysTo } from '@/lib/urgency';
 import Pill from '@/components/Pill';
 import QuantityStepper from '@/components/QuantityStepper';
@@ -18,7 +19,7 @@ import { showAlert } from '@/lib/alert';
 import PrimaryButton from '@/components/PrimaryButton';
 import { getInitials } from '@/lib/text';
 import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
-import { Zone, ScoreGrade } from '@/types';
+import { Zone, ScoreGrade, Product, NewShoppingItem } from '@/types';
 
 const GRADE_COLORS: Record<ScoreGrade, string> = {
   a: '#038141', b: '#85bb2f', c: '#fecb02', d: '#ee8100', e: '#e63e11',
@@ -44,6 +45,16 @@ const PRESETS = [
   { d: 90, labelKey: 'common.presets.d90' },
 ];
 
+// Cosa finisce in lista quando si ricompra un prodotto della dispensa: tutto
+// ciò che lo identifica (barcode incluso, così una voce già presente si
+// riconosce e ne sale la quantità), non scadenza e zona di quella confezione.
+function shoppingItemOf(p: Product): NewShoppingItem {
+  return {
+    name: p.name, brand: p.brand || undefined, qty: p.qty || undefined,
+    barcode: p.barcode, category: p.category, tint: p.tint, zone: p.zone,
+  };
+}
+
 function addDays(n: number): string {
   return new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
 }
@@ -53,6 +64,7 @@ export default function ProductDetailScreen() {
   const { products, removeProduct, changeZone, editProduct, markOpened, consumeOne, consumeAll } = useProducts();
   const { user } = useAuth();
   const { activePantry } = usePantry();
+  const { addItem: addToShopping } = useShopping();
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -206,10 +218,34 @@ export default function ProductDetailScreen() {
         {
           text: t('product.consumedWord'),
           onPress: async () => {
+            const finished = product;
             await consumeOne(product.id);
             router.back();
+            askAddToList(finished);
           },
         },
+      ],
+    );
+  };
+
+  const handleAddToList = async () => {
+    try {
+      await addToShopping(shoppingItemOf(product));
+      showAlert(t('product.addToList'), t('product.addedToList', { name: product.name }));
+    } catch (e: any) {
+      showAlert(t('common.error'), e?.message ?? t('shopping.addFailed'));
+    }
+  };
+
+  // Ultima unità finita: è il momento in cui si pensa a ricomprarlo. Si torna
+  // indietro subito (il prodotto non esiste più) e la domanda compare sopra.
+  const askAddToList = (p: Product) => {
+    showAlert(
+      t('product.finishedTitle', { name: p.name }),
+      t('product.finishedBody'),
+      [
+        { text: t('product.finishedNo'), style: 'cancel' },
+        { text: t('product.finishedAdd'), onPress: () => { addToShopping(shoppingItemOf(p)).catch(console.warn); } },
       ],
     );
   };
@@ -223,8 +259,10 @@ export default function ProductDetailScreen() {
         {
           text: t('product.consumedWord'),
           onPress: async () => {
+            const finished = product;
             await consumeAll(product.id);
             router.back();
+            askAddToList(finished);
           },
         },
       ],
@@ -591,6 +629,21 @@ export default function ProductDetailScreen() {
               <Text style={styles.consumeAllText}>{t('product.consumeAllUnits', { count: product.count })}</Text>
             </TouchableOpacity>
           )}
+        </View>
+
+        {/* Ricompra */}
+        <View style={styles.section}>
+          <Pill
+            variant="ghost"
+            size="lg"
+            onPress={handleAddToList}
+            style={{ justifyContent: 'center' }}
+          >
+            <Ionicons name="cart-outline" size={18} color={T.primary} />
+            <Text style={{ fontFamily: FONTS.sansSemiBold, color: T.primary, fontSize: 16 }}>
+              {t('product.addToList')}
+            </Text>
+          </Pill>
         </View>
 
         {/* Delete */}

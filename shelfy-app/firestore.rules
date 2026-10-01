@@ -13,6 +13,11 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Lista della spesa personale
+    match /users/{userId}/shoppingItems/{itemId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
     // Ricette community salvate dall'utente per cucinarle dopo
     match /users/{userId}/savedRecipes/{recipeId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
@@ -166,6 +171,12 @@ service cloud.firestore {
         allow read, write: if request.auth != null
           && request.auth.uid in get(/databases/$(database)/documents/pantries/$(pantryId)).data.memberIds;
       }
+
+      // Lista della spesa della casa: la vedono e la spuntano tutti i membri.
+      match /shoppingItems/{itemId} {
+        allow read, write: if request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/pantries/$(pantryId)).data.memberIds;
+      }
     }
 
     // Codici invito: risolvono codice -> dispensa. Mai leggibili/scrivibili
@@ -173,6 +184,65 @@ service cloud.firestore {
     // altrui) — solo la Cloud Function li usa con l'Admin SDK.
     match /inviteCodes/{code} {
       allow read, write: if false;
+    }
+
+    // ---------------------------------------------------------------------
+    // Prezzi della community
+    // ---------------------------------------------------------------------
+    // Si scrive SOLO dalla Cloud Function submitPrice (Admin SDK): è lei che
+    // limita la frequenza, scarta i prezzi anomali e tiene separato l'autore
+    // dal dato pubblico. Dal client si legge soltanto.
+
+    // Ultimo prezzo noto per prodotto+negozio: la lettura che usa l'app.
+    match /latestPrices/{id} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Negozi segnalati (catena + comune + eventuale zona).
+    match /stores/{storeId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Storico delle osservazioni, senza autore: per ora lo legge solo l'admin
+    // (la cronologia prezzi agli utenti è una fase successiva).
+    match /priceObservations/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Chi ha inviato cosa: solo moderazione, mai visibile alla community.
+    match /priceSubmissions/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Contatore giornaliero degli invii: lo incrementa la Cloud Function.
+    match /users/{userId}/priceSubmits/{day} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    // ---------------------------------------------------------------------
+    // Catalogo Shelfy
+    // ---------------------------------------------------------------------
+    // Prodotti sconosciuti a Open Food Facts inseriti da chi li ha scansionati.
+    // Si scrive solo dalla Cloud Function submitCatalogProduct; l'autore sta
+    // in catalogSubmissions, visibile solo all'admin.
+    match /catalogProducts/{barcode} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    match /catalogSubmissions/{barcode} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /users/{userId}/catalogSubmits/{day} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
     }
 
     // Tutto il resto è bloccato

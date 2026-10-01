@@ -4,15 +4,21 @@ import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { useShopping } from '@/context/ShoppingContext';
 import { registerForPushNotifications } from '@/lib/notifications';
 import { saveUserPushToken } from '@/lib/firestore';
 
-type TabIconProps = { focused: boolean; icon: string };
+type TabIconProps = { focused: boolean; icon: string; badge?: number };
 
-function TabIcon({ focused, icon }: TabIconProps) {
+function TabIcon({ focused, icon, badge }: TabIconProps) {
   return (
     <View style={styles.tabItem}>
       <Text style={[styles.tabEmoji, { opacity: focused ? 1 : 0.5 }]}>{icon}</Text>
+      {badge ? (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -21,6 +27,7 @@ export default function TabsLayout() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { openCount } = useShopping();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -72,16 +79,12 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="🏠" />,
         }}
       />
+      {/* La spesa sta subito dopo la dispensa: il ciclo è dispensa → spesa →
+          ricette. Il badge conta le voci ancora da comprare. */}
       <Tabs.Screen
-        name="notifications"
+        name="shopping"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="🔔" />,
-        }}
-      />
-      <Tabs.Screen
-        name="feedback"
-        options={{
-          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="💡" />,
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="🛒" badge={openCount} />,
         }}
       />
       <Tabs.Screen
@@ -90,6 +93,15 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="🍳" />,
         }}
       />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} icon="🔔" />,
+        }}
+      />
+      {/* Idee & Feedback non è più una tab: è raggiungibile da Impostazioni
+          (stesso invio di feedback), così la barra resta a 4 voci + admin. */}
+      <Tabs.Screen name="feedback" options={{ href: null }} />
       {/* Scorciatoia alla dashboard admin, visibile solo agli admin. Il tap
           non cambia tab: apre /admin (fuori dal gruppo tabs) e resta lì. */}
       <Tabs.Screen
@@ -114,4 +126,10 @@ const styles = StyleSheet.create({
   // lineHeight esplicito: senza, i glifi emoji vengono tagliati in basso su
   // Android (metriche del font più alte del box di riga di default).
   tabEmoji: { fontSize: 26, lineHeight: 34 },
+  badge: {
+    position: 'absolute', top: -2, right: -8, minWidth: 18, height: 18,
+    borderRadius: 9, paddingHorizontal: 5, backgroundColor: T.primary,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  badgeText: { color: '#fbfaf3', fontSize: 10, fontWeight: '700', lineHeight: 13 },
 });

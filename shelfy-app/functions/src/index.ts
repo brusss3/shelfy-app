@@ -723,3 +723,208 @@ export const sendExpiryReminders = onSchedule(
     await Promise.all(sends);
   },
 );
+
+// -----------------------------------------------------------------------
+// Prezzi della community
+// -----------------------------------------------------------------------
+// Un prezzo non è una proprietà del prodotto ma un'osservazione: prodotto +
+// negozio + data + prezzo + fonte. Ogni invio produce:
+//  - priceObservations/{id}: storico, append-only (nessun dato personale);
+//  - latestPrices/{barcode}_{storeId}: l'ultimo prezzo noto per negozio,
+//    quello che l'app legge (una lettura per negozio, non per osservazione);
+//  - priceSubmissions/{id}: chi ha inviato cosa, leggibile solo dall'admin —
+//    serve a moderare e, più avanti, a pesare l'affidabilità. È separato di
+//    proposito: la community vede prodotto/prezzo/negozio/data, mai l'autore.
+// Tutto passa da qui (Admin SDK) perché le regole Firestore non possono
+// limitare la frequenza né confrontare con i prezzi già noti.
+// -----------------------------------------------------------------------
+
+const MAX_PRICE_SUBMITS_PER_DAY = 40;
+const MAX_PRICE_EUR = 999;
+// Un prezzo oltre questo fattore (sopra o sotto) rispetto alla mediana dei
+// prezzi già noti dello stesso prodotto non viene pubblicato da solo: più
+// largo di qualsiasi promozione reale, stretto abbastanza da fermare 150 € al
+// posto di 1,50 €.
+const OUTLIER_FACTOR = 4;
+const MAX_PRICE_AGE_DAYS = 30;
+
+function slug(s: string): string {
+  return s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+// Limite giornaliero per utente (giorno civile italiano, come il credito AI):
+// un contatore in users/{uid}/{collection}/{giorno}, scrivibile solo da qui.
+async function bumpDailyCounter(
+  db: FirebaseFirestore.Firestore, uid: string, collection: string, max: number, message: string,
+): Promise<void> {
+  const ref = db.collection('users').doc(uid).collection(collection).doc(todayKeyRome());
+  await db.runTransaction(async (tx: Transaction) => {
+    const snap = await tx.get(ref);
+    const count = snap.exists ? ((snap.data()?.count as number) ?? 0) : 0;
+    if (count >= max) throw new HttpsError('resource-exhausted', message);
+    tx.set(ref, { count: count + 1, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  });
+}
+
+export const submitPrice = onCall(
+  { region: 'europe-west1', cors: true },
+  async (request) => {
+    const uid = requireUid(request);
+
+    const barcode = String(request.data?.barcode ?? '').trim();
+    if (!/^\d{8,14}$/.test(barcode)) throw new HttpsError('invalid-argument', 'Codice a barre non valido');
+
+    const price = Number(request.data?.price);
+    if (!Number.isFinite(price) || price < 0.01 || price > MAX_PRICE_EUR) {
+      throw new HttpsError('invalid-argument', 'Prezzo non valido');
+    }
+    const priceCents = Math.round(price * 100);
+
+    const chain = requireString(request.data?.store?.chain, 'Catena', 30);
+    const city = requireString(request.data?.store?.city, 'Comune', 60);
+    const storeName = String(request.data?.store?.name ?? '').trim().slice(0, 60);
+    const chainSlug = slug(chain);
+    const cityKey = slug(city);
+    if (!chainSlug || !cityKey) throw new HttpsError('invalid-argument', 'Negozio non valido');
+    const storeId = [chainSlug, cityKey, slug(storeName)].filter(Boolean).join('--');
+
+    // La data del prezzo è quella in cui l'utente l'ha visto: mai nel futuro,
+    // e non più vecchia di un mese (oltre non è più una rilevazione utile).
+    const observedAt = new Date(requireString(request.data?.observedAt, 'Data', 30));
+    const now = Date.now();
+    if (Number.isNaN(observedAt.getTime()) || observedAt.getTime() > now + 3600_000
+      || observedAt.getTime() < now - MAX_PRICE_AGE_DAYS * 86400_000) {
+      throw new HttpsError('invalid-argument', 'Data non valida');
+    }
+
+    const productName = String(request.data?.productName ?? '').trim().slice(0, 120);
+    const db = getFirestore();
+
+    await bumpDailyCounter(db, uid, 'priceSubmits', MAX_PRICE_SUBMITS_PER_DAY,
+      'Hai inviato molti prezzi oggi. Riprova domani.');
+
+    const latestCol = db.collection('latestPrices');
+    const known = await latestCol.where('barcode', '==', barcode).limit(50).get();
+    const knownCents = known.docs
+      .map((d) => d.data().priceCents as number)
+      .filter((c) => typeof c === 'number')
+      .sort((a, b) => a - b);
+
+    let suspicious = false;
+    if (knownCents.length > 0) {
+      const mid = Math.floor(knownCents.length / 2);
+      const median = knownCents.length % 2 ? knownCents[mid] : (knownCents[mid - 1] + knownCents[mid]) / 2;
+      suspicious = priceCents > median * OUTLIER_FACTOR || priceCents < median / OUTLIER_FACTOR;
+    }
+
+    const obsRef = db.collection('priceObservations').doc();
+    const storeRef = db.collection('stores').doc(storeId);
+    const latestRef = latestCol.doc(`${barcode}_${storeId}`);
+    const observedTs = observedAt;
+
+    await db.runTransaction(async (tx: Transaction) => {
+      const latestSnap = await tx.get(latestRef);
+
+      tx.set(obsRef, {
+        barcode, storeId, priceCents, observedAt: observedTs, source: 'USER',
+        status: suspicious ? 'SUSPICIOUS' : 'COMMUNITY',
+        createdAt: FieldValue.serverTimestamp(),
+      });
+      tx.set(db.collection('priceSubmissions').doc(obsRef.id), {
+        uid, barcode, storeId, priceCents, suspicious, createdAt: FieldValue.serverTimestamp(),
+      });
+      if (suspicious) return;
+
+      tx.set(storeRef, { chain, name: storeName, city, cityKey, createdAt: FieldValue.serverTimestamp() }, { merge: true });
+
+      const prev = latestSnap.exists ? latestSnap.data()! : null;
+      const prevAt = prev ? (prev.observedAt as FirebaseFirestore.Timestamp).toMillis() : 0;
+      // Un'osservazione più vecchia di quella già nota non sovrascrive il
+      // "prezzo attuale": resta solo nello storico.
+      if (prev && observedAt.getTime() < prevAt) return;
+
+      // Stesso prezzo già segnalato per questo negozio = conferma.
+      const confirmations = prev && prev.priceCents === priceCents ? ((prev.confirmations as number) ?? 1) + 1 : 1;
+      tx.set(latestRef, {
+        barcode, storeId, chain, storeName, city, cityKey,
+        productName: productName || (prev?.productName as string) || '',
+        priceCents, observedAt: observedTs, confirmations, source: 'USER',
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    });
+
+    return { status: suspicious ? 'held' : 'published', storeId };
+  },
+);
+
+// -----------------------------------------------------------------------
+// Catalogo Shelfy
+// -----------------------------------------------------------------------
+// Prodotti con un codice a barre che Open Food Facts non conosce, inseriti da
+// chi li ha scansionati: da quel momento li trova chiunque scansioni lo stesso
+// codice, e possono avere un prezzo. È un dataset a sé, mai mescolato ai dati
+// di Open Food Facts (licenza ODbL). Il documento pubblico non ha l'autore:
+// quello sta in catalogSubmissions, solo per l'admin.
+//
+// Il primo inserimento vince: un secondo invio per lo stesso codice non
+// sovrascrive nulla e restituisce il prodotto già presente, così nessuno può
+// rinominare l'articolo di qualcun altro. Le correzioni passano dall'admin.
+// -----------------------------------------------------------------------
+
+const MAX_CATALOG_SUBMITS_PER_DAY = 30;
+
+function cleanText(value: unknown, maxLen: number): string {
+  return String(value ?? '')
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLen);
+}
+
+export const submitCatalogProduct = onCall(
+  { region: 'europe-west1', cors: true },
+  async (request) => {
+    const uid = requireUid(request);
+
+    const barcode = String(request.data?.barcode ?? '').trim();
+    if (!/^\d{8,14}$/.test(barcode)) throw new HttpsError('invalid-argument', 'Codice a barre non valido');
+
+    const name = cleanText(request.data?.name, 120);
+    // Almeno due caratteri e non solo cifre/simboli: un nome così non aiuta
+    // nessuno a riconoscere il prodotto.
+    if (name.length < 2 || !/\p{L}/u.test(name)) throw new HttpsError('invalid-argument', 'Nome del prodotto non valido');
+    const brand = cleanText(request.data?.brand, 60);
+    const qty = cleanText(request.data?.qty, 30);
+
+    const db = getFirestore();
+    const ref = db.collection('catalogProducts').doc(barcode);
+
+    // Già presente: nessun conteggio nel limite, nessuna scrittura.
+    const existing = await ref.get();
+    if (existing.exists) {
+      const d = existing.data()!;
+      return { created: false, name: d.name as string, brand: (d.brand as string) ?? '', qty: (d.qty as string) ?? '' };
+    }
+
+    await bumpDailyCounter(db, uid, 'catalogSubmits', MAX_CATALOG_SUBMITS_PER_DAY,
+      'Hai aggiunto molti prodotti oggi. Riprova domani.');
+
+    return db.runTransaction(async (tx: Transaction) => {
+      const snap = await tx.get(ref);
+      if (snap.exists) {
+        const d = snap.data()!;
+        return { created: false, name: d.name as string, brand: (d.brand as string) ?? '', qty: (d.qty as string) ?? '' };
+      }
+      tx.set(ref, { barcode, name, brand, qty, source: 'USER', createdAt: FieldValue.serverTimestamp() });
+      tx.set(db.collection('catalogSubmissions').doc(barcode), {
+        uid, barcode, name, brand, qty, createdAt: FieldValue.serverTimestamp(),
+      });
+      return { created: true, name, brand, qty };
+    });
+  },
+);

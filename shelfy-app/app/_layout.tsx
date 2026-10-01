@@ -11,6 +11,7 @@ import { initI18n } from '@/lib/i18n';
 import { AuthProvider } from '@/context/AuthContext';
 import { PantryProvider } from '@/context/PantryContext';
 import { ProductsProvider } from '@/context/ProductsContext';
+import { ShoppingProvider } from '@/context/ShoppingContext';
 import { RecipesProvider } from '@/context/RecipesContext';
 import { CommunityProvider } from '@/context/CommunityContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -71,6 +72,7 @@ export default function RootLayout() {
         <NotificationsScheduler />
         <SurveyModal />
         <ProductsProvider>
+          <ShoppingProvider>
           <RecipesProvider>
           <CommunityProvider>
           <StatusBar style="dark" />
@@ -98,6 +100,7 @@ export default function RootLayout() {
           </Stack>
           </CommunityProvider>
           </RecipesProvider>
+          </ShoppingProvider>
         </ProductsProvider>
         </PantryProvider>
       </AuthProvider>

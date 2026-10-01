@@ -192,3 +192,65 @@ export interface PantryInvite {
   code: string | null;
   expiresAt: string | null;
 }
+
+// ---------------------------------------------------------------------------
+// Lista della spesa
+// ---------------------------------------------------------------------------
+
+/** Una voce della lista. Può essere un prodotto vero (con barcode e dati di
+ *  Open Food Facts) oppure testo libero ("banane"), senza barcode. */
+export interface ShoppingItem {
+  id: string;
+  name: string;
+  brand?: string;
+  /** Formato della confezione, testo libero ("1 L"). */
+  qty?: string;
+  /** Quante confezioni comprare. */
+  count: number;
+  barcode?: string;
+  category?: string;
+  tint?: string;
+  zone?: Zone;
+  /** Nel carrello: preso, ma ancora in lista fino a "Svuota carrello". */
+  checked: boolean;
+  /** Chi l'ha aggiunta — rilevante solo in una casa condivisa. */
+  addedBy?: string;
+  createdAt: string;
+}
+
+export type NewShoppingItem = Omit<ShoppingItem, 'id' | 'checked' | 'createdAt' | 'addedBy' | 'count'> & {
+  count?: number;
+};
+
+// ---------------------------------------------------------------------------
+// Prezzi della community
+// ---------------------------------------------------------------------------
+
+/** Ultimo prezzo noto di un prodotto (barcode) in un negozio. */
+export interface LatestPrice {
+  id: string;
+  barcode: string;
+  storeId: string;
+  chain: string;
+  /** Zona / via del punto vendita, può essere vuoto. */
+  storeName: string;
+  city: string;
+  priceCents: number;
+  /** Quando l'utente ha visto il prezzo (non quando l'ha inviato). */
+  observedAt: string;
+  /** Quante segnalazioni consecutive concordano su questo prezzo. */
+  confirmations: number;
+}
+
+export interface Store {
+  id: string;
+  chain: string;
+  name: string;
+  city: string;
+}
+
+export interface StoreInput {
+  chain: string;
+  name: string;
+  city: string;
+}

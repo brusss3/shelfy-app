@@ -4,16 +4,19 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
-import { useRouter, useIsFocused } from 'expo-router';
+import { useRouter, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { T, FONTS, RADIUS, CLAY } from '@/constants/theme';
 import { ScannedProduct, Zone, NutritionInfo, ScoreGrade } from '@/types';
 import { tintForCategory } from '@/lib/urgency';
 import { useProducts } from '@/context/ProductsContext';
+import { useShopping } from '@/context/ShoppingContext';
 import { showAlert } from '@/lib/alert';
 import { usePremiumGate, isProductLimitError } from '@/lib/premiumGate';
 import { ocrAvailable } from '@/lib/ocr';
 import DateScannerModal from '@/components/DateScannerModal';
+import NewProductModal, { NewProductData } from '@/components/NewProductModal';
+import { getCatalogProduct, submitCatalogProduct } from '@/lib/catalog';
 import PrimaryButton from '@/components/PrimaryButton';
 import { getInitials } from '@/lib/text';
 
@@ -72,12 +75,38 @@ function parseAllergens(p: Record<string, any>): string[] | undefined {
   });
 }
 
-// Fetch product info from Open Food Facts
-async function lookupBarcode(barcode: string): Promise<ScannedProduct | null> {
+// `missing` = nessuno conosce il codice (si può proporre di aggiungerlo);
+// `offline` = la ricerca non è andata a buon fine, e non c'è niente da
+// concludere sul prodotto: non va scambiato per un codice sconosciuto.
+type LookupResult =
+  | { kind: 'found'; product: ScannedProduct }
+  | { kind: 'missing' }
+  | { kind: 'offline' };
+
+// Prodotto di cui non sappiamo altro che nome, marca e formato: zona e
+// scadenza si scelgono poi a mano, come per qualunque prodotto senza dati.
+function plainProduct(barcode: string, name: string, brand: string, qty: string): ScannedProduct {
+  return {
+    name, brand, barcode, qty,
+    category: 'Altro',
+    zone: 'dispensa',
+    tint: tintForCategory('Altro'),
+    suggestExpiry: 30,
+  };
+}
+
+// Cerca il prodotto su Open Food Facts e, se non lo conosce, nel catalogo
+// Shelfy (i prodotti inseriti da chi li ha scansionati prima).
+async function lookupBarcode(barcode: string): Promise<LookupResult> {
   try {
     const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json?lc=it`);
     const data = await res.json();
-    if (data.status !== 1 || !data.product) return null;
+    if (data.status !== 1 || !data.product) {
+      const own = await getCatalogProduct(barcode);
+      return own
+        ? { kind: 'found', product: plainProduct(barcode, own.name, own.brand, own.qty) }
+        : { kind: 'missing' };
+    }
     const p = data.product;
     const category = p.food_groups_tags?.[0]?.replace('en:', '') ?? 'Altro';
     const name = p.product_name_it ?? p.product_name ?? 'Prodotto sconosciuto';
@@ -87,18 +116,21 @@ async function lookupBarcode(barcode: string): Promise<ScannedProduct | null> {
       (p.categories_tags ?? []).some((t: string) => t.includes(k)),
     ) ? 'frigo' : 'dispensa';
     return {
-      name, brand, barcode, qty,
-      category: category.charAt(0).toUpperCase() + category.slice(1),
-      zone: zone as any,
-      tint: tintForCategory(category),
-      suggestExpiry: zone === 'frigo' ? 7 : 180,
-      nutrition: parseNutrition(p.nutriments),
-      allergens: parseAllergens(p),
-      nutriscore: parseGrade(p.nutriscore_grade),
-      ecoscore: parseGrade(p.ecoscore_grade),
+      kind: 'found',
+      product: {
+        name, brand, barcode, qty,
+        category: category.charAt(0).toUpperCase() + category.slice(1),
+        zone: zone as any,
+        tint: tintForCategory(category),
+        suggestExpiry: zone === 'frigo' ? 7 : 180,
+        nutrition: parseNutrition(p.nutriments),
+        allergens: parseAllergens(p),
+        nutriscore: parseGrade(p.nutriscore_grade),
+        ecoscore: parseGrade(p.ecoscore_grade),
+      },
     };
   } catch {
-    return null;
+    return { kind: 'offline' };
   }
 }
 
@@ -107,6 +139,11 @@ export default function ScannerScreen() {
   const isFocused = useIsFocused();
   const { t } = useTranslation();
   const { addNewProduct } = useProducts();
+  // Con ?mode=shopping lo scanner serve la lista della spesa: il codice letto
+  // diventa una voce da comprare, senza passare da zona e scadenza.
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const shoppingMode = mode === 'shopping';
+  const { addItem: addShoppingItem } = useShopping();
   const { onProductLimit } = usePremiumGate();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(true);
@@ -123,6 +160,9 @@ export default function ScannerScreen() {
   const [zoom, setZoom] = useState(0);
   const [camKey, setCamKey] = useState(0);
   const [mountError, setMountError] = useState<string | null>(null);
+  // Codice che nessuno conosce: apre il modulo per dargli un nome.
+  const [unknownCode, setUnknownCode] = useState<string | null>(null);
+  const [savingUnknown, setSavingUnknown] = useState(false);
   const lastScan = useRef<string>('');
   const cooldown = useRef(false);
 
@@ -163,6 +203,7 @@ export default function ScannerScreen() {
       setSelectedZone(null);
       setSelectedExpiry(null);
       setShowDateScanner(false);
+      setUnknownCode(null);
       setMountError(null);
       setZoom(0);
       lastScan.current = '';
@@ -192,27 +233,91 @@ export default function ScannerScreen() {
     setScanning(false);
     setLoading(true);
 
-    const product = await lookupBarcode(code);
+    const lookup = await lookupBarcode(code);
     setLoading(false);
 
-    if (product) {
-      setFound(product);
-    } else {
-      // Not found — set minimal mock
-      setFound({
-        name: t('scanner.unknownProduct'),
-        brand: '',
-        barcode: code,
-        qty: '',
-        category: 'Altro',
-        zone: 'dispensa',
-        tint: T.primarySoft,
-        suggestExpiry: 30,
-      });
+    if (lookup.kind === 'missing') {
+      setUnknownCode(code);
+      return;
     }
+    const product = lookup.kind === 'found' ? lookup.product : null;
+
+    if (shoppingMode) {
+      if (!product) {
+        showAlert(t('common.error'), t('shopping.scan.offlineBody'), [
+          { text: t('common.retry'), style: 'cancel', onPress: resumeScanning },
+          { text: t('shopping.scan.cancel'), onPress: () => router.back() },
+        ]);
+        return;
+      }
+      await addToShoppingAndClose(product);
+      return;
+    }
+
+    // Senza connessione non sappiamo niente del prodotto: resta il segnaposto
+    // da compilare a mano.
+    setFound(product ?? plainProduct(code, t('scanner.unknownProduct'), '', ''));
     // Barcode letto: passiamo subito alla fotocamera per la data di scadenza,
     // invece di far scegliere manualmente una preset. Se l'OCR non è
     // disponibile (Expo Go) restano le preset nella scheda sottostante.
+    if (ocrAvailable) setShowDateScanner(true);
+    setTimeout(() => { cooldown.current = false; }, 2000);
+  };
+
+  const resumeScanning = () => {
+    lastScan.current = '';
+    cooldown.current = false;
+    setScanning(true);
+  };
+
+  const addToShoppingAndClose = async (product: ScannedProduct) => {
+    try {
+      await addShoppingItem({
+        name: product.name, brand: product.brand || undefined, qty: product.qty || undefined,
+        barcode: product.barcode, category: product.category, tint: product.tint, zone: product.zone,
+      });
+      router.back();
+    } catch (e: any) {
+      showAlert(t('common.error'), e?.message ?? t('shopping.addFailed'));
+      resumeScanning();
+    }
+  };
+
+  // Il prodotto sconosciuto viene dato alla community e poi usato subito per
+  // quello che stava facendo l'utente (lista o dispensa). Se l'invio al
+  // catalogo fallisce non si blocca nulla: l'utente prosegue con ciò che ha
+  // scritto, semplicemente il prodotto non diventa trovabile da altri.
+  const handleNewProductSave = async (data: NewProductData) => {
+    if (!unknownCode) return;
+    setSavingUnknown(true);
+    let { name, brand, qty } = data;
+    try {
+      const saved = await submitCatalogProduct({ barcode: unknownCode, name, brand, qty });
+      ({ name, brand, qty } = saved);
+    } catch (e) {
+      console.warn('[catalog]', e);
+    }
+    const product = plainProduct(unknownCode, name, brand, qty);
+    setSavingUnknown(false);
+    setUnknownCode(null);
+
+    if (shoppingMode) {
+      await addToShoppingAndClose(product);
+      return;
+    }
+    setFound(product);
+    if (ocrAvailable) setShowDateScanner(true);
+    setTimeout(() => { cooldown.current = false; }, 2000);
+  };
+
+  const handleNewProductSkip = () => {
+    const code = unknownCode;
+    setUnknownCode(null);
+    if (shoppingMode || !code) {
+      resumeScanning();
+      return;
+    }
+    setFound(plainProduct(code, t('scanner.unknownProduct'), '', ''));
     if (ocrAvailable) setShowDateScanner(true);
     setTimeout(() => { cooldown.current = false; }, 2000);
   };
@@ -354,7 +459,7 @@ export default function ScannerScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.glassBtn}>
           <Text style={styles.glassBtnText}>✕</Text>
         </TouchableOpacity>
-        <Text style={styles.topBarTitle}>{t('scanner.headerTitle')}</Text>
+        <Text style={styles.topBarTitle}>{shoppingMode ? t('shopping.scan.title') : t('scanner.headerTitle')}</Text>
         <View style={styles.glassBtn} />
       </View>
 
@@ -365,7 +470,7 @@ export default function ScannerScreen() {
         ) : (
           <>
             <Text style={styles.statusTitle}>
-              {found ? t('scanner.statusFound') : t('scanner.statusScanning')}
+              {found ? t('scanner.statusFound') : shoppingMode ? t('shopping.scan.hint') : t('scanner.statusScanning')}
             </Text>
             <Text style={styles.statusSub}>
               {found
@@ -493,7 +598,7 @@ export default function ScannerScreen() {
       )}
 
       {/* Manual entry */}
-      {!found && !loading && (
+      {!found && !loading && !shoppingMode && (
         <TouchableOpacity
           style={styles.manualBtn}
           onPress={() => router.push('/add')}
@@ -503,6 +608,15 @@ export default function ScannerScreen() {
           <Text style={styles.manualBtnText}>{t('scanner.manualEntry')}</Text>
         </TouchableOpacity>
       )}
+
+      <NewProductModal
+        visible={unknownCode !== null}
+        barcode={unknownCode ?? ''}
+        saving={savingUnknown}
+        skipLabel={shoppingMode ? t('catalog.skipRescan') : t('catalog.skipPantry')}
+        onSave={handleNewProductSave}
+        onSkip={handleNewProductSkip}
+      />
 
       <DateScannerModal
         visible={showDateScanner}
