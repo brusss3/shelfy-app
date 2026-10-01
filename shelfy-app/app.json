@@ -20,7 +20,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#fff9ed"
+        "backgroundColor": "#fefaef"
       },
       "package": "it.shelfyapp",
       "permissions": [
@@ -54,7 +54,7 @@
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#2f4a31"
+          "color": "#17432d"
         }
       ],
       [
@@ -62,7 +62,7 @@
         {
           "image": "./assets/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#fff9ed"
+          "backgroundColor": "#fefaef"
         }
       ],
       "react-native-edge-to-edge",

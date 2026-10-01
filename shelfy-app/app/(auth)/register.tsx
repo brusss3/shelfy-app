@@ -48,7 +48,7 @@ export default function RegisterScreen() {
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <Image source={require('@/assets/icon.png')} style={styles.logoTile} resizeMode="contain" />
+          <Image source={require('@/assets/logo-mark.png')} style={styles.logoTile} resizeMode="contain" />
           <Text style={styles.appName}>Shelfy</Text>
           <Text style={styles.tagline}>{t('auth.register.tagline')}</Text>
         </View>
@@ -108,8 +108,7 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, justifyContent: 'center', padding: 24, paddingBottom: 48 },
   header: { alignItems: 'center', marginBottom: 32 },
   logoTile: {
-    width: 84, height: 102, marginBottom: 10,
-    boxShadow: SHADOW.fab.boxShadow,
+    width: 72, height: 72, marginBottom: 10,
   },
   appName: { fontFamily: FONTS.serifItalic, fontSize: 36, color: T.ink, letterSpacing: -1 },
   tagline: { fontSize: 14, color: T.mute, marginTop: 4, fontFamily: FONTS.sans },
