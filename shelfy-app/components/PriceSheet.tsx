@@ -90,9 +90,18 @@ export default function PriceSheet({ item, prices, onClose }: Props) {
     return Number.isFinite(n) && n >= 0.01 && n <= 999 ? Math.round(n * 100) : null;
   })();
 
+  const knownStores: StoreInput[] = [
+    ...(lastStore && lastStore.city.trim().toLowerCase() === city.trim().toLowerCase() ? [lastStore] : []),
+    ...stores.map((s) => ({ chain: s.chain, name: s.name, city: s.city })),
+  ].filter((s, i, arr) => arr.findIndex((o) => sameStore(o, s)) === i);
+
+  // Senza negozi già noti non c'è nulla da scegliere: il modulo per descriverne
+  // uno nuovo si apre da solo, senza far cercare un pulsante.
+  const creating = newStore || (!loadingStores && knownStores.length === 0);
+
   // Il negozio effettivo: uno scelto dall'elenco, oppure quello che si sta
   // descrivendo nel modulo "nuovo negozio".
-  const effectiveStore: StoreInput | null = newStore
+  const effectiveStore: StoreInput | null = creating
     ? (chain.trim() ? { chain: chain.trim(), name: area.trim(), city: city.trim() } : null)
     : store ? { ...store, city: city.trim() } : null;
 
@@ -122,11 +131,6 @@ export default function PriceSheet({ item, prices, onClose }: Props) {
       setSaving(false);
     }
   };
-
-  const knownStores: StoreInput[] = [
-    ...(lastStore && lastStore.city.trim().toLowerCase() === city.trim().toLowerCase() ? [lastStore] : []),
-    ...stores.map((s) => ({ chain: s.chain, name: s.name, city: s.city })),
-  ].filter((s, i, arr) => arr.findIndex((o) => sameStore(o, s)) === i);
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
@@ -160,12 +164,16 @@ export default function PriceSheet({ item, prices, onClose }: Props) {
                             {isBest && (
                               <View style={styles.bestTag}><Text style={styles.bestTagText}>{t('prices.lowest')}</Text></View>
                             )}
+                            {p.source === 'openprices' && (
+                              <View style={styles.sourceTag}><Text style={styles.sourceTagText}>{t('prices.openPrices')}</Text></View>
+                            )}
                           </View>
                           <Text style={[styles.age, rec === 'old' && { color: T.warn }, rec === 'stale' && { color: T.urgent }]}>
                             {rec === 'stale'
                               ? t('prices.staleNote', { age: ageLabel(p.observedAt) })
                               : t('prices.updated', { age: ageLabel(p.observedAt) })}
                             {p.confirmations > 1 ? ` · ${t('prices.confirmed', { count: p.confirmations })}` : ''}
+                            {p.distanceKm !== undefined ? ` · ${t('prices.distance', { km: p.distanceKm })}` : ''}
                           </Text>
                         </View>
                         <Text style={styles.price}>{formatPrice(p.priceCents)}</Text>
@@ -174,6 +182,8 @@ export default function PriceSheet({ item, prices, onClose }: Props) {
                   })}
                   <Text style={styles.hint}>
                     {t('prices.recencyHint', { recent: RECENT_DAYS, stale: STALE_DAYS })}
+                    {prices.some((p) => p.source === 'openprices') ? `
+${t('prices.openPricesNote')}` : ''}
                   </Text>
                 </View>
               ) : (
@@ -220,10 +230,10 @@ export default function PriceSheet({ item, prices, onClose }: Props) {
                   <Text style={styles.label}>{t('prices.storeLabel')}</Text>
                   {loadingStores ? (
                     <ActivityIndicator size="small" color={T.mute} style={{ alignSelf: 'flex-start' }} />
-                  ) : (
+                  ) : knownStores.length > 0 && (
                     <View style={styles.chips}>
                       {knownStores.map((s) => {
-                        const active = !newStore && store !== null && sameStore(store, s);
+                        const active = !creating && store !== null && sameStore(store, s);
                         return (
                           <TouchableOpacity
                             key={`${s.chain}|${s.name}`}
@@ -236,16 +246,16 @@ export default function PriceSheet({ item, prices, onClose }: Props) {
                         );
                       })}
                       <TouchableOpacity
-                        style={[styles.chip, newStore && styles.chipActive]}
+                        style={[styles.chip, creating && styles.chipActive]}
                         onPress={() => { setNewStore(true); setStore(null); }}
                         activeOpacity={0.85}
                       >
-                        <Text style={[styles.chipText, newStore && styles.chipTextActive]}>{t('prices.newStore')}</Text>
+                        <Text style={[styles.chipText, creating && styles.chipTextActive]}>{t('prices.newStore')}</Text>
                       </TouchableOpacity>
                     </View>
                   )}
 
-                  {newStore && (
+                  {creating && !loadingStores && (
                     <View style={styles.newStore}>
                       <View style={styles.chips}>
                         {CHAINS.map((c) => {
@@ -354,6 +364,8 @@ const styles = StyleSheet.create({
   storeName: { flexShrink: 1, fontFamily: FONTS.sansSemiBold, fontSize: 15, color: T.ink },
   bestTag: { backgroundColor: T.okSoft, borderRadius: 8, paddingVertical: 2, paddingHorizontal: 7 },
   bestTagText: { fontFamily: FONTS.sansBold, fontSize: 10, color: T.ok },
+  sourceTag: { backgroundColor: T.line, borderRadius: 8, paddingVertical: 2, paddingHorizontal: 7 },
+  sourceTagText: { fontFamily: FONTS.sansBold, fontSize: 10, color: T.ink2 },
   age: { fontFamily: FONTS.sans, fontSize: 12, color: T.mute, marginTop: 3 },
   price: { fontFamily: FONTS.sansBold, fontSize: 18, color: T.ink },
   hint: { fontFamily: FONTS.sans, fontSize: 11, color: T.mute, textAlign: 'center', marginTop: 2 },

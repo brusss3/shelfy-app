@@ -14,11 +14,14 @@ import { useProducts } from '@/context/ProductsContext';
 import { usePantry } from '@/context/PantryContext';
 import { useAuth } from '@/context/AuthContext';
 import { NewShoppingItem, LatestPrice, ShoppingItem } from '@/types';
-import { subscribeToLatestPrices, bestRecent } from '@/lib/prices';
+import {
+  subscribeToLatestPrices, bestRecent, fetchOpenPrices, mergePrices, loadPriceArea, savePriceArea,
+} from '@/lib/prices';
 import { searchProducts, ProductSuggestion } from '@/lib/productSearch';
 import { showAlert } from '@/lib/alert';
 import ShoppingRow from '@/components/ShoppingRow';
 import PriceSheet from '@/components/PriceSheet';
+import PriceAreaSheet from '@/components/PriceAreaSheet';
 import ProfileButton from '@/components/ProfileButton';
 import PrimaryButton from '@/components/PrimaryButton';
 
@@ -45,7 +48,10 @@ export default function ShoppingScreen() {
   const [remote, setRemote] = useState<ProductSuggestion[]>([]);
   const [searching, setSearching] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
-  const [pricesByBarcode, setPricesByBarcode] = useState<Record<string, LatestPrice[]>>({});
+  const [communityPrices, setCommunityPrices] = useState<Record<string, LatestPrice[]>>({});
+  const [openPrices, setOpenPrices] = useState<Record<string, LatestPrice[]>>({});
+  const [area, setArea] = useState<{ city: string; radiusKm: number } | null>(null);
+  const [areaOpen, setAreaOpen] = useState(false);
   const [priceItemId, setPriceItemId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -64,13 +70,40 @@ export default function ShoppingScreen() {
     [items],
   );
   useEffect(() => {
-    if (!barcodesKey) { setPricesByBarcode({}); return; }
+    if (!barcodesKey) { setCommunityPrices({}); return; }
     return subscribeToLatestPrices(
       barcodesKey.split(','),
-      setPricesByBarcode,
+      setCommunityPrices,
       (err) => console.warn('[prices]', err),
     );
   }, [barcodesKey]);
+
+  useEffect(() => { loadPriceArea().then(setArea); }, []);
+
+  // Prezzi di Open Prices entro il raggio dal comune: senza comune non si
+  // cerca, e un errore (offline, servizio giù) lascia semplicemente i soli
+  // prezzi della community.
+  useEffect(() => {
+    if (!barcodesKey || !area?.city) { setOpenPrices({}); return; }
+    let cancelled = false;
+    fetchOpenPrices(barcodesKey.split(','), area.city, area.radiusKm)
+      .then((res) => { if (!cancelled) setOpenPrices(res); })
+      .catch((e) => {
+        if (cancelled) return;
+        setOpenPrices({});
+        if (e?.code === 'functions/invalid-argument') showAlert(t('common.error'), t('prices.areaError'));
+        else console.warn('[openprices]', e);
+      });
+    return () => { cancelled = true; };
+  }, [barcodesKey, area?.city, area?.radiusKm]);
+
+  const pricesByBarcode = useMemo(() => mergePrices(communityPrices, openPrices), [communityPrices, openPrices]);
+
+  const saveArea = (city: string, radiusKm: number) => {
+    savePriceArea(city, radiusKm);
+    setArea({ city, radiusKm });
+    setAreaOpen(false);
+  };
 
   // Il prezzo da mostrare sulla voce: il più basso tra quelli attuali; se
   // sono tutti vecchi, il più recente, che la voce segnala come datato.
@@ -200,6 +233,14 @@ export default function ShoppingScreen() {
             <Text style={styles.title}>{t('shopping.title')}</Text>
             <View style={styles.subRow}>
               {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+              <TouchableOpacity onPress={() => setAreaOpen(true)} style={styles.scopeChip} activeOpacity={0.8}>
+                <Ionicons name="location-outline" size={12} color={T.mute} />
+                <Text style={styles.scopeChipText}>
+                  {area?.city
+                    ? t('prices.areaChip', { city: area.city, km: area.radiusKm })
+                    : t('prices.areaChipEmpty')}
+                </Text>
+              </TouchableOpacity>
               <TouchableOpacity onPress={() => router.push('/pantry')} style={styles.scopeChip} activeOpacity={0.8}>
                 <Ionicons name={activePantry ? 'people-outline' : 'person-outline'} size={12} color={T.mute} />
                 <Text style={styles.scopeChipText}>
@@ -326,7 +367,15 @@ export default function ShoppingScreen() {
         <PriceSheet
           item={priceItem && priceItem.barcode ? priceItem : null}
           prices={priceItem?.barcode ? pricesByBarcode[priceItem.barcode] ?? [] : []}
-          onClose={() => setPriceItemId(null)}
+          onClose={() => { setPriceItemId(null); loadPriceArea().then(setArea); }}
+        />
+
+        <PriceAreaSheet
+          visible={areaOpen}
+          city={area?.city ?? ''}
+          radiusKm={area?.radiusKm ?? 15}
+          onSave={saveArea}
+          onClose={() => setAreaOpen(false)}
         />
 
         {toast && query.length === 0 && (

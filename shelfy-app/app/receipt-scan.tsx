@@ -8,11 +8,11 @@ import { useTranslation } from 'react-i18next';
 import { T, FONTS, RADIUS } from '@/constants/theme';
 import { showAlert } from '@/lib/alert';
 import { recognizeText } from '@/lib/ocr';
-import { parseReceiptLines } from '@/lib/parseReceipt';
+import { parseReceipt } from '@/lib/parseReceipt';
 
 // Fotocamera full-screen per fotografare uno scontrino: scatta, estrae il
-// testo via OCR e ne ricava le righe prodotto plausibili (euristiche, niente
-// AI), poi passa la lista alla schermata di revisione per la conferma.
+// testo via OCR e ne ricava righe prodotto, prezzi, catena e data (euristiche,
+// niente AI), poi passa tutto alla schermata di revisione per la conferma.
 export default function ReceiptScanScreen() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -48,9 +48,9 @@ export default function ReceiptScanScreen() {
 
       const src = photo.base64 ?? photo.uri;
       const text = await recognizeText(src);
-      const items = parseReceiptLines(text);
+      const parsed = parseReceipt(text);
 
-      if (items.length === 0) {
+      if (parsed.lines.length === 0) {
         showAlert(
           t('receiptScan.noItemsTitle'),
           t('receiptScan.noItemsBody'),
@@ -58,7 +58,14 @@ export default function ReceiptScanScreen() {
         return;
       }
 
-      router.replace({ pathname: '/receipt-review', params: { items: JSON.stringify(items) } });
+      router.replace({
+        pathname: '/receipt-review',
+        params: {
+          items: JSON.stringify(parsed.lines),
+          chain: parsed.chain ?? '',
+          date: parsed.date ?? '',
+        },
+      });
     } catch (e: any) {
       showAlert(t('dateScanner.ocrErrorTitle'), e?.message ?? t('common.retry'));
     } finally {

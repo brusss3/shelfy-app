@@ -33,3 +33,6 @@ expo-env.d.ts
 # @end expo-cli
 # Credenziali di firma EAS (upload keystore): mai nel repo
 credentials.json
+
+# APK pubblicato dal web con scripts/publish-apk.ps1: pesa 180 MB, non va nel repo
+public/download/

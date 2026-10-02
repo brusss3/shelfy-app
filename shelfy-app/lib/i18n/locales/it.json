@@ -642,7 +642,26 @@
     "missingExpiryError": "Imposta la scadenza per ogni prodotto",
     "saveFailed": "Impossibile salvare i prodotti",
     "addCount_one": "Aggiungi {{count}} prodotto",
-    "addCount_other": "Aggiungi {{count}} prodotti"
+    "addCount_other": "Aggiungi {{count}} prodotti",
+    "storeSection": "NEGOZIO E DATA",
+    "storeHint": "Per condividere i prezzi servono comune e catena. Condividiamo solo le righe con un prezzo e un prodotto collegato.",
+    "pricesReady": "{{count}} prezzi pronti da condividere.",
+    "pricesNone": "Nessun prezzo da condividere: collega le righe a un prodotto.",
+    "link": "Collega prodotto",
+    "linked": "Collegato",
+    "pricesSavedTitle": "Prezzi condivisi",
+    "pricesSavedBody": "Ho condiviso {{count}} prezzi: ora li vedono anche gli altri utenti.",
+    "pricesPartial": "{{count}} non sono stati inviati.",
+    "pricesFailedTitle": "Prezzi non inviati",
+    "pricesFailedBody": "I prodotti sono stati aggiunti, ma non sono riuscito a inviare i prezzi. Riprova più tardi.",
+    "match": {
+      "title": "Quale prodotto è?",
+      "searchPlaceholder": "Cerca per nome",
+      "scan": "Scansiona il codice a barre",
+      "scanHint": "Inquadra il codice sulla confezione",
+      "backToSearch": "Torna alla ricerca",
+      "noResults": "Nessun risultato: prova un altro nome o scansiona il codice."
+    }
   },
   "limits": {
     "productLimitTitle": "Dispensa piena",
@@ -955,7 +974,7 @@
     "cityLabel": "Comune",
     "cityPlaceholder": "Es. Pisa",
     "storeLabel": "Dove l'hai visto?",
-    "newStore": "Altro negozio",
+    "newStore": "+ Nuovo negozio",
     "otherChain": "Altra catena",
     "chainPlaceholder": "Nome della catena",
     "areaPlaceholder": "Zona o via (facoltativo)",
@@ -972,7 +991,18 @@
     "savedBody": "Grazie! Ora è visibile a chi cerca questo prodotto.",
     "heldTitle": "Prezzo da controllare",
     "heldBody": "Questo prezzo è molto diverso da quelli già noti, quindi non lo pubblichiamo subito. Se è giusto, un'altra segnalazione lo confermerà.",
-    "saveFailed": "Non sono riuscito a salvare il prezzo. Riprova."
+    "saveFailed": "Non sono riuscito a salvare il prezzo. Riprova.",
+    "openPrices": "Open Prices",
+    "distance": "a {{km}} km",
+    "areaTitle": "Zona dei prezzi",
+    "areaChip": "{{city}} · {{km}} km",
+    "areaChipEmpty": "Imposta la zona",
+    "areaHint": "Mostriamo anche i prezzi di Open Prices, un database pubblico, nei negozi entro questa distanza dal comune.",
+    "radiusLabel": "Entro",
+    "radiusKm": "{{km}} km",
+    "areaSave": "Salva zona",
+    "openPricesNote": "Open Prices: dati aperti raccolti da altri utenti, non verificati da Shelfy.",
+    "areaError": "Non trovo questo comune. Controlla il nome e riprova."
   },
   "catalog": {
     "title": "Prodotto non trovato",
@@ -984,5 +1014,10 @@
     "save": "Salva e continua",
     "skipRescan": "Scansiona un altro",
     "skipPantry": "Salta, inserisco i dati dopo"
+  },
+  "apk": {
+    "button": "Scarica per Android",
+    "label": "Scarica l'app per Android",
+    "hint": "Installazione fuori dal Play Store: Android può mostrare un avviso, conferma per proseguire."
   }
 }

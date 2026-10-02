@@ -164,10 +164,80 @@ export async function submitPrice(payload: {
   return res.data;
 }
 
-// Comune e ultimo negozio usato si ricordano sul dispositivo: davanti allo
-// scaffale si vuole inserire il prezzo in due tocchi, senza riscrivere tutto.
+export const RADIUS_CHOICES_KM = [5, 15, 30, 50] as const;
+export const DEFAULT_RADIUS_KM = 15;
+
+interface OpenPriceDto {
+  barcode: string;
+  osmId: number;
+  chain: string;
+  city: string;
+  priceCents: number;
+  observedAt: string;
+  distanceKm: number;
+}
+
+/** Prezzi di Open Prices entro `radiusKm` dal comune, già nella forma dei
+ *  prezzi della community (così lista e scheda li trattano allo stesso modo). */
+export async function fetchOpenPrices(
+  barcodes: string[], city: string, radiusKm: number,
+): Promise<Record<string, LatestPrice[]>> {
+  const fn = httpsCallable<unknown, { items: OpenPriceDto[] }>(functions, 'getOpenPrices');
+  const res = await fn({ barcodes, city, radiusKm });
+  const out: Record<string, LatestPrice[]> = {};
+  for (const i of res.data.items) {
+    (out[i.barcode] ??= []).push({
+      id: `op_${i.barcode}_${i.osmId}`,
+      barcode: i.barcode,
+      storeId: `osm_${i.osmId}`,
+      chain: i.chain,
+      storeName: i.city,
+      city: i.city,
+      priceCents: i.priceCents,
+      observedAt: i.observedAt,
+      confirmations: 1,
+      source: 'openprices',
+      distanceKm: i.distanceKm,
+    });
+  }
+  return out;
+}
+
+/** Unisce i prezzi della community e quelli di Open Prices, dal più basso. */
+export function mergePrices(
+  community: Record<string, LatestPrice[]>,
+  open: Record<string, LatestPrice[]>,
+): Record<string, LatestPrice[]> {
+  const out: Record<string, LatestPrice[]> = {};
+  for (const src of [community, open]) {
+    for (const [barcode, list] of Object.entries(src)) (out[barcode] ??= []).push(...list);
+  }
+  for (const list of Object.values(out)) list.sort((a, b) => a.priceCents - b.priceCents);
+  return out;
+}
+
+// Comune, raggio e ultimo negozio usato si ricordano sul dispositivo: davanti
+// allo scaffale si vuole inserire il prezzo in due tocchi, senza riscrivere tutto.
 const CITY_KEY = 'shelfy.priceCity';
+const RADIUS_KEY = 'shelfy.priceRadius';
 const LAST_STORE_KEY = 'shelfy.priceLastStore';
+
+export async function loadPriceArea(): Promise<{ city: string; radiusKm: number }> {
+  try {
+    const [city, radius] = await Promise.all([
+      AsyncStorage.getItem(CITY_KEY), AsyncStorage.getItem(RADIUS_KEY),
+    ]);
+    const r = Number(radius);
+    return { city: city ?? '', radiusKm: (RADIUS_CHOICES_KM as readonly number[]).includes(r) ? r : DEFAULT_RADIUS_KM };
+  } catch {
+    return { city: '', radiusKm: DEFAULT_RADIUS_KM };
+  }
+}
+
+export function savePriceArea(city: string, radiusKm: number): void {
+  AsyncStorage.setItem(CITY_KEY, city).catch(() => {});
+  AsyncStorage.setItem(RADIUS_KEY, String(radiusKm)).catch(() => {});
+}
 
 export async function loadPricePrefs(): Promise<{ city: string; lastStore: StoreInput | null }> {
   try {

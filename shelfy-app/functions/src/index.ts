@@ -739,7 +739,8 @@ export const sendExpiryReminders = onSchedule(
 // limitare la frequenza né confrontare con i prezzi già noti.
 // -----------------------------------------------------------------------
 
-const MAX_PRICE_SUBMITS_PER_DAY = 40;
+// Uno scontrino intero porta 10-30 prezzi in una volta: il tetto deve reggere un paio di scontrini al giorno.
+const MAX_PRICE_SUBMITS_PER_DAY = 120;
 const MAX_PRICE_EUR = 999;
 // Un prezzo oltre questo fattore (sopra o sotto) rispetto alla mediana dei
 // prezzi già noti dello stesso prodotto non viene pubblicato da solo: più
@@ -859,6 +860,164 @@ export const submitPrice = onCall(
     });
 
     return { status: suspicious ? 'held' : 'published', storeId };
+  },
+);
+
+// -----------------------------------------------------------------------
+// Open Prices
+// -----------------------------------------------------------------------
+// Prezzi di Open Food Facts (open-prices), cercati entro un raggio dal comune
+// scelto dall'utente. Restano un dataset a parte (licenza ODbL): non vengono
+// mai scritti in latestPrices, il client li mostra etichettati come "Open
+// Prices". La funzione fa da cache: l'API pubblica non va martellata dai
+// client, e il geocoding del comune (Nominatim, 1 richiesta/s) si fa una volta.
+// -----------------------------------------------------------------------
+
+const OP_API = 'https://prices.openfoodfacts.org/api/v1/prices';
+const NOMINATIM_API = 'https://nominatim.openstreetmap.org/search';
+const OP_USER_AGENT = 'Shelfy/1.0 (https://shelfy-app.it)';
+const OP_RADII_KM = [5, 15, 30, 50];
+const OP_MAX_BARCODES = 30;
+const OP_CACHE_MS = 24 * 3600_000;
+const OP_MAX_AGE_DAYS = 180;
+const OP_PAGE_SIZE = 100;
+const OP_MAX_PAGES = 3;
+const MAX_OPEN_PRICES_CALLS_PER_DAY = 200;
+
+interface OpenPriceItem {
+  barcode: string;
+  osmId: number;
+  chain: string;
+  city: string;
+  priceCents: number;
+  observedAt: string;
+  distanceKm: number;
+}
+
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const rad = Math.PI / 180;
+  const a = Math.sin(((lat2 - lat1) * rad) / 2) ** 2
+    + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(((lon2 - lon1) * rad) / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(a));
+}
+
+async function geocodeCity(
+  db: FirebaseFirestore.Firestore, city: string, cityKey: string,
+): Promise<{ lat: number; lon: number } | null> {
+  const ref = db.collection('geocodeCache').doc(cityKey);
+  const cached = await ref.get();
+  if (cached.exists) {
+    const d = cached.data()!;
+    return { lat: d.lat as number, lon: d.lon as number };
+  }
+  const url = `${NOMINATIM_API}?format=jsonv2&limit=5&countrycodes=it&q=${encodeURIComponent(city)}`;
+  const res = await fetch(url, { headers: { 'User-Agent': OP_USER_AGENT } });
+  if (!res.ok) throw new HttpsError('unavailable', 'Ricerca del comune non disponibile');
+  const rows = (await res.json()) as { lat?: string; lon?: string; addresstype?: string }[];
+  // "Pisa" restituisce prima la provincia (30 km più a sud del centro): si
+  // preferisce il risultato che è un abitato, non un'area amministrativa.
+  const place = rows.find((r) => ['city', 'town', 'village', 'municipality', 'hamlet', 'suburb'].includes(r.addresstype ?? ''))
+    ?? rows[0];
+  const lat = Number(place?.lat);
+  const lon = Number(place?.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  await ref.set({ lat, lon, city, createdAt: FieldValue.serverTimestamp() });
+  return { lat, lon };
+}
+
+// Un prezzo per (prodotto, negozio): l'ultimo, perché l'API li restituisce
+// dal più recente. I prezzi al chilo/litro (merce sfusa) e quelli senza data
+// o valuta non sono confrontabili con il prezzo a confezione e si scartano.
+async function fetchOpenPrices(
+  barcodes: string[], lat: number, lon: number, radiusKm: number,
+): Promise<OpenPriceItem[]> {
+  const since = new Date(Date.now() - OP_MAX_AGE_DAYS * 86400_000).toISOString().slice(0, 10);
+  const out: OpenPriceItem[] = [];
+  const seen = new Set<string>();
+  for (let page = 1; page <= OP_MAX_PAGES; page++) {
+    const params = new URLSearchParams({
+      product_code__in: barcodes.join(','),
+      lat: String(lat), lon: String(lon), radius_km: String(radiusKm),
+      currency: 'EUR', date__gte: since,
+      order_by: '-date', size: String(OP_PAGE_SIZE), page: String(page),
+    });
+    const res = await fetch(`${OP_API}?${params}`, { headers: { 'User-Agent': OP_USER_AGENT } });
+    if (!res.ok) throw new HttpsError('unavailable', 'Open Prices non disponibile');
+    const body = (await res.json()) as { items?: any[] };
+    const rows = body.items ?? [];
+    for (const r of rows) {
+      const l = r.location;
+      const price = Number(r.price);
+      if (!l || !r.date || !Number.isFinite(price) || price <= 0) continue;
+      if (r.price_per && r.price_per !== 'UNIT') continue;
+      const key = `${r.product_code}_${l.osm_id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({
+        barcode: String(r.product_code),
+        osmId: Number(l.osm_id),
+        chain: String(l.osm_brand || l.osm_name || '').slice(0, 40),
+        city: String(l.osm_address_city ?? '').slice(0, 60),
+        priceCents: Math.round(price * 100),
+        observedAt: new Date(r.date).toISOString(),
+        distanceKm: Math.round(haversineKm(lat, lon, Number(l.osm_lat), Number(l.osm_lon)) * 10) / 10,
+      });
+    }
+    if (rows.length < OP_PAGE_SIZE) break;
+  }
+  return out;
+}
+
+export const getOpenPrices = onCall(
+  { region: 'europe-west1', cors: true },
+  async (request) => {
+    const uid = requireUid(request);
+
+    const raw = Array.isArray(request.data?.barcodes) ? request.data.barcodes : [];
+    const barcodes: string[] = Array.from(new Set<string>(
+      raw.map((b: unknown) => String(b).trim()).filter((b: string) => /^\d{8,14}$/.test(b)),
+    )).slice(0, OP_MAX_BARCODES);
+    if (barcodes.length === 0) return { items: [] };
+
+    const city = requireString(request.data?.city, 'Comune', 60);
+    const cityKey = slug(city);
+    if (!cityKey) throw new HttpsError('invalid-argument', 'Comune non valido');
+    const asked = Number(request.data?.radiusKm);
+    const radiusKm = OP_RADII_KM.find((r) => r >= asked) ?? OP_RADII_KM[OP_RADII_KM.length - 1];
+
+    const db = getFirestore();
+    const cacheCol = db.collection('openPricesCache');
+    const docId = (b: string) => `${b}__${cityKey}__${radiusKm}`;
+
+    // Prima la cache (24 h): si chiama l'API solo per i barcode non ancora noti.
+    const snaps = await db.getAll(...barcodes.map((b) => cacheCol.doc(docId(b))));
+    const fresh = new Map<string, OpenPriceItem[]>();
+    for (const s of snaps) {
+      const d = s.data();
+      if (d && Date.now() - (d.fetchedAt as number) < OP_CACHE_MS) {
+        fresh.set(d.barcode as string, d.items as OpenPriceItem[]);
+      }
+    }
+
+    const missing = barcodes.filter((b) => !fresh.has(b));
+    if (missing.length > 0) {
+      await bumpDailyCounter(db, uid, 'openPricesCalls', MAX_OPEN_PRICES_CALLS_PER_DAY,
+        'Troppe ricerche oggi. Riprova domani.');
+      const where = await geocodeCity(db, city, cityKey);
+      if (!where) throw new HttpsError('invalid-argument', 'Comune non trovato');
+
+      const found = await fetchOpenPrices(missing, where.lat, where.lon, radiusKm);
+      const batch = db.batch();
+      for (const b of missing) {
+        const items = found.filter((i) => i.barcode === b);
+        fresh.set(b, items);
+        // Anche "nessun prezzo" si memorizza, così non si richiede a ogni apertura.
+        batch.set(cacheCol.doc(docId(b)), { barcode: b, items, fetchedAt: Date.now() });
+      }
+      await batch.commit();
+    }
+
+    return { items: barcodes.flatMap((b) => fresh.get(b) ?? []) };
   },
 );
 

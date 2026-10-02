@@ -240,6 +240,10 @@ export interface LatestPrice {
   observedAt: string;
   /** Quante segnalazioni consecutive concordano su questo prezzo. */
   confirmations: number;
+  /** Assente = segnalato dagli utenti di Shelfy. */
+  source?: 'openprices';
+  /** Solo per Open Prices: distanza dal comune scelto. */
+  distanceKm?: number;
 }
 
 export interface Store {

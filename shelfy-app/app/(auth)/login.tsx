@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { authErrorMessage } from '@/lib/authErrors';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
 import PrimaryButton from '@/components/PrimaryButton';
+import ApkDownloadButton from '@/components/ApkDownloadButton';
 import { showAlert } from '@/lib/alert';
 import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
 
@@ -121,6 +122,8 @@ export default function LoginScreen() {
         <Text style={styles.guidesLink} onPress={openGuides} accessibilityRole="link">
           {t('auth.login.guidesLink')}
         </Text>
+
+        <ApkDownloadButton variant="full" />
       </ScrollView>
     </KeyboardAvoidingView>
   );

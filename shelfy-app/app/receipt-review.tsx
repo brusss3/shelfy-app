@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, ActivityIndicator, Modal,
@@ -13,6 +13,10 @@ import { tintForCategory } from '@/lib/urgency';
 import { showAlert } from '@/lib/alert';
 import { usePremiumGate, isProductLimitError } from '@/lib/premiumGate';
 import PrimaryButton from '@/components/PrimaryButton';
+import ProductMatchSheet from '@/components/ProductMatchSheet';
+import { CHAINS, loadPricePrefs, savePricePrefs, submitPrice } from '@/lib/prices';
+import { ProductSuggestion } from '@/lib/productSearch';
+import { ReceiptLine } from '@/lib/parseReceipt';
 
 const ZONES: { id: Zone; labelKey: string; icon: string }[] = [
   { id: 'frigo', labelKey: 'common.zones.frigo', icon: '❄️' },
@@ -33,6 +37,20 @@ function addDays(n: number): string {
 interface ReceiptRow {
   name: string;
   expiry: string | null;
+  /** Prezzo come testo ("1,29"): si modifica a mano. */
+  price: string;
+  /** Barcode del prodotto collegato; senza, il prezzo non si può salvare. */
+  barcode: string;
+  brand: string;
+  qty: string;
+}
+
+const isoDate = (daysAgo: number) => new Date(Date.now() - daysAgo * 86400000).toISOString().slice(0, 10);
+
+// "1,29" -> 129 centesimi, o null se non è un prezzo valido.
+function parsePriceCents(text: string): number | null {
+  const n = parseFloat(text.replace(',', '.'));
+  return Number.isFinite(n) && n >= 0.01 && n <= 999 ? Math.round(n * 100) : null;
 }
 
 // Revisione della lista letta dallo scontrino: l'utente corregge ogni nome,
@@ -46,11 +64,23 @@ export default function ReceiptReviewScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
-  const initialItems: string[] = params.items ? JSON.parse(params.items as string) : [];
+  const initialItems: ReceiptLine[] = params.items ? JSON.parse(params.items as string) : [];
+  const detectedDate = typeof params.date === 'string' && params.date ? params.date : '';
+  const detectedChain = typeof params.chain === 'string' ? params.chain : '';
 
   const [rows, setRows] = useState<ReceiptRow[]>(
-    initialItems.map((name) => ({ name, expiry: null })),
+    initialItems.map((l) => ({
+      name: l.name, expiry: null, barcode: '', brand: '', qty: '',
+      price: l.priceCents !== null ? (l.priceCents / 100).toFixed(2).replace('.', ',') : '',
+    })),
   );
+  const [matchRow, setMatchRow] = useState<number | null>(null);
+  const [city, setCity] = useState('');
+  const [chain, setChain] = useState(detectedChain);
+  const [customChain, setCustomChain] = useState(
+    !!detectedChain && !(CHAINS as readonly string[]).includes(detectedChain),
+  );
+  const [dateIso, setDateIso] = useState(detectedDate || isoDate(0));
   const [zone, setZone] = useState<Zone | null>(null);
   const [saving, setSaving] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -58,6 +88,21 @@ export default function ReceiptReviewScreen() {
   const [pickerYear, setPickerYear] = useState('');
   const [pickerMonth, setPickerMonth] = useState('');
   const [pickerDay, setPickerDay] = useState('');
+
+  // Il comune dell'ultima volta: davanti allo scontrino si vuole solo confermare.
+  useEffect(() => {
+    loadPricePrefs().then((p) => setCity((c) => c || p.city));
+  }, []);
+
+  const updateRow = (index: number, patch: Partial<ReceiptRow>) => {
+    setRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+  };
+
+  const pickMatch = (p: ProductSuggestion) => {
+    if (matchRow === null) return;
+    updateRow(matchRow, { barcode: p.barcode, brand: p.brand, qty: p.qty });
+    setMatchRow(null);
+  };
 
   const updateRowName = (index: number, name: string) => {
     setRows((prev) => prev.map((r, i) => (i === index ? { ...r, name } : r)));
@@ -68,7 +113,7 @@ export default function ReceiptReviewScreen() {
   };
 
   const addRow = () => {
-    setRows((prev) => [...prev, { name: '', expiry: null }]);
+    setRows((prev) => [...prev, { name: '', expiry: null, price: '', barcode: '', brand: '', qty: '' }]);
   };
 
   const setRowExpiry = (index: number, iso: string) => {
@@ -101,7 +146,53 @@ export default function ReceiptReviewScreen() {
   };
 
   const validRows = rows.filter((r) => r.name.trim().length > 0);
+  const storeReady = chain.trim().length > 0 && city.trim().length > 0;
+  const priceRows = validRows.filter((r) => !!r.barcode && parsePriceCents(r.price) !== null);
   const canSave = !!zone && validRows.length > 0 && validRows.every((r) => !!r.expiry);
+
+  // Invia i prezzi delle righe collegate a un prodotto, tre alla volta. Un
+  // limite giornaliero raggiunto interrompe l'invio: il resto non si perde in
+  // silenzio, lo si dice all'utente.
+  const sendPrices = async (): Promise<{ title: string; body: string } | null> => {
+    if (priceRows.length === 0) return null;
+    const store = { chain: chain.trim(), name: '', city: city.trim() };
+    const observedAt = dateIso === isoDate(0)
+      ? new Date().toISOString()
+      : new Date(`${dateIso}T12:00:00`).toISOString();
+    let saved = 0;
+    let held = 0;
+    let stopped = false;
+    const queue = [...priceRows];
+    const worker = async () => {
+      for (let r = queue.shift(); r && !stopped; r = queue.shift()) {
+        try {
+          const res = await submitPrice({
+            barcode: r.barcode,
+            productName: [r.brand, r.name.trim()].filter(Boolean).join(' '),
+            priceCents: parsePriceCents(r.price) as number,
+            store,
+            observedAt,
+          });
+          if (res.status === 'held') held += 1; else saved += 1;
+        } catch (e: any) {
+          if (e?.code === 'functions/resource-exhausted') stopped = true;
+        }
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    if (saved + held > 0) savePricePrefs(city.trim(), store);
+    const failed = priceRows.length - saved - held;
+    if (saved + held === 0) {
+      return { title: t('receiptReview.pricesFailedTitle'), body: t('receiptReview.pricesFailedBody') };
+    }
+    return {
+      title: t('receiptReview.pricesSavedTitle'),
+      body: [
+        t('receiptReview.pricesSavedBody', { count: saved + held }),
+        failed > 0 ? t('receiptReview.pricesPartial', { count: failed }) : null,
+      ].filter(Boolean).join(' '),
+    };
+  };
 
   const handleSave = async () => {
     if (!zone) {
@@ -123,19 +214,25 @@ export default function ReceiptReviewScreen() {
       await addNewProducts(
         validRows.map((r) => ({
           name: r.name.trim(),
-          brand: '',
-          qty: '',
+          brand: r.brand,
+          qty: r.qty,
           count: 1,
           zone,
           category: 'Altro',
           expiry: r.expiry as string,
           added: today,
-          barcode: '',
+          barcode: r.barcode,
           tint: tintForCategory('Altro'),
           cal: 0,
         })),
       );
-      router.replace('/(tabs)');
+      // I prodotti sono già salvati: un errore sui prezzi non deve annullarli.
+      const summary = storeReady ? await sendPrices() : null;
+      if (summary) {
+        showAlert(summary.title, summary.body, [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]);
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (e: any) {
       if (isProductLimitError(e)) { onProductLimit(); } else {
         showAlert(t('common.error'), e?.message ?? t('receiptReview.saveFailed'));
@@ -202,34 +299,131 @@ export default function ReceiptReviewScreen() {
           ))}
         </ScrollView>
 
+        {/* Negozio e data: servono a salvare i prezzi */}
+        <Text style={styles.sectionLabel}>{t('receiptReview.storeSection')}</Text>
+        <View style={styles.storeCard}>
+          <Text style={styles.storeHint}>{t('receiptReview.storeHint')}</Text>
+          <TextInput
+            style={styles.storeInput}
+            value={city}
+            onChangeText={setCity}
+            placeholder={t('prices.cityPlaceholder')}
+            placeholderTextColor={T.mute}
+            autoCapitalize="words"
+          />
+          <View style={styles.chipsWrap}>
+            {CHAINS.map((c) => {
+              const active = !customChain && chain === c;
+              return (
+                <TouchableOpacity
+                  key={c}
+                  style={[styles.miniChip, active && styles.miniChipActive]}
+                  onPress={() => { setCustomChain(false); setChain(c); }}
+                  activeOpacity={0.85}
+                >
+                  <Text style={[styles.miniChipText, active && styles.miniChipTextActive]}>{c}</Text>
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity
+              style={[styles.miniChip, customChain && styles.miniChipActive]}
+              onPress={() => { setCustomChain(true); setChain(''); }}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.miniChipText, customChain && styles.miniChipTextActive]}>{t('prices.otherChain')}</Text>
+            </TouchableOpacity>
+          </View>
+          {customChain && (
+            <TextInput
+              style={styles.storeInput}
+              value={chain}
+              onChangeText={setChain}
+              placeholder={t('prices.chainPlaceholder')}
+              placeholderTextColor={T.mute}
+              maxLength={30}
+              autoCapitalize="words"
+            />
+          )}
+          <View style={styles.chipsWrap}>
+            {[
+              ...(detectedDate && detectedDate !== isoDate(0) && detectedDate !== isoDate(1)
+                ? [{ iso: detectedDate, label: detectedDate.split('-').reverse().join('/') }]
+                : []),
+              { iso: isoDate(0), label: t('prices.date.today') },
+              { iso: isoDate(1), label: t('prices.date.yesterday') },
+            ].map((d) => {
+              const active = dateIso === d.iso;
+              return (
+                <TouchableOpacity
+                  key={d.iso}
+                  style={[styles.miniChip, active && styles.miniChipActive]}
+                  onPress={() => setDateIso(d.iso)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={[styles.miniChipText, active && styles.miniChipTextActive]}>{d.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <Text style={styles.storeHint}>
+            {priceRows.length > 0 && storeReady
+              ? t('receiptReview.pricesReady', { count: priceRows.length })
+              : t('receiptReview.pricesNone')}
+          </Text>
+        </View>
+
         {/* Rows */}
         <Text style={styles.sectionLabel}>{t('receiptReview.productsSection', { count: rows.length })}</Text>
         <View style={styles.rowsWrap}>
           {rows.map((row, index) => (
             <View key={index} style={styles.rowCard}>
-              <TextInput
-                style={styles.rowNameInput}
-                value={row.name}
-                onChangeText={(v) => updateRowName(index, v)}
-                placeholder={t('receiptReview.namePlaceholder')}
-                placeholderTextColor={T.mute}
-              />
-              <TouchableOpacity
-                onPress={() => openDatePicker(index)}
-                activeOpacity={0.85}
-                style={styles.rowDateBtn}
-              >
-                <Text style={[styles.rowDateText, !row.expiry && styles.rowDatePlaceholder]}>
-                  {row.expiry ?? t('receiptReview.expiryPlaceholder')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => removeRow(index)}
-                activeOpacity={0.85}
-                style={styles.rowDeleteBtn}
-              >
-                <Text style={styles.rowDeleteText}>✕</Text>
-              </TouchableOpacity>
+              <View style={styles.rowMain}>
+                <TextInput
+                  style={styles.rowNameInput}
+                  value={row.name}
+                  onChangeText={(v) => updateRowName(index, v)}
+                  placeholder={t('receiptReview.namePlaceholder')}
+                  placeholderTextColor={T.mute}
+                />
+                <TouchableOpacity
+                  onPress={() => openDatePicker(index)}
+                  activeOpacity={0.85}
+                  style={styles.rowDateBtn}
+                >
+                  <Text style={[styles.rowDateText, !row.expiry && styles.rowDatePlaceholder]}>
+                    {row.expiry ?? t('receiptReview.expiryPlaceholder')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => removeRow(index)}
+                  activeOpacity={0.85}
+                  style={styles.rowDeleteBtn}
+                >
+                  <Text style={styles.rowDeleteText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.rowPriceLine}>
+                <View style={styles.priceBox}>
+                  <TextInput
+                    style={styles.priceInput}
+                    value={row.price}
+                    onChangeText={(v) => updateRow(index, { price: v })}
+                    placeholder="0,00"
+                    placeholderTextColor={T.mute}
+                    keyboardType="decimal-pad"
+                  />
+                  <Text style={styles.priceCurrency}>€</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setMatchRow(index)}
+                  activeOpacity={0.85}
+                  style={[styles.linkBtn, !!row.barcode && styles.linkBtnDone]}
+                >
+                  <Text style={[styles.linkBtnText, !!row.barcode && styles.linkBtnTextDone]} numberOfLines={1}>
+                    {row.barcode ? `✓ ${t('receiptReview.linked')}` : t('receiptReview.link')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ))}
 
@@ -240,6 +434,13 @@ export default function ReceiptReviewScreen() {
 
         <View style={{ height: 120 }} />
       </ScrollView>
+
+      <ProductMatchSheet
+        visible={matchRow !== null}
+        initialQuery={matchRow !== null ? rows[matchRow]?.name ?? '' : ''}
+        onPick={pickMatch}
+        onClose={() => setMatchRow(null)}
+      />
 
       {/* Date picker modal, condiviso da tutte le righe */}
       <Modal visible={showDatePicker} transparent animationType="fade" onRequestClose={() => setShowDatePicker(false)}>
@@ -371,8 +572,38 @@ const styles = StyleSheet.create({
   rowsWrap: { paddingHorizontal: 16, gap: 8 },
   rowCard: {
     backgroundColor: T.surface, borderRadius: RADIUS.lg, ...SHADOW.card,
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 8,
+    paddingHorizontal: 12, paddingVertical: 10, gap: 8,
   },
+  rowMain: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  rowPriceLine: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  priceBox: {
+    flexDirection: 'row', alignItems: 'center', width: 96, height: 36, borderRadius: RADIUS.input,
+    paddingHorizontal: 12, backgroundColor: T.bg, boxShadow: CLAY.inset,
+  },
+  priceInput: { flex: 1, fontSize: 14, fontFamily: FONTS.sansMedium, color: T.ink, padding: 0 },
+  priceCurrency: { fontFamily: FONTS.sansBold, fontSize: 13, color: T.mute, marginLeft: 4 },
+  linkBtn: {
+    flex: 1, height: 36, borderRadius: RADIUS.md, borderWidth: 1, borderColor: T.line,
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10,
+  },
+  linkBtnDone: { backgroundColor: T.okSoft, borderColor: T.okSoft },
+  linkBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: T.primary },
+  linkBtnTextDone: { color: T.ok },
+
+  storeCard: { marginHorizontal: 16, marginBottom: 20, gap: 10 },
+  storeHint: { fontFamily: FONTS.sans, fontSize: 12, color: T.mute, lineHeight: 17 },
+  storeInput: {
+    height: 44, borderRadius: RADIUS.input, paddingHorizontal: 16, backgroundColor: T.bg,
+    boxShadow: CLAY.inset, fontSize: 15, fontFamily: FONTS.sans, color: T.ink,
+  },
+  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  miniChip: {
+    paddingVertical: 7, paddingHorizontal: 12, borderRadius: RADIUS.md,
+    backgroundColor: T.surface, ...SHADOW.card,
+  },
+  miniChipActive: { backgroundColor: T.primary },
+  miniChipText: { fontFamily: FONTS.sansMedium, fontSize: 13, color: T.ink },
+  miniChipTextActive: { color: '#fbfaf3' },
   rowNameInput: {
     flex: 1.4, fontFamily: FONTS.sans, fontSize: 14, color: T.ink, padding: 0, fontWeight: '500',
   },

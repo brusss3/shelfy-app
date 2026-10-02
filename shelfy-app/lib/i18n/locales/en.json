@@ -642,7 +642,26 @@
     "missingExpiryError": "Set the expiry date for every product",
     "saveFailed": "Couldn't save the products",
     "addCount_one": "Add {{count}} product",
-    "addCount_other": "Add {{count}} products"
+    "addCount_other": "Add {{count}} products",
+    "storeSection": "STORE AND DATE",
+    "storeHint": "To share prices we need the town and the chain. Only lines with a price and a linked product are shared.",
+    "pricesReady": "{{count}} prices ready to share.",
+    "pricesNone": "No prices to share: link lines to a product.",
+    "link": "Link product",
+    "linked": "Linked",
+    "pricesSavedTitle": "Prices shared",
+    "pricesSavedBody": "I shared {{count}} prices: other users can see them now.",
+    "pricesPartial": "{{count}} could not be sent.",
+    "pricesFailedTitle": "Prices not sent",
+    "pricesFailedBody": "The products were added, but I couldn't send the prices. Try again later.",
+    "match": {
+      "title": "Which product is it?",
+      "searchPlaceholder": "Search by name",
+      "scan": "Scan the barcode",
+      "scanHint": "Point at the barcode on the package",
+      "backToSearch": "Back to search",
+      "noResults": "No results: try another name or scan the barcode."
+    }
   },
   "limits": {
     "productLimitTitle": "Pantry full",
@@ -955,7 +974,7 @@
     "cityLabel": "City",
     "cityPlaceholder": "E.g. Pisa",
     "storeLabel": "Where did you see it?",
-    "newStore": "Other store",
+    "newStore": "+ New store",
     "otherChain": "Other chain",
     "chainPlaceholder": "Chain name",
     "areaPlaceholder": "Area or street (optional)",
@@ -972,7 +991,18 @@
     "savedBody": "Thanks! It's now visible to people looking for this product.",
     "heldTitle": "Price needs a check",
     "heldBody": "This price is very different from the ones we already know, so we're not publishing it right away. If it's right, another report will confirm it.",
-    "saveFailed": "Couldn't save the price. Try again."
+    "saveFailed": "Couldn't save the price. Try again.",
+    "openPrices": "Open Prices",
+    "distance": "{{km}} km away",
+    "areaTitle": "Price area",
+    "areaChip": "{{city}} · {{km}} km",
+    "areaChipEmpty": "Set your area",
+    "areaHint": "We also show prices from Open Prices, a public database, for stores within this distance of your town.",
+    "radiusLabel": "Within",
+    "radiusKm": "{{km}} km",
+    "areaSave": "Save area",
+    "openPricesNote": "Open Prices: open data collected by other users, not verified by Shelfy.",
+    "areaError": "I can't find this town. Check the name and try again."
   },
   "catalog": {
     "title": "Product not found",
@@ -984,5 +1014,10 @@
     "save": "Save and continue",
     "skipRescan": "Scan another",
     "skipPantry": "Skip, I'll enter details later"
+  },
+  "apk": {
+    "button": "Download for Android",
+    "label": "Download the Android app",
+    "hint": "Installed outside the Play Store: Android may show a warning, confirm to continue."
   }
 }
