@@ -10,7 +10,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LatestPrice, ShoppingItem } from '@/types';
 import { ageLabel, formatPrice, recencyOf } from '@/lib/prices';
-import { T, FONTS, RADIUS, CLAY, SURFACE, GRADIENT } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 
 interface Props {
   item: ShoppingItem;
@@ -33,6 +34,8 @@ function tap() {
 // Il gesto principale della schermata: spuntare. Il cerchio si schiaccia e
 // rimbalza come un pezzo di plastilina, e la voce scende nel carrello.
 export default function ShoppingRow({ item, addedByName, price, onPricePress, onToggle, onCountChange, onRemove }: Props) {
+  const { T, GRADIENT, SURFACE } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { t } = useTranslation();
   const squish = useSharedValue(1);
   const fill = useSharedValue(item.checked ? 1 : 0);
@@ -69,7 +72,7 @@ export default function ShoppingRow({ item, addedByName, price, onPricePress, on
           <Animated.View style={[styles.ring, ringStyle, item.checked && styles.ringChecked]}>
             <Animated.View style={[StyleSheet.absoluteFill, checkStyle]}>
               <LinearGradient colors={GRADIENT.primary} style={styles.ringFill}>
-                <Ionicons name="checkmark" size={18} color="#fbfaf3" />
+                <Ionicons name="checkmark" size={18} color={T.onPrimary} />
               </LinearGradient>
             </Animated.View>
           </Animated.View>
@@ -137,7 +140,7 @@ export default function ShoppingRow({ item, addedByName, price, onPricePress, on
 
 const RING = 30;
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY }: Theme) => StyleSheet.create({
   card: {
     borderRadius: RADIUS.clay,
     paddingVertical: 12,

@@ -1,15 +1,19 @@
 import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
-import { useAuth } from '@/context/AuthContext';
-import { T, FONTS, RADIUS } from '@/constants/theme';
+import { useTranslation } from 'react-i18next';
+import { RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 import ApkDownloadButton from './ApkDownloadButton';
 
+// Pulsante in alto a destra delle schermate principali: apre le impostazioni
+// (profilo, lingua, tema, notifiche). Per questo è un ingranaggio, non l'iniziale.
 export default function ProfileButton() {
-  const { user } = useAuth();
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
-
-  const initial = user?.displayName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? 'U';
+  const { t } = useTranslation();
 
   return (
     <View style={styles.row}>
@@ -17,21 +21,21 @@ export default function ProfileButton() {
       <ApkDownloadButton variant="icon" />
       <TouchableOpacity
         onPress={() => router.push('/settings' as Href)}
-        style={styles.avatar}
+        style={styles.button}
         activeOpacity={0.75}
-        accessibilityLabel="Apri impostazioni"
+        accessibilityRole="button"
+        accessibilityLabel={t('settings.title')}
       >
-        <Text style={styles.initial}>{initial}</Text>
+        <Ionicons name="settings-outline" size={22} color={T.primaryInk} />
       </TouchableOpacity>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T }: Theme) => StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  avatar: {
+  button: {
     width: 42, height: 42, borderRadius: RADIUS.pill,
     backgroundColor: T.primarySoft, alignItems: 'center', justifyContent: 'center',
   },
-  initial: { fontFamily: FONTS.display, fontSize: 18, color: T.primaryInk },
 });

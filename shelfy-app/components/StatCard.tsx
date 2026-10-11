@@ -1,7 +1,8 @@
 import React from 'react';
 import { Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { T, FONTS, RADIUS, CLAY, SURFACE } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 
 interface Props {
   value: number;
@@ -10,6 +11,8 @@ interface Props {
 }
 
 export default function StatCard({ value, label, color }: Props) {
+  const { SURFACE } = useTheme();
+  const styles = useThemedStyles(createStyles);
   return (
     <LinearGradient colors={SURFACE.card} style={styles.card}>
       <Text style={[styles.value, { color }]}>{value}</Text>
@@ -18,7 +21,7 @@ export default function StatCard({ value, label, color }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY }: Theme) => StyleSheet.create({
   // Rilievo più contenuto delle righe prodotto: sono numeri di contorno, non
   // il contenuto principale della schermata, e con lo stesso peso delle righe
   // la pagina "grida" tutta uguale.

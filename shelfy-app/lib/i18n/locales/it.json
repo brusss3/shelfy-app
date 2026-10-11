@@ -623,7 +623,10 @@
     "statusReading": "Leggo lo scontrino…",
     "statusTitle": "Inquadra lo scontrino",
     "statusSub": "Tienilo disteso e ben illuminato",
-    "captureFailed": "Scatto non riuscito",
+    "statusSubMore": "Hai già {{count}} foto: inquadra la parte successiva o premi Fatto",
+    "statusSubFirst": "Puoi aggiungere più foto: intestazione, poi i prodotti",
+    "doneBtn": "Fatto ({{count}})",
+        "captureFailed": "Scatto non riuscito",
     "noItemsTitle": "Nessun prodotto trovato",
     "noItemsBody": "Non sono riuscito a leggere righe utili dallo scontrino. Avvicinati e assicurati che sia ben illuminato, oppure inserisci i prodotti manualmente."
   },
@@ -885,7 +888,8 @@
       "title": "Lingua",
       "system": "Lingua del dispositivo",
       "it": "Italiano",
-      "en": "English"
+      "en": "English",
+      "es": "Español"
     },
     "feedback": {
       "title": "Segnala un problema o un'idea",
@@ -907,13 +911,23 @@
       "confirmBody": "Vuoi uscire dall'account?",
       "confirm": "Esci"
     },
-    "version": "Shelfy v{{version}}"
+    "version": "Shelfy v{{version}}",
+    "theme": {
+      "title": "Tema",
+      "system": "Del dispositivo",
+      "light": "Chiaro",
+      "dark": "Scuro"
+    }
   },
   "survey": {
     "badge": "Sondaggio",
     "skip": "Non ora"
   },
   "shopping": {
+    "frequent": "Usati spesso",
+    "removeFavoriteTitle": "Togliere dai suggeriti?",
+    "removeFavoriteBody": "«{{name}}» non comparirà più tra gli usati spesso, finché non lo aggiungi di nuovo qualche volta.",
+    "removeFavorite": "Togli",
     "title": "Spesa",
     "openCount_one": "{{count}} da comprare",
     "openCount_other": "{{count}} da comprare",
@@ -934,6 +948,7 @@
     "incrementedToast": "{{name}} era già in lista: quantità aumentata",
     "addFailed": "Non sono riuscito ad aggiungere la voce. Riprova.",
     "a11y": {
+      "quickAdd": "Aggiungi {{name}}",
       "add": "Aggiungi alla lista",
       "scan": "Scansiona un codice a barre",
       "remove": "Togli dalla lista",
@@ -1019,5 +1034,107 @@
     "button": "Scarica per Android",
     "label": "Scarica l'app per Android",
     "hint": "Installazione fuori dal Play Store: Android può mostrare un avviso, conferma per proseguire."
+  },
+  "serverErrors": {
+    "loginRequired": "Devi accedere.",
+    "pickIngredient": "Seleziona almeno un ingrediente.",
+    "aiInvalid": "Risposta dell'AI non valida. Riprova.",
+    "aiIncomplete": "La ricetta dell'AI è incompleta. Riprova.",
+    "aiEmpty": "L'AI non ha risposto. Riprova.",
+    "aiLimit": "Il servizio AI ha raggiunto il limite. Riprova più tardi.",
+    "aiUnavailable": "AI non disponibile in questo momento. Riprova più tardi.",
+    "aiQuota": "Credito ricette AI esaurito.",
+    "aiDisabled": "Le ricette AI sono temporaneamente disattivate.",
+    "aiNotActive": "Le ricette AI non sono attive sul tuo account.",
+    "aiAlreadyToday": "Hai già generato la ricetta di oggi.",
+    "aiAlreadyWeek": "Hai già generato la ricetta di questa settimana.",
+    "inviteCodeFailed": "Non sono riuscito a generare un codice d'invito. Riprova.",
+    "invalidCode": "Codice non valido.",
+    "tooManyAttempts": "Troppi tentativi. Riprova tra un'ora.",
+    "codeNotFound": "Codice non valido o scaduto.",
+    "homeNotFound": "Casa non trovata.",
+    "homeFull": "Questa casa ha già raggiunto il numero massimo di membri.",
+    "onlyOwner": "Solo chi ha creato la casa può farlo.",
+    "ownerCannotLeave": "Chi ha creato la casa non può abbandonarla: eliminala invece.",
+    "useLeave": "Usa \"Esci dalla casa\" per rimuovere te stesso.",
+    "onlyOwnerDelete": "Solo chi ha creato la casa può eliminarla.",
+    "invalidBarcode": "Codice a barre non valido.",
+    "invalidPrice": "Prezzo non valido.",
+    "invalidStore": "Negozio non valido.",
+    "invalidDate": "Data non valida (al massimo 30 giorni fa).",
+    "cityLookupUnavailable": "La ricerca del comune non è disponibile ora. Riprova.",
+    "openPricesUnavailable": "Open Prices non è disponibile ora. Riprova.",
+    "invalidCity": "Comune non valido.",
+    "cityNotFound": "Non trovo questo comune.",
+    "invalidProductName": "Nome del prodotto non valido.",
+    "limitPrices": "Hai inviato molti prezzi oggi. Riprova domani.",
+    "limitSearches": "Troppe ricerche oggi. Riprova domani.",
+    "limitCatalog": "Hai aggiunto molti prodotti oggi. Riprova domani.",
+    "missing": {
+      "homeName": "Manca il nome della casa.",
+      "userName": "Manca il nome utente.",
+      "home": "Manca la casa.",
+      "member": "Manca il membro.",
+      "chain": "Manca la catena.",
+      "city": "Manca il comune.",
+      "date": "Manca la data.",
+      "generic": "Manca un dato obbligatorio."
+    },
+    "recipeNotFound": "Ricetta non trovata."
+  },
+  "tutorials": {
+    "helpA11y": "Come funziona",
+    "gotIt": "Ho capito",
+    "receiptScan": {
+      "title": "Come scansionare lo scontrino",
+      "steps": [
+        "Prima foto: l'intestazione, con nome e indirizzo del negozio. Serve solo a riconoscere catena e città (puoi saltarla).",
+        "Poi i prodotti: se lo scontrino è lungo fai più foto, scorrendo dall'alto verso il basso. Includi sempre la colonna dei prezzi a destra.",
+        "Tra una foto e l'altra lascia sovrapporre qualche riga: i doppioni vengono tolti da soli.",
+        "Premi Fatto: controlli prodotti e prezzi prima di salvare."
+      ],
+      "tip": "Tieni lo scontrino disteso, ben illuminato e senza tagliare i prezzi."
+    },
+    "receiptReview": {
+      "title": "Come controllare la lista",
+      "steps": [
+        "Correggi i nomi letti dallo scontrino e rimuovi le righe che non sono prodotti.",
+        "Scegli dove li conservi (Frigo, Freezer o Dispensa) e imposta le scadenze: puoi applicarne una in blocco a tutte le righe vuote.",
+        "Per condividere i prezzi tocca «Collega prodotto» su una riga e cercalo per nome o con il codice a barre. Si condividono solo le righe collegate e con un prezzo.",
+        "Controlla comune, catena e data: sono già compilati se li ho letti dall'intestazione."
+      ],
+      "tip": "I prezzi condivisi sono anonimi e li vedono tutti gli utenti di Shelfy."
+    },
+    "recipeAi": {
+      "title": "Ricette con il tuo assistente AI",
+      "steps": [
+        "In Ricette scegli gli alimenti da consumare e quante ricette vuoi.",
+        "Tocca «Copia la richiesta»: preparo io il testo da dare a ChatGPT, Gemini o all'assistente che usi.",
+        "Incolla la richiesta nell'assistente e aspetta la risposta: deve essere un blocco di codice JSON.",
+        "Copia tutto il blocco, torna qui e incollalo: vedrai l'anteprima delle ricette e potrai salvarle."
+      ],
+      "tip": "Se compare un errore, di solito il JSON è stato copiato a metà: ricopia tutto il blocco."
+    },
+    "sharedPantry": {
+      "title": "Case condivise",
+      "steps": [
+        "Crea una casa e dalle un nome: la dispensa diventa condivisa con chi inviti.",
+        "Apri la casa: trovi il codice d'invito a 6 caratteri e il QR. Condividi uno dei due con chi vuoi far entrare.",
+        "Chi ha il codice sceglie «Ho un codice d'invito» e lo digita oppure inquadra il QR.",
+        "Tocca «Usa questa casa» per lavorare sui suoi prodotti. «Personale» ti riporta alla tua dispensa privata."
+      ],
+      "tip": "Il codice scade: dalla pagina della casa puoi rigenerarlo o disattivarlo quando vuoi."
+    },
+    "shopping": {
+      "title": "Come funziona la spesa",
+      "steps": [
+        "Scrivi cosa ti serve, scansiona un codice a barre o aggiungi un prodotto dalla dispensa.",
+      "Le voci che aggiungi spesso (pane, latte, acqua…) compaiono sopra la barra come scorciatoie: toccale per aggiungerle, tieni premuto per toglierle.",
+        "Tocca la zona in alto (es. «Pisa · 10 km») per scegliere comune e raggio in cui cercare i prezzi.",
+        "Sotto ogni voce vedi il prezzo più recente segnalato dagli utenti Shelfy o da Open Prices, un database pubblico non verificato.",
+        "Se sei al supermercato tocca «Aggiungi prezzo» e inserisci quello che vedi sullo scaffale: aiuti chi fa la spesa dopo di te."
+      ],
+      "tip": "I prezzi sono anonimi. Quelli oltre qualche settimana sono solo storici e possono essere cambiati."
+    }
   }
 }

@@ -7,6 +7,7 @@ import { db } from './firebase';
 import { aiUsageKey } from './limits';
 import { Product, Zone, CommunityRecipe, RecipeRequest, RecipeProposal, MyRecipe, Survey } from '@/types';
 import { notifyAdminsNewFeedback } from './notifications';
+import i18n from '@/lib/i18n';
 
 function tsToIso(ts: unknown): string {
   return ts instanceof Timestamp ? ts.toDate().toISOString() : (typeof ts === 'string' ? ts : new Date().toISOString());
@@ -384,7 +385,7 @@ export async function rateRecipe(recipeId: string, uid: string, value: number): 
 
   await runTransaction(db, async (tx) => {
     const [recipeSnap, ratingSnap] = await Promise.all([tx.get(recipeRef), tx.get(ratingRef)]);
-    if (!recipeSnap.exists()) throw new Error('Ricetta non trovata');
+    if (!recipeSnap.exists()) throw new Error(i18n.t('serverErrors.recipeNotFound'));
 
     const previousValue = ratingSnap.exists() ? (ratingSnap.data().value as number) : null;
     const ratingSum = (recipeSnap.data().ratingSum as number) ?? 0;

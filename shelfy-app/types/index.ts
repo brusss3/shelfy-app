@@ -222,6 +222,14 @@ export type NewShoppingItem = Omit<ShoppingItem, 'id' | 'checked' | 'createdAt' 
   count?: number;
 };
 
+/** Voce che l'utente mette spesso in lista: la memoria dei suggerimenti rapidi.
+ *  `id` è la chiave stabile di favoriteKey (barcode, o nome normalizzato). */
+export interface ShoppingFavorite extends Omit<NewShoppingItem, 'count'> {
+  id: string;
+  /** Quante volte è stata aggiunta alla lista. */
+  uses: number;
+}
+
 // ---------------------------------------------------------------------------
 // Prezzi della community
 // ---------------------------------------------------------------------------

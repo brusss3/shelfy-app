@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
-import { NewShoppingItem, ShoppingItem } from '@/types';
+import { NewShoppingItem, ShoppingFavorite, ShoppingItem } from '@/types';
 import {
   subscribeToShoppingItems, addShoppingItem, updateShoppingItem,
-  deleteShoppingItem, clearCheckedItems,
+  deleteShoppingItem, clearCheckedItems, recordFavoriteUse, subscribeToFavorites, deleteFavorite,
 } from '@/lib/shopping';
 import { useAuth } from './AuthContext';
 import { usePantry } from './PantryContext';
+import i18n from '@/lib/i18n';
 
 /** `added` = voce nuova, `incremented` = era già in lista e ne è stata alzata
  *  la quantità invece di duplicarla. */
@@ -13,6 +14,8 @@ export type AddResult = 'added' | 'incremented';
 
 interface ShoppingContextType {
   items: ShoppingItem[];
+  /** Voci aggiunte spesso, dalla più usata: base dei suggerimenti rapidi. */
+  favorites: ShoppingFavorite[];
   loading: boolean;
   /** Voci ancora da comprare (non nel carrello): è il numero sul badge. */
   openCount: number;
@@ -21,6 +24,7 @@ interface ShoppingContextType {
   setItemCount: (id: string, count: number) => Promise<void>;
   removeItem: (id: string) => Promise<void>;
   clearChecked: () => Promise<void>;
+  removeFavorite: (id: string) => Promise<void>;
 }
 
 const ShoppingContext = createContext<ShoppingContextType>({} as ShoppingContextType);
@@ -32,6 +36,7 @@ export function ShoppingProvider({ children }: { children: React.ReactNode }) {
   // Stesso scope della dispensa attiva: vedi lib/shopping.ts.
   const { activePantryId } = usePantry();
   const [items, setItems] = useState<ShoppingItem[]>([]);
+  const [favorites, setFavorites] = useState<ShoppingFavorite[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -52,6 +57,18 @@ export function ShoppingProvider({ children }: { children: React.ReactNode }) {
     // snapshot del documento utente e farebbe lampeggiare la schermata.
   }, [user?.uid, activePantryId]);
 
+  // I preferiti sono accessori: un errore (es. regole non ancora aggiornate)
+  // lascia la lista funzionante, solo senza scorciatoie.
+  useEffect(() => {
+    if (!user) { setFavorites([]); return; }
+    return subscribeToFavorites(
+      user.uid,
+      activePantryId,
+      setFavorites,
+      (err) => { console.warn('[ShoppingContext] preferiti:', err); setFavorites([]); },
+    );
+  }, [user?.uid, activePantryId]);
+
   const openCount = useMemo(
     () => items.reduce((n, i) => (i.checked ? n : n + 1), 0),
     [items],
@@ -59,7 +76,7 @@ export function ShoppingProvider({ children }: { children: React.ReactNode }) {
 
   const addItem = useCallback(
     async (data: NewShoppingItem): Promise<AddResult> => {
-      if (!user) throw new Error('Devi accedere');
+      if (!user) throw new Error(i18n.t('serverErrors.loginRequired'));
       const name = data.name.trim();
       // Stesso prodotto già da comprare: stesso barcode, o — per le voci a
       // testo libero — stesso nome. Se è già nel carrello conta come nuovo
@@ -67,13 +84,19 @@ export function ShoppingProvider({ children }: { children: React.ReactNode }) {
       const existing = items.find((i) => !i.checked && (
         (data.barcode && i.barcode ? i.barcode === data.barcode : norm(i.name) === norm(name))
       ));
+      const remember = () => {
+        recordFavoriteUse(user.uid, activePantryId, { ...data, name })
+          .catch((e) => console.warn('[ShoppingContext] preferito:', e));
+      };
       if (existing) {
         await updateShoppingItem(user.uid, activePantryId, existing.id, {
           count: existing.count + (data.count ?? 1),
         });
+        remember();
         return 'incremented';
       }
       await addShoppingItem(user.uid, activePantryId, { ...data, name });
+      remember();
       return 'added';
     },
     [user, activePantryId, items],
@@ -110,9 +133,17 @@ export function ShoppingProvider({ children }: { children: React.ReactNode }) {
     await clearCheckedItems(user.uid, activePantryId);
   }, [user, activePantryId]);
 
+  const removeFavorite = useCallback(
+    async (id: string) => {
+      if (!user) return;
+      await deleteFavorite(user.uid, activePantryId, id);
+    },
+    [user, activePantryId],
+  );
+
   return (
     <ShoppingContext.Provider
-      value={{ items, loading, openCount, addItem, toggleItem, setItemCount, removeItem, clearChecked }}
+      value={{ items, favorites, loading, openCount, addItem, toggleItem, setItemCount, removeItem, clearChecked, removeFavorite }}
     >
       {children}
     </ShoppingContext.Provider>

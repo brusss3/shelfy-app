@@ -5,19 +5,24 @@ import {
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { T, FONTS, RADIUS } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
 import { showAlert } from '@/lib/alert';
 import { recognizeText } from '@/lib/ocr';
-import { parseReceipt } from '@/lib/parseReceipt';
+import TutorialModal, { useTutorial } from '@/components/Tutorial';
+import { mergeReceipts, parseReceipt, type ParsedReceipt } from '@/lib/parseReceipt';
 
 // Fotocamera full-screen per fotografare uno scontrino: scatta, estrae il
-// testo via OCR e ne ricava righe prodotto, prezzi, catena e data (euristiche,
-// niente AI), poi passa tutto alla schermata di revisione per la conferma.
+// testo via OCR e ne ricava righe prodotto, prezzi, catena, comune e data
+// (euristiche, niente AI). Si possono scattare più foto (intestazione, poi i
+// prodotti); con "Fatto" si passa alla schermata di revisione per la conferma.
+// Un breve tutorial si apre da solo la prima volta e dal bottone "?".
 export default function ReceiptScanScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
   const [ocrLoading, setOcrLoading] = useState(false);
+  const [parts, setParts] = useState<ParsedReceipt[]>([]);
+  const tutorial = useTutorial('receiptScan');
   const [zoom, setZoom] = useState(0);
   const [camKey, setCamKey] = useState(0);
   const [mountError, setMountError] = useState<string | null>(null);
@@ -50,7 +55,8 @@ export default function ReceiptScanScreen() {
       const text = await recognizeText(src);
       const parsed = parseReceipt(text);
 
-      if (parsed.lines.length === 0) {
+      // Una foto di sola intestazione non ha righe ma porta catena e comune.
+      if (parsed.lines.length === 0 && !parsed.chain && !parsed.city) {
         showAlert(
           t('receiptScan.noItemsTitle'),
           t('receiptScan.noItemsBody'),
@@ -58,19 +64,31 @@ export default function ReceiptScanScreen() {
         return;
       }
 
-      router.replace({
-        pathname: '/receipt-review',
-        params: {
-          items: JSON.stringify(parsed.lines),
-          chain: parsed.chain ?? '',
-          date: parsed.date ?? '',
-        },
-      });
+      setParts((prev) => [...prev, parsed]);
     } catch (e: any) {
       showAlert(t('dateScanner.ocrErrorTitle'), e?.message ?? t('common.retry'));
     } finally {
       setOcrLoading(false);
     }
+  };
+
+  // Più foto dello stesso scontrino (intestazione + prodotti) si fondono in un
+  // solo risultato; la revisione resta una sola.
+  const handleDone = () => {
+    const merged = mergeReceipts(parts);
+    if (merged.lines.length === 0) {
+      showAlert(t('receiptScan.noItemsTitle'), t('receiptScan.noItemsBody'));
+      return;
+    }
+    router.replace({
+      pathname: '/receipt-review',
+      params: {
+        items: JSON.stringify(merged.lines),
+        chain: merged.chain ?? '',
+        date: merged.date ?? '',
+        city: merged.city ?? '',
+      },
+    });
   };
 
   if (!permission) {
@@ -148,8 +166,12 @@ export default function ReceiptScanScreen() {
           <Text style={styles.glassBtnText}>✕</Text>
         </TouchableOpacity>
         <Text style={styles.topBarTitle}>{t('receiptScan.headerTitle')}</Text>
-        <View style={styles.glassBtn} />
+        <TouchableOpacity onPress={tutorial.open} style={styles.glassBtn} activeOpacity={0.85}>
+          <Text style={styles.glassBtnText}>?</Text>
+        </TouchableOpacity>
       </View>
+
+      <TutorialModal id="receiptScan" visible={tutorial.visible} onClose={tutorial.close} />
 
       {/* Status */}
       <View style={styles.statusBox}>
@@ -161,7 +183,11 @@ export default function ReceiptScanScreen() {
         ) : (
           <>
             <Text style={styles.statusTitle}>{t('receiptScan.statusTitle')}</Text>
-            <Text style={styles.statusSub}>{t('receiptScan.statusSub')}</Text>
+            <Text style={styles.statusSub}>
+              {parts.length > 0
+                ? t('receiptScan.statusSubMore', { count: parts.length })
+                : `${t('receiptScan.statusSub')}\n${t('receiptScan.statusSubFirst')}`}
+            </Text>
           </>
         )}
       </View>
@@ -177,6 +203,16 @@ export default function ReceiptScanScreen() {
           >
             <View style={styles.shutterInner} />
           </TouchableOpacity>
+          {parts.length > 0 && (
+            <TouchableOpacity
+              style={[styles.doneBtn, ocrLoading && { opacity: 0.5 }]}
+              onPress={handleDone}
+              disabled={ocrLoading}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.doneBtnText}>{t('receiptScan.doneBtn', { count: parts.length })}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>
@@ -237,4 +273,10 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   shutterInner: { width: 58, height: 58, borderRadius: 100, backgroundColor: '#fbfaf3' },
+  doneBtn: {
+    position: 'absolute', right: 24, top: 14,
+    backgroundColor: '#fbfaf3', borderRadius: RADIUS.pill,
+    paddingVertical: 12, paddingHorizontal: 20,
+  },
+  doneBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: '#0a0d09' },
 });

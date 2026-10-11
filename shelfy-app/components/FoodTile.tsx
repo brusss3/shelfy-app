@@ -2,7 +2,8 @@ import React from 'react';
 import { Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Product } from '@/types';
-import { T, FONTS, CLAY } from '@/constants/theme';
+import { FONTS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 import { getInitials } from '@/lib/text';
 import { lighten, darken } from '@/lib/color';
 
@@ -13,6 +14,8 @@ interface Props {
 }
 
 export default function FoodTile({ product, size = 56, radius = 16 }: Props) {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const initials = getInitials(product.name);
   const base = product.tint || T.primarySoft;
 
@@ -27,7 +30,7 @@ export default function FoodTile({ product, size = 56, radius = 16 }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ CLAY }: Theme) => StyleSheet.create({
   tile: {
     alignItems: 'center',
     justifyContent: 'center',

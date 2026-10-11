@@ -8,15 +8,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { usePantry } from '@/context/PantryContext';
+import TutorialModal, { HelpButton, useTutorial } from '@/components/Tutorial';
 import PrimaryButton from '@/components/PrimaryButton';
 import { showAlert } from '@/lib/alert';
-import {
-  T, FONTS, RADIUS, CLAY, SURFACE, GRADIENT,
-} from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 
 export default function PantryHubScreen() {
+  const { T, GRADIENT, SURFACE } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const { t } = useTranslation();
+  const tutorial = useTutorial('sharedPantry');
   const { pantries, loading, activePantryId, setActivePantryId } = usePantry();
 
   const [showCreate, setShowCreate] = useState(false);
@@ -49,8 +52,9 @@ export default function PantryHubScreen() {
           <Ionicons name="chevron-back" size={20} color={T.ink} />
         </TouchableOpacity>
         <Text style={styles.title}>{t('pantry.hub.title')}</Text>
-        <View style={styles.navBtn} />
+        <HelpButton onPress={tutorial.open} />
       </View>
+      <TutorialModal id="sharedPantry" visible={tutorial.visible} onClose={tutorial.close} />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={styles.sectionLabel}>{t('pantry.hub.activeSpace')}</Text>
@@ -61,13 +65,13 @@ export default function PantryHubScreen() {
             style={styles.row}
           >
             <View style={[styles.rowIcon, activePantryId !== null && styles.rowIconSoft]}>
-              <Ionicons name="person-outline" size={20} color={activePantryId === null ? '#fbfaf3' : T.primary} />
+              <Ionicons name="person-outline" size={20} color={activePantryId === null ? T.onPrimary : T.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.rowTitle, activePantryId === null && styles.rowTitleActive]}>{t('pantry.hub.personal')}</Text>
               <Text style={[styles.rowSub, activePantryId === null && styles.rowSubActive]}>{t('pantry.hub.personalSub')}</Text>
             </View>
-            {activePantryId === null && <Ionicons name="checkmark-circle" size={22} color="#fbfaf3" />}
+            {activePantryId === null && <Ionicons name="checkmark-circle" size={22} color={T.onPrimary} />}
           </LinearGradient>
         </TouchableOpacity>
 
@@ -82,7 +86,7 @@ export default function PantryHubScreen() {
                 <TouchableOpacity key={p.id} onPress={() => router.push(`/pantry/${p.id}`)} activeOpacity={0.9}>
                   <LinearGradient colors={active ? GRADIENT.primary : SURFACE.card} style={styles.row}>
                     <View style={[styles.rowIcon, !active && styles.rowIconSoft]}>
-                      <Ionicons name="people-outline" size={20} color={active ? '#fbfaf3' : T.primary} />
+                      <Ionicons name="people-outline" size={20} color={active ? T.onPrimary : T.primary} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={[styles.rowTitle, active && styles.rowTitleActive]} numberOfLines={1}>{p.name}</Text>
@@ -90,7 +94,7 @@ export default function PantryHubScreen() {
                         {t('pantry.hub.memberCount', { count: p.memberIds.length })}
                       </Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={18} color={active ? '#fbfaf3' : T.mute} />
+                    <Ionicons name="chevron-forward" size={18} color={active ? T.onPrimary : T.mute} />
                   </LinearGradient>
                 </TouchableOpacity>
               );
@@ -150,7 +154,7 @@ export default function PantryHubScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -177,7 +181,7 @@ const styles = StyleSheet.create({
   },
   rowIconSoft: { backgroundColor: T.primarySoft },
   rowTitle: { fontFamily: FONTS.sansBold, fontSize: 15, color: T.ink },
-  rowTitleActive: { color: '#fbfaf3' },
+  rowTitleActive: { color: T.onPrimary },
   rowSub: { fontFamily: FONTS.sans, fontSize: 12, color: T.mute, marginTop: 2 },
   rowSubActive: { color: 'rgba(251,250,243,0.72)' },
 
@@ -204,7 +208,7 @@ const styles = StyleSheet.create({
   modalTitle: { fontFamily: FONTS.serifItalic, fontSize: 22, color: T.ink, letterSpacing: -0.3 },
   modalSub: { fontSize: 13, color: T.mute, fontFamily: FONTS.sans, marginTop: -6 },
   modalInput: {
-    backgroundColor: '#ece8de', borderRadius: RADIUS.input,
+    backgroundColor: T.field, borderRadius: RADIUS.input,
     paddingHorizontal: 14, paddingVertical: 12,
     fontFamily: FONTS.sans, fontSize: 15, color: T.ink,
     boxShadow: CLAY.inset,

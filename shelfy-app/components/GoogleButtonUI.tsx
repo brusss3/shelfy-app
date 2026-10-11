@@ -1,7 +1,8 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { T, FONTS, RADIUS } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 
 interface Props {
   onPress: () => void;
@@ -11,6 +12,8 @@ interface Props {
 
 // Pulsante condiviso "Continua con Google" (presentazionale).
 export default function GoogleButtonUI({ onPress, loading, disabled }: Props) {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { t } = useTranslation();
   return (
     <TouchableOpacity
@@ -33,7 +36,7 @@ export default function GoogleButtonUI({ onPress, loading, disabled }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T }: Theme) => StyleSheet.create({
   btn: {
     backgroundColor: T.surface,
     borderRadius: RADIUS.lg,

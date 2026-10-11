@@ -12,10 +12,13 @@ import {
 } from '@/lib/firestore';
 import { showAlert } from '@/lib/alert';
 import PrimaryButton from '@/components/PrimaryButton';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 import { CommunityRecipe, RecipeProposal, RecipeRequest } from '@/types';
 
 export default function RequestDetailScreen() {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const { requests, recipes, closeRequest } = useCommunity();
@@ -233,7 +236,7 @@ export default function RequestDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, SHADOW }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   scroll: { paddingBottom: 32 },
 

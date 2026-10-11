@@ -15,7 +15,8 @@ import { effectiveDays } from '@/lib/urgency';
 import { showAlert } from '@/lib/alert';
 import ProfileButton from '@/components/ProfileButton';
 import PrimaryButton from '@/components/PrimaryButton';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 import { CommunityRecipe, RecipeRequest } from '@/types';
 
 type View_ = 'recipes' | 'requests' | 'mine';
@@ -29,6 +30,8 @@ function matchCount(recipe: CommunityRecipe, expiringNames: string[]): number {
 }
 
 export default function RecipesScreen() {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { products } = useProducts();
   const { recipes, requests, loading } = useCommunity();
   const { myRecipes, savedRecipes } = useRecipes();
@@ -110,7 +113,7 @@ export default function RecipesScreen() {
               activeOpacity={0.85}
               accessibilityLabel={t('recipes.aiHeaderA11y')}
             >
-              <Ionicons name="sparkles" size={19} color="#fbfaf3" />
+              <Ionicons name="sparkles" size={19} color={T.onPrimary} />
             </TouchableOpacity>
             <ProfileButton />
           </View>
@@ -393,7 +396,7 @@ export default function RecipesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, SHADOW }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   scroll: { paddingBottom: 120 },
 
@@ -419,7 +422,7 @@ const styles = StyleSheet.create({
   toggleBtn: { flex: 1, borderRadius: RADIUS.sm, paddingVertical: 10, alignItems: 'center' },
   toggleBtnActive: { backgroundColor: T.primary },
   toggleText: { fontSize: 13, fontFamily: FONTS.sansSemiBold, color: T.ink2 },
-  toggleTextActive: { color: '#fbfaf3' },
+  toggleTextActive: { color: T.onPrimary },
 
   primaryBtn: { marginHorizontal: 20, marginBottom: 16 },
 
@@ -488,7 +491,7 @@ const styles = StyleSheet.create({
   publishedBadge: {
     backgroundColor: T.okSoft, borderRadius: RADIUS.tag, paddingVertical: 4, paddingHorizontal: 8,
   },
-  publishedBadgeText: { fontSize: 10, fontFamily: FONTS.sansBold, color: '#1b3320', textTransform: 'uppercase' },
+  publishedBadgeText: { fontSize: 10, fontFamily: FONTS.sansBold, color: T.okInk, textTransform: 'uppercase' },
 
   list: { paddingHorizontal: 20, gap: 10 },
 
@@ -509,7 +512,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.warnSoft, borderRadius: RADIUS.tag,
     paddingVertical: 4, paddingHorizontal: 8,
   },
-  urgentBadgeText: { fontSize: 10, fontFamily: FONTS.sansBold, color: '#4a3414', textTransform: 'uppercase' },
+  urgentBadgeText: { fontSize: 10, fontFamily: FONTS.sansBold, color: T.warnInk, textTransform: 'uppercase' },
 
   requestCard: {
     backgroundColor: T.surface, borderRadius: RADIUS.lg, padding: 14, gap: 8, ...SHADOW.card,

@@ -4,9 +4,10 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
 import PaywallScreen from '@/components/PaywallScreen';
-import { T, SHADOW } from '@/constants/theme';
+import { useThemedStyles, type Theme } from '@/context/ThemeContext';
 
 export default function PaywallRoute() {
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { monetizationEnabled } = useAuth();
@@ -33,7 +34,7 @@ export default function PaywallRoute() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, SHADOW }: Theme) => StyleSheet.create({
   closeBtn: {
     position: 'absolute', right: 16,
     width: 40, height: 40, borderRadius: 100, backgroundColor: T.surface,

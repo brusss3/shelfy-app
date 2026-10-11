@@ -9,8 +9,10 @@ import * as Clipboard from 'expo-clipboard';
 import { useRecipes } from '@/context/RecipesContext';
 import { parseRecipeJson, RecipeImportError, ImportedRecipe } from '@/lib/recipePrompt';
 import { showAlert } from '@/lib/alert';
+import TutorialModal, { HelpButton, useTutorial } from '@/components/Tutorial';
 import PrimaryButton from '@/components/PrimaryButton';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 
 type ParseState =
   | { kind: 'empty' }
@@ -18,10 +20,13 @@ type ParseState =
   | { kind: 'error'; message: string };
 
 export default function ImportRecipeScreen() {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { addMyRecipe } = useRecipes();
+  const tutorial = useTutorial('recipeAi');
   const [text, setText] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -74,8 +79,9 @@ export default function ImportRecipeScreen() {
             <Text style={styles.closeBtnText}>✕</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t('recipeImport.title')}</Text>
-          <View style={{ width: 40 }} />
+          <HelpButton onPress={tutorial.open} />
         </View>
+        <TutorialModal id="recipeAi" visible={tutorial.visible} onClose={tutorial.close} />
 
         <Text style={styles.intro}>{t('recipeImport.intro')}</Text>
 
@@ -155,7 +161,7 @@ export default function ImportRecipeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, SHADOW }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   scroll: { paddingBottom: 20 },
 
@@ -195,7 +201,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.warnSoft, borderRadius: RADIUS.md, marginHorizontal: 16,
     padding: 12, marginBottom: 16,
   },
-  errorText: { fontSize: 13, color: '#4a3414', fontFamily: FONTS.sansMedium, lineHeight: 18 },
+  errorText: { fontSize: 13, color: T.warnInk, fontFamily: FONTS.sansMedium, lineHeight: 18 },
 
   sectionLabel: {
     fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.6,

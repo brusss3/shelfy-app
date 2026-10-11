@@ -3,7 +3,8 @@ import {
   View, Text, Modal, TextInput, TouchableOpacity, StyleSheet, Platform, KeyboardAvoidingView,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { T, FONTS, RADIUS, CLAY } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 import PrimaryButton from './PrimaryButton';
 
 export interface NewProductData {
@@ -26,6 +27,8 @@ interface Props {
 // dargli un nome. Da quel momento il prodotto entra nel catalogo Shelfy e lo
 // trova chiunque scansioni lo stesso codice.
 export default function NewProductModal({ visible, barcode, saving, skipLabel, onSave, onSkip }: Props) {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { t } = useTranslation();
   const [name, setName] = useState('');
   const [brand, setBrand] = useState('');
@@ -102,7 +105,7 @@ export default function NewProductModal({ visible, barcode, saving, skipLabel, o
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY }: Theme) => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   card: { backgroundColor: T.bg, borderRadius: RADIUS.xl, padding: 22, width: '100%', maxWidth: 380, gap: 10 },
   title: { fontFamily: FONTS.sansBold, fontSize: 20, color: T.ink, letterSpacing: -0.3 },

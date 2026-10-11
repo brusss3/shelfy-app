@@ -4,7 +4,8 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { DEPTH, FONTS, GRADIENT, RADIUS, T } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -52,6 +53,8 @@ export default function PrimaryButton({
   icon, iconVariant = 'inline', label, subLabel, compactOnNative,
   fullWidth, containerStyle, style, labelStyle, accessibilityLabel,
 }: PrimaryButtonProps) {
+  const { T, GRADIENT } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const isCircle = shape === 'circle';
   const compact = compactOnNative && Platform.OS !== 'web';
   // Proporzionata al lato invece che fissa: un box più grande (es. il CTA
@@ -80,9 +83,9 @@ export default function PrimaryButton({
         ]}
       >
         {loading ? (
-          <ActivityIndicator color="#fbfaf3" />
+          <ActivityIndicator color={T.onPrimary} />
         ) : isCircle ? (
-          icon ? <Ionicons name={icon} size={circleIconSize} color="#fbfaf3" /> : null
+          icon ? <Ionicons name={icon} size={circleIconSize} color={T.onPrimary} /> : null
         ) : compact ? (
           icon ? (
             iconVariant === 'shutter' ? (
@@ -90,7 +93,7 @@ export default function PrimaryButton({
                 <Ionicons name={icon} size={22} color={T.primary} />
               </View>
             ) : (
-              <Ionicons name={icon} size={22} color="#fbfaf3" />
+              <Ionicons name={icon} size={22} color={T.onPrimary} />
             )
           ) : null
         ) : (
@@ -101,7 +104,7 @@ export default function PrimaryButton({
                   <Ionicons name={icon} size={20} color={T.primary} />
                 </View>
               ) : (
-                <Ionicons name={icon} size={18} color="#fbfaf3" />
+                <Ionicons name={icon} size={18} color={T.onPrimary} />
               )
             ) : null}
             <View>
@@ -115,7 +118,7 @@ export default function PrimaryButton({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, DEPTH }: Theme) => StyleSheet.create({
   disabled: { opacity: 0.5 },
   depth: { boxShadow: DEPTH.button },
   pill: {
@@ -129,7 +132,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   label: {
-    fontFamily: FONTS.sansBold, fontSize: 16, color: '#fbfaf3', letterSpacing: -0.1,
+    fontFamily: FONTS.sansBold, fontSize: 16, color: T.onPrimary, letterSpacing: -0.1,
     textAlign: 'center',
   },
   subLabel: {

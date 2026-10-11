@@ -9,9 +9,12 @@ import { useAuth } from '@/context/AuthContext';
 import { authErrorMessage } from '@/lib/authErrors';
 import PrimaryButton from '@/components/PrimaryButton';
 import { showAlert } from '@/lib/alert';
-import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 
 export default function ForgotPasswordScreen() {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -104,7 +107,7 @@ export default function ForgotPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY, SHADOW }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   scroll: { flexGrow: 1, justifyContent: 'center', padding: 24, paddingBottom: 48 },
   header: { alignItems: 'center', marginBottom: 32 },
@@ -125,7 +128,7 @@ const styles = StyleSheet.create({
     marginBottom: 6, letterSpacing: 0.1,
   },
   input: {
-    backgroundColor: '#ece8de', borderRadius: RADIUS.input,
+    backgroundColor: T.field, borderRadius: RADIUS.input,
     paddingHorizontal: 16, paddingVertical: 13,
     fontFamily: FONTS.sans, fontSize: 15, color: T.ink,
     boxShadow: CLAY.inset,

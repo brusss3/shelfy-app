@@ -7,7 +7,8 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { usePantry } from '@/context/PantryContext';
 import PrimaryButton from '@/components/PrimaryButton';
-import { T, FONTS, RADIUS, CLAY } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 
 // Destinazione del deep link shelfy://join/CODE — sia da QR letto da
 // un'altra fotocamera (es. quella di sistema) sia da un link condiviso via
@@ -16,6 +17,8 @@ import { T, FONTS, RADIUS, CLAY } from '@/constants/theme';
 // appena atterra, e gestisce da sola il caso "utente non loggato" — cosa che
 // pantry/join.tsx non deve fare perché è sempre dietro l'auth gate delle tab.
 export default function JoinByLinkScreen() {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { code: rawCode } = useLocalSearchParams<{ code: string }>();
   const code = (rawCode ?? '').toUpperCase();
   const router = useRouter();
@@ -133,7 +136,7 @@ export default function JoinByLinkScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   center: { justifyContent: 'center', alignItems: 'center', padding: 24 },
   card: {

@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { T, FONTS, RADIUS, CLAY } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 
 // Link fisso all'ultimo APK (vedi scripts/publish-apk.ps1). Sul web è relativo,
 // così funziona sia su shelfy-app.it sia sul dominio Firebase.
@@ -25,6 +26,8 @@ interface Props {
 }
 
 export default function ApkDownloadButton({ variant }: Props) {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { t } = useTranslation();
   if (!canOfferApk()) return null;
 
@@ -53,7 +56,7 @@ export default function ApkDownloadButton({ variant }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY }: Theme) => StyleSheet.create({
   iconBtn: {
     width: 42, height: 42, borderRadius: RADIUS.pill,
     backgroundColor: T.surface, alignItems: 'center', justifyContent: 'center', boxShadow: CLAY.chip,

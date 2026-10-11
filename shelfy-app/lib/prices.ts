@@ -1,10 +1,10 @@
 import {
   collection, query, where, onSnapshot, getDocs, limit, Timestamp,
 } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '@/lib/i18n';
-import { db, functions } from './firebase';
+import { db } from './firebase';
+import { callable } from './callable';
 import { LatestPrice, Store, StoreInput } from '@/types';
 
 // Soglie di recenza del documento di progetto: sotto i 30 giorni un prezzo è
@@ -153,7 +153,7 @@ export async function submitPrice(payload: {
   store: StoreInput;
   observedAt: string;
 }): Promise<SubmitPriceResult> {
-  const fn = httpsCallable<unknown, SubmitPriceResult>(functions, 'submitPrice');
+  const fn = callable<unknown, SubmitPriceResult>('submitPrice');
   const res = await fn({
     barcode: payload.barcode,
     productName: payload.productName,
@@ -182,7 +182,7 @@ interface OpenPriceDto {
 export async function fetchOpenPrices(
   barcodes: string[], city: string, radiusKm: number,
 ): Promise<Record<string, LatestPrice[]>> {
-  const fn = httpsCallable<unknown, { items: OpenPriceDto[] }>(functions, 'getOpenPrices');
+  const fn = callable<unknown, { items: OpenPriceDto[] }>('getOpenPrices');
   const res = await fn({ barcodes, city, radiusKm });
   const out: Record<string, LatestPrice[]> = {};
   for (const i of res.data.items) {

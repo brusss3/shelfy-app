@@ -1,9 +1,9 @@
 import {
   collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy,
-  serverTimestamp, Timestamp, writeBatch, getDocs, where,
+  serverTimestamp, Timestamp, writeBatch, getDocs, where, setDoc, increment, limit,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { NewShoppingItem, ShoppingItem } from '@/types';
+import { NewShoppingItem, ShoppingFavorite, ShoppingItem } from '@/types';
 
 // La lista segue lo stesso scope della dispensa: personale sotto l'utente,
 // condivisa sotto la casa — così i conviventi vedono e spuntano la stessa
@@ -12,6 +12,25 @@ function itemsRef(userId: string, pantryId?: string | null) {
   return pantryId
     ? collection(db, 'pantries', pantryId, 'shoppingItems')
     : collection(db, 'users', userId, 'shoppingItems');
+}
+
+// Memoria delle voci usate spesso, nello stesso scope della lista.
+function favoritesRef(userId: string, pantryId?: string | null) {
+  return pantryId
+    ? collection(db, 'pantries', pantryId, 'shoppingFavorites')
+    : collection(db, 'users', userId, 'shoppingFavorites');
+}
+
+/** Chiave stabile di una voce: il barcode se c'è, altrimenti il nome senza
+ *  maiuscole, accenti e punteggiatura ("Latte" e "latte " sono la stessa voce).
+ *  Vuota se il nome non ha lettere né cifre. */
+export function favoriteKey(item: { barcode?: string; name: string }): string {
+  if (item.barcode) return `b${item.barcode.replace(/[^0-9A-Za-z]/g, '')}`;
+  const slug = item.name
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+  return slug ? `n${slug}` : '';
 }
 
 function tsToIso(ts: unknown): string {
@@ -89,4 +108,49 @@ export async function clearCheckedItems(userId: string, pantryId: string | null)
   const batch = writeBatch(db);
   snap.docs.forEach((d) => batch.delete(d.ref));
   await batch.commit();
+}
+
+/** Registra un uso della voce: la crea o ne alza il contatore. */
+export async function recordFavoriteUse(
+  userId: string,
+  pantryId: string | null,
+  data: NewShoppingItem,
+): Promise<void> {
+  const id = favoriteKey(data);
+  if (!id) return;
+  const { count: _count, ...rest } = data;
+  await setDoc(
+    doc(favoritesRef(userId, pantryId), id),
+    { ...clean(rest), uses: increment(1), lastAddedAt: serverTimestamp() },
+    { merge: true },
+  );
+}
+
+export function subscribeToFavorites(
+  userId: string,
+  pantryId: string | null,
+  onData: (favorites: ShoppingFavorite[]) => void,
+  onError?: (err: Error) => void,
+) {
+  const q = query(favoritesRef(userId, pantryId), orderBy('uses', 'desc'), limit(30));
+  return onSnapshot(
+    q,
+    (snap) => onData(snap.docs.map((d) => {
+      const data = d.data();
+      return {
+        ...(data as Omit<ShoppingFavorite, 'id' | 'uses'>),
+        id: d.id,
+        uses: typeof data.uses === 'number' ? data.uses : 0,
+      };
+    })),
+    onError,
+  );
+}
+
+export async function deleteFavorite(
+  userId: string,
+  pantryId: string | null,
+  favoriteId: string,
+): Promise<void> {
+  await deleteDoc(doc(favoritesRef(userId, pantryId), favoriteId));
 }

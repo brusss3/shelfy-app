@@ -18,7 +18,8 @@ import { ocrAvailable } from '@/lib/ocr';
 import { showAlert } from '@/lib/alert';
 import PrimaryButton from '@/components/PrimaryButton';
 import { getInitials } from '@/lib/text';
-import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 import { Zone, ScoreGrade, Product, NewShoppingItem } from '@/types';
 
 const GRADE_COLORS: Record<ScoreGrade, string> = {
@@ -60,6 +61,8 @@ function addDays(n: number): string {
 }
 
 export default function ProductDetailScreen() {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { products, removeProduct, changeZone, editProduct, markOpened, consumeOne, consumeAll } = useProducts();
   const { user } = useAuth();
@@ -306,9 +309,9 @@ export default function ProductDetailScreen() {
                 disabled={saving}
               >
                 {saving ? (
-                  <ActivityIndicator color="#fbfaf3" size="small" />
+                  <ActivityIndicator color={T.onPrimary} size="small" />
                 ) : (
-                  <Ionicons name="checkmark" size={20} color="#fbfaf3" />
+                  <Ionicons name="checkmark" size={20} color={T.onPrimary} />
                 )}
               </TouchableOpacity>
             ) : (
@@ -506,7 +509,7 @@ export default function ProductDetailScreen() {
                     </View>
                     {active && (
                       <View style={styles.checkBadge}>
-                        <Text style={{ color: '#fbfaf3', fontSize: 14 }}>✓</Text>
+                        <Text style={{ color: T.onPrimary, fontSize: 14 }}>✓</Text>
                       </View>
                     )}
                   </TouchableOpacity>
@@ -620,7 +623,7 @@ export default function ProductDetailScreen() {
             onPress={handleConsumeOne}
             style={{ justifyContent: 'center' }}
           >
-            <Text style={{ fontFamily: FONTS.sansSemiBold, color: '#fbfaf3', fontSize: 16 }}>
+            <Text style={{ fontFamily: FONTS.sansSemiBold, color: T.onPrimary, fontSize: 16 }}>
               {t('product.consumedLabel')}{product.count > 1 ? t('product.remainingSuffix', { count: product.count - 1 }) : ''}
             </Text>
           </Pill>
@@ -832,7 +835,7 @@ export default function ProductDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY, SHADOW }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   scroll: { paddingBottom: 32 },
 
@@ -887,7 +890,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.55)', borderRadius: 100,
     paddingVertical: 6, paddingHorizontal: 14, marginTop: 4,
   },
-  openedHeroBadgeText: { fontSize: 12, fontFamily: FONTS.sansSemiBold, color: '#2d5c2d' },
+  openedHeroBadgeText: { fontSize: 12, fontFamily: FONTS.sansSemiBold, color: T.okInk },
 
   section: { paddingHorizontal: 20, marginBottom: 14 },
   sectionTitle: {
@@ -912,15 +915,15 @@ const styles = StyleSheet.create({
   },
   openBtnActive: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#e8f0e8', borderRadius: RADIUS.lg, padding: 16,
+    backgroundColor: T.okSoft, borderRadius: RADIUS.lg, padding: 16,
     borderWidth: 1, borderColor: 'rgba(58,107,58,0.2)',
   },
   openBtnTitle: { fontSize: 14, fontFamily: FONTS.sansSemiBold, color: T.ink },
   openBtnSub: { fontSize: 12, color: T.mute, marginTop: 1, fontFamily: FONTS.sans },
-  openBtnTitleActive: { fontSize: 14, fontFamily: FONTS.sansSemiBold, color: '#2d5c2d' },
-  openBtnSubActive: { fontSize: 12, color: '#4a8050', marginTop: 1, fontFamily: FONTS.sans },
+  openBtnTitleActive: { fontSize: 14, fontFamily: FONTS.sansSemiBold, color: T.okInk },
+  openBtnSubActive: { fontSize: 12, color: T.ok, marginTop: 1, fontFamily: FONTS.sans },
   openBtnArrow: { fontSize: 18, color: T.mute },
-  openBtnArrowActive: { fontSize: 18, color: '#3a6b3a' },
+  openBtnArrowActive: { fontSize: 18, color: T.ok },
 
   card: {
     backgroundColor: T.surface, borderRadius: RADIUS.lg, overflow: 'hidden', ...SHADOW.card,
@@ -958,7 +961,7 @@ const styles = StyleSheet.create({
   scoreRow: { flexDirection: 'row', gap: 24 },
   scoreBadge: { alignItems: 'center', gap: 4 },
   scoreCircle: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  scoreCircleText: { fontFamily: FONTS.sansBold, fontSize: 15, color: '#fff' },
+  scoreCircleText: { fontFamily: FONTS.sansBold, fontSize: 15, color: T.onPrimary },
   scoreLabel: { fontSize: 11, fontFamily: FONTS.sansMedium, color: T.mute },
   nutritionCaption: {
     fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.4,
@@ -1004,7 +1007,7 @@ const styles = StyleSheet.create({
   pickerLabel: { fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.4 },
   pickerInput: {
     width: '100%', textAlign: 'center',
-    backgroundColor: '#ece8de', borderRadius: RADIUS.input,
+    backgroundColor: T.field, borderRadius: RADIUS.input,
     paddingVertical: 12, fontSize: 20, fontFamily: FONTS.sansBold, color: T.ink,
     boxShadow: CLAY.inset,
   },

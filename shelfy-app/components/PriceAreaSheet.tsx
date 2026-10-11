@@ -4,7 +4,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { T, FONTS, RADIUS, CLAY } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 import { RADIUS_CHOICES_KM } from '@/lib/prices';
 import PrimaryButton from './PrimaryButton';
 
@@ -19,6 +20,8 @@ interface Props {
 // Comune e raggio entro cui cercare i prezzi di Open Prices: si impostano una
 // volta e si ricordano sul dispositivo.
 export default function PriceAreaSheet({ visible, city, radiusKm, onSave, onClose }: Props) {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { t } = useTranslation();
   const [cityText, setCityText] = useState(city);
   const [radius, setRadius] = useState(radiusKm);
@@ -90,7 +93,7 @@ export default function PriceAreaSheet({ visible, city, radiusKm, onSave, onClos
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY }: Theme) => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(20,28,18,0.42)', justifyContent: 'flex-end' },
   kav: { width: '100%', alignItems: 'center' },
   sheet: {
@@ -119,5 +122,5 @@ const styles = StyleSheet.create({
   },
   chipActive: { backgroundColor: T.primary },
   chipText: { fontFamily: FONTS.sansMedium, fontSize: 14, color: T.ink },
-  chipTextActive: { color: '#fbfaf3' },
+  chipTextActive: { color: T.onPrimary },
 });

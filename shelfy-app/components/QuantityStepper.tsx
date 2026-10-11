@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { T, FONTS, RADIUS } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useThemedStyles, type Theme } from '@/context/ThemeContext';
 
 interface Props {
   value: number;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function QuantityStepper({ value, onChange, min = 1, max = 99 }: Props) {
+  const styles = useThemedStyles(createStyles);
   const canDecrease = value > min;
   const canIncrease = value < max;
 
@@ -36,7 +38,7 @@ export default function QuantityStepper({ value, onChange, min = 1, max = 99 }: 
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T }: Theme) => StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   btn: {
     width: 32, height: 32, borderRadius: RADIUS.sm, backgroundColor: T.primarySoft,

@@ -6,12 +6,15 @@ import {
   subscribeToActiveSurvey, hasRespondedToSurvey, submitSurveyResponse,
 } from '@/lib/firestore';
 import { Survey } from '@/types';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 
 // Popup del sondaggio attivo, montato una volta sola in _layout.
 // Compare all'avvio se l'utente non ha ancora risposto; chiuderlo senza
 // rispondere conta come risposta vuota, così non torna più.
 export default function SurveyModal() {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { user } = useAuth();
   const { t } = useTranslation();
   const [survey, setSurvey] = useState<Survey | null>(null);
@@ -82,7 +85,7 @@ export default function SurveyModal() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, SHADOW }: Theme) => StyleSheet.create({
   overlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center', alignItems: 'center', padding: 24,

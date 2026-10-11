@@ -10,11 +10,14 @@ import { useProducts } from '@/context/ProductsContext';
 import { useCommunity } from '@/context/CommunityContext';
 import { showAlert } from '@/lib/alert';
 import PrimaryButton from '@/components/PrimaryButton';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 
 // Richiesta d'aiuto: l'utente seleziona ingredienti dalla propria dispensa
 // (preselezionati quelli in scadenza) e chiede alla community un'idea.
 export default function RequestNewScreen() {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { products } = useProducts();
@@ -133,7 +136,7 @@ export default function RequestNewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, SHADOW }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   scroll: { paddingBottom: 20 },
 
@@ -167,7 +170,7 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: T.primary, borderColor: T.primary },
   chipExpiring: { borderColor: '#d9822b' },
   chipText: { fontSize: 13, fontFamily: FONTS.sansSemiBold, color: T.ink2 },
-  chipTextActive: { color: '#fbfaf3' },
+  chipTextActive: { color: T.onPrimary },
 
   sectionLabel: {
     fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.6,

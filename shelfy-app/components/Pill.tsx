@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
-import { T, FONTS } from '@/constants/theme';
+import { FONTS } from '@/constants/theme';
+import { useTheme, type Theme } from '@/context/ThemeContext';
 
 type Variant = 'primary' | 'ghost' | 'soft' | 'warn' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
@@ -14,13 +15,13 @@ interface Props {
   disabled?: boolean;
 }
 
-const variantStyles: Record<Variant, { bg: string; color: string; border?: string }> = {
-  primary: { bg: T.primary, color: '#fbfaf3' },
+const variantStyles = ({ T }: Theme): Record<Variant, { bg: string; color: string; border?: string }> => ({
+  primary: { bg: T.primary, color: T.onPrimary },
   ghost:   { bg: 'transparent', color: T.primary, border: T.line },
   soft:    { bg: T.primarySoft, color: T.primaryInk },
-  warn:    { bg: T.warn, color: '#fff' },
-  danger:  { bg: T.urgent, color: '#fff' },
-};
+  warn:    { bg: T.warn, color: T.onPrimary },
+  danger:  { bg: T.urgent, color: T.onPrimary },
+});
 
 const sizeStyles: Record<Size, { paddingV: number; paddingH: number; fontSize: number }> = {
   sm: { paddingV: 8, paddingH: 14, fontSize: 13 },
@@ -29,7 +30,8 @@ const sizeStyles: Record<Size, { paddingV: number; paddingH: number; fontSize: n
 };
 
 export default function Pill({ children, onPress, variant = 'primary', size = 'md', style, disabled }: Props) {
-  const v = variantStyles[variant];
+  const theme = useTheme();
+  const v = variantStyles(theme)[variant];
   const s = sizeStyles[size];
 
   return (

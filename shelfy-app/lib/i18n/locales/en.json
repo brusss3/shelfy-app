@@ -623,7 +623,10 @@
     "statusReading": "Reading the receipt…",
     "statusTitle": "Frame the receipt",
     "statusSub": "Keep it flat and well lit",
-    "captureFailed": "Couldn't take the photo",
+    "statusSubMore": "{{count}} photos so far: frame the next part or tap Done",
+    "statusSubFirst": "You can add several photos: header first, then the products",
+    "doneBtn": "Done ({{count}})",
+        "captureFailed": "Couldn't take the photo",
     "noItemsTitle": "No products found",
     "noItemsBody": "Couldn't read useful lines from the receipt. Get closer and make sure it's well lit, or add the products manually."
   },
@@ -885,7 +888,8 @@
       "title": "Language",
       "system": "Device language",
       "it": "Italiano",
-      "en": "English"
+      "en": "English",
+      "es": "Español"
     },
     "feedback": {
       "title": "Report a problem or an idea",
@@ -907,13 +911,23 @@
       "confirmBody": "Do you want to log out?",
       "confirm": "Log out"
     },
-    "version": "Shelfy v{{version}}"
+    "version": "Shelfy v{{version}}",
+    "theme": {
+      "title": "Theme",
+      "system": "Device",
+      "light": "Light",
+      "dark": "Dark"
+    }
   },
   "survey": {
     "badge": "Survey",
     "skip": "Not now"
   },
   "shopping": {
+    "frequent": "Often used",
+    "removeFavoriteTitle": "Remove from suggestions?",
+    "removeFavoriteBody": "\"{{name}}\" will no longer show up as often used until you add it a few more times.",
+    "removeFavorite": "Remove",
     "title": "Shopping",
     "openCount_one": "{{count}} to buy",
     "openCount_other": "{{count}} to buy",
@@ -934,6 +948,7 @@
     "incrementedToast": "{{name}} was already on the list: quantity increased",
     "addFailed": "Couldn't add the item. Try again.",
     "a11y": {
+      "quickAdd": "Add {{name}}",
       "add": "Add to list",
       "scan": "Scan a barcode",
       "remove": "Remove from list",
@@ -1019,5 +1034,107 @@
     "button": "Download for Android",
     "label": "Download the Android app",
     "hint": "Installed outside the Play Store: Android may show a warning, confirm to continue."
+  },
+  "serverErrors": {
+    "loginRequired": "You need to log in.",
+    "pickIngredient": "Select at least one ingredient.",
+    "aiInvalid": "The AI answer is not valid. Try again.",
+    "aiIncomplete": "The AI recipe is incomplete. Try again.",
+    "aiEmpty": "The AI did not answer. Try again.",
+    "aiLimit": "The AI service has reached its limit. Try again later.",
+    "aiUnavailable": "AI is not available right now. Try again later.",
+    "aiQuota": "AI recipe credit used up.",
+    "aiDisabled": "AI recipes are temporarily turned off.",
+    "aiNotActive": "AI recipes are not active on your account.",
+    "aiAlreadyToday": "You already generated today's recipe.",
+    "aiAlreadyWeek": "You already generated this week's recipe.",
+    "inviteCodeFailed": "I couldn't generate an invite code. Try again.",
+    "invalidCode": "Invalid code.",
+    "tooManyAttempts": "Too many attempts. Try again in an hour.",
+    "codeNotFound": "Invalid or expired code.",
+    "homeNotFound": "Home not found.",
+    "homeFull": "This home has reached the maximum number of members.",
+    "onlyOwner": "Only whoever created the home can do this.",
+    "ownerCannotLeave": "Whoever created the home can't leave it: delete it instead.",
+    "useLeave": "Use \"Leave home\" to remove yourself.",
+    "onlyOwnerDelete": "Only whoever created the home can delete it.",
+    "invalidBarcode": "Invalid barcode.",
+    "invalidPrice": "Invalid price.",
+    "invalidStore": "Invalid store.",
+    "invalidDate": "Invalid date (30 days ago at most).",
+    "cityLookupUnavailable": "Town search is not available right now. Try again.",
+    "openPricesUnavailable": "Open Prices is not available right now. Try again.",
+    "invalidCity": "Invalid town.",
+    "cityNotFound": "I can't find this town.",
+    "invalidProductName": "Invalid product name.",
+    "limitPrices": "You sent a lot of prices today. Try again tomorrow.",
+    "limitSearches": "Too many searches today. Try again tomorrow.",
+    "limitCatalog": "You added a lot of products today. Try again tomorrow.",
+    "missing": {
+      "homeName": "The home name is missing.",
+      "userName": "The user name is missing.",
+      "home": "The home is missing.",
+      "member": "The member is missing.",
+      "chain": "The chain is missing.",
+      "city": "The town is missing.",
+      "date": "The date is missing.",
+      "generic": "A required field is missing."
+    },
+    "recipeNotFound": "Recipe not found."
+  },
+  "tutorials": {
+    "helpA11y": "How it works",
+    "gotIt": "Got it",
+    "receiptScan": {
+      "title": "How to scan the receipt",
+      "steps": [
+        "First photo: the header, with the store name and address. It is only used to recognise the chain and city (you can skip it).",
+        "Then the products: if the receipt is long, take several photos from top to bottom. Always include the price column on the right.",
+        "Let a few lines overlap between photos: duplicates are removed automatically.",
+        "Tap Done: you review products and prices before saving."
+      ],
+      "tip": "Keep the receipt flat, well lit, and do not cut off the prices."
+    },
+    "receiptReview": {
+      "title": "How to review the list",
+      "steps": [
+        "Fix the names read from the receipt and remove rows that are not products.",
+        "Choose where you store them (Fridge, Freezer or Pantry) and set expiry dates: you can apply one to all empty rows at once.",
+        "To share prices, tap \"Link product\" on a row and find it by name or barcode. Only linked rows with a price are shared.",
+        "Check city, chain and date: they are already filled in if I could read them from the header."
+      ],
+      "tip": "Shared prices are anonymous and visible to all Shelfy users."
+    },
+    "recipeAi": {
+      "title": "Recipes with your AI assistant",
+      "steps": [
+        "In Recipes, pick the foods to use up and how many recipes you want.",
+        "Tap \"Copy the request\": I prepare the text to give to ChatGPT, Gemini or whichever assistant you use.",
+        "Paste the request into the assistant and wait for the reply: it must be a JSON code block.",
+        "Copy the whole block, come back here and paste it: you will see a preview of the recipes and can save them."
+      ],
+      "tip": "If an error shows up, the JSON was usually copied only partly: copy the whole block again."
+    },
+    "sharedPantry": {
+      "title": "Shared homes",
+      "steps": [
+        "Create a home and give it a name: the pantry becomes shared with the people you invite.",
+        "Open the home: you will find the 6-character invite code and the QR. Share either one with whoever you want to let in.",
+        "Whoever has the code picks \"I have an invite code\" and types it or scans the QR.",
+        "Tap \"Use this home\" to work on its products. \"Personal\" takes you back to your private pantry."
+      ],
+      "tip": "The code expires: from the home page you can regenerate or deactivate it any time."
+    },
+    "shopping": {
+      "title": "How shopping works",
+      "steps": [
+        "Type what you need, scan a barcode or add a product from your pantry.",
+      "Items you add often (bread, milk, water…) appear above the bar as shortcuts: tap one to add it, press and hold to remove it.",
+        "Tap the area at the top (e.g. \"Pisa · 10 km\") to choose the city and radius for price searches.",
+        "Under each item you see the latest price reported by Shelfy users or by Open Prices, a public unverified database.",
+        "At the supermarket, tap \"Add price\" and enter what you see on the shelf: you help whoever shops after you."
+      ],
+      "tip": "Prices are anonymous. Ones older than a few weeks are only historical and may have changed."
+    }
   }
 }

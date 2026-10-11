@@ -5,6 +5,7 @@ import {
 } from '@/lib/firestore';
 import { CommunityRecipe, RecipeRequest } from '@/types';
 import { useAuth } from './AuthContext';
+import i18n from '@/lib/i18n';
 
 interface CommunityContextType {
   recipes: CommunityRecipe[];
@@ -41,11 +42,11 @@ export function CommunityProvider({ children }: { children: React.ReactNode }) {
 
   const createRecipe = useCallback(
     async (data: Omit<CommunityRecipe, 'id' | 'authorId' | 'authorName' | 'ratingSum' | 'ratingCount' | 'createdAt'>) => {
-      if (!user) throw new Error('Devi accedere per pubblicare una ricetta');
+      if (!user) throw new Error(i18n.t('serverErrors.loginRequired'));
       return createCommunityRecipe({
         ...data,
         authorId: user.uid,
-        authorName: user.displayName ?? 'Utente Shelfy',
+        authorName: user.displayName ?? i18n.t('common.shelfyUser'),
       });
     },
     [user],
@@ -65,11 +66,11 @@ export function CommunityProvider({ children }: { children: React.ReactNode }) {
 
   const createRequest = useCallback(
     async (data: { ingredients: string[]; note: string }) => {
-      if (!user) throw new Error('Devi accedere per chiedere aiuto');
+      if (!user) throw new Error(i18n.t('serverErrors.loginRequired'));
       return createRecipeRequest({
         ...data,
         authorId: user.uid,
-        authorName: user.displayName ?? 'Utente Shelfy',
+        authorName: user.displayName ?? i18n.t('common.shelfyUser'),
       });
     },
     [user],

@@ -15,6 +15,7 @@ import {
   deletePantry as deletePantryApi,
 } from '@/lib/pantry';
 import { useAuth } from './AuthContext';
+import i18n from '@/lib/i18n';
 
 const ACTIVE_PANTRY_KEY = 'shelfy.activePantryId';
 
@@ -101,13 +102,13 @@ export function PantryProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const createPantry = useCallback(async (name: string) => {
-    if (!user) throw new Error('Devi accedere');
-    return createPantryApi(name, user.displayName ?? 'Utente Shelfy');
+    if (!user) throw new Error(i18n.t('serverErrors.loginRequired'));
+    return createPantryApi(name, user.displayName ?? i18n.t('common.shelfyUser'));
   }, [user]);
 
   const joinPantry = useCallback(async (code: string) => {
-    if (!user) throw new Error('Devi accedere');
-    return joinPantryApi(code, user.displayName ?? 'Utente Shelfy');
+    if (!user) throw new Error(i18n.t('serverErrors.loginRequired'));
+    return joinPantryApi(code, user.displayName ?? i18n.t('common.shelfyUser'));
   }, [user]);
 
   const renamePantry = useCallback((pantryId: string, name: string) => renamePantryApi(pantryId, name), []);

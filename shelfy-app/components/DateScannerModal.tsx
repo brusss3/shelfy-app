@@ -6,7 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useTranslation } from 'react-i18next';
-import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useThemedStyles, type Theme } from '@/context/ThemeContext';
 import { showAlert } from '@/lib/alert';
 import { recognizeText } from '@/lib/ocr';
 import { parseExpiry, type DateFormat } from '@/lib/parseExpiry';
@@ -96,6 +97,7 @@ const FORMATS: { id: DateFormat; labelKey: string }[] = [
 // Fotocamera a tutto schermo che scatta una foto della scadenza, ne estrae
 // la data via OCR e la restituisce al chiamante. Usata dalla form prodotto.
 export default function DateScannerModal({ visible, onClose, onResult }: Props) {
+  const styles = useThemedStyles(createStyles);
   const { t } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
   const [ocrLoading, setOcrLoading] = useState(false);
@@ -383,7 +385,7 @@ export default function DateScannerModal({ visible, onClose, onResult }: Props) 
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY, SHADOW }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0a0d09' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   hint: { fontFamily: FONTS.sans, color: '#fff', fontSize: 18, textAlign: 'center', lineHeight: 24 },

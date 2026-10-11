@@ -13,10 +13,13 @@ import { createProposal } from '@/lib/firestore';
 import { showAlert } from '@/lib/alert';
 import { RECIPE_TINTS as TINTS, RECIPE_DIFFICULTIES as DIFFICULTIES } from '@/lib/recipePrompt';
 import PrimaryButton from '@/components/PrimaryButton';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 import { RecipeIngredient } from '@/types';
 
 export default function CreateRecipeScreen() {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const { user } = useAuth();
   const { createRecipe } = useCommunity();
@@ -272,6 +275,7 @@ export default function CreateRecipeScreen() {
 }
 
 function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.fieldRow}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -281,10 +285,11 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
 }
 
 function Divider() {
+  const { T } = useTheme();
   return <View style={{ height: 0.5, backgroundColor: T.line, marginLeft: 16 }} />;
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, SHADOW }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   scroll: { paddingBottom: 20 },
 
@@ -319,7 +324,7 @@ const styles = StyleSheet.create({
   },
   chipActive: { backgroundColor: T.primary },
   chipText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: T.ink },
-  chipTextActive: { color: '#fbfaf3' },
+  chipTextActive: { color: T.onPrimary },
   visibilityHint: {
     fontSize: 12, color: T.mute, fontFamily: FONTS.sans,
     marginHorizontal: 20, marginTop: -12, marginBottom: 20, lineHeight: 16,

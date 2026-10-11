@@ -9,12 +9,15 @@ import { getCommunityRecipe, getMyRecipeRating } from '@/lib/firestore';
 import { showAlert } from '@/lib/alert';
 import RecipeDetailView from '@/components/RecipeDetailView';
 import Pill from '@/components/Pill';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 import { CommunityRecipe } from '@/types';
 
 const STARS = [1, 2, 3, 4, 5];
 
 export default function RecipeDetailScreen() {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const { savedRecipes, saveRecipe, markCompleted } = useRecipes();
@@ -148,7 +151,7 @@ export default function RecipeDetailScreen() {
             >
               <Text style={{
                 fontFamily: FONTS.sansSemiBold, fontSize: 16,
-                color: isCompleted ? T.primary : '#fbfaf3',
+                color: isCompleted ? T.primary : T.onPrimary,
               }}>
                 {isCompleted ? t('recipes.alreadyCooked') : saved ? t('recipeDetail.markCooked') : t('recipeDetail.saveRecipe')}
               </Text>
@@ -167,7 +170,7 @@ export default function RecipeDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, SHADOW }: Theme) => StyleSheet.create({
   center: { flex: 1, backgroundColor: T.bg, justifyContent: 'center', alignItems: 'center' },
   metaItem: { fontSize: 13, color: T.ink2, fontFamily: FONTS.sans },
   metaDot: { color: T.mute, fontSize: 13 },

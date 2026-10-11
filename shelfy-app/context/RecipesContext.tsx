@@ -7,6 +7,7 @@ import {
   createCommunityRecipe, hasUsedAiCredit, subscribeToAiEnabled,
 } from '@/lib/firestore';
 import { CommunityRecipe, SavedRecipe, MyRecipe } from '@/types';
+import i18n from '@/lib/i18n';
 
 interface RecipesContextType {
   /** Ricette della community messe da parte dall'utente. */
@@ -76,7 +77,7 @@ export function RecipesProvider({ children }: { children: React.ReactNode }) {
 
   const addMyRecipe = useCallback(
     async (data: Omit<MyRecipe, 'id' | 'published' | 'publishedRecipeId' | 'createdAt'>) => {
-      if (!user) throw new Error('Devi accedere per salvare una ricetta');
+      if (!user) throw new Error(i18n.t('serverErrors.loginRequired'));
       return createMyRecipe(user.uid, data);
     },
     [user?.uid],
@@ -94,10 +95,10 @@ export function RecipesProvider({ children }: { children: React.ReactNode }) {
   // così resta tracciato il legame tra le due.
   const publishMyRecipe = useCallback(
     async (recipe: MyRecipe) => {
-      if (!user) throw new Error('Devi accedere per pubblicare');
+      if (!user) throw new Error(i18n.t('serverErrors.loginRequired'));
       const communityId = await createCommunityRecipe({
         authorId: user.uid,
-        authorName: user.displayName ?? 'Utente Shelfy',
+        authorName: user.displayName ?? i18n.t('common.shelfyUser'),
         title: recipe.title,
         desc: recipe.desc,
         time: recipe.time,

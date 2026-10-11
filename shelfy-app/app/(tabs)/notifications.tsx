@@ -10,10 +10,12 @@ import { urgencyOf, shortDate, effectiveDays, effectiveExpiry } from '@/lib/urge
 import FoodTile from '@/components/FoodTile';
 import Pill from '@/components/Pill';
 import ProfileButton from '@/components/ProfileButton';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 import { Product } from '@/types';
 
 export default function NotificationsScreen() {
+  const styles = useThemedStyles(createStyles);
   const { products, removeProduct, changeZone, consumeOne } = useProducts();
   const router = useRouter();
   const { t } = useTranslation();
@@ -103,6 +105,7 @@ export default function NotificationsScreen() {
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={{ marginBottom: 18 }}>
       <View style={styles.sectionHeader}>
@@ -114,10 +117,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function SummaryChip({ count, label, tone }: { count: number; label: string; tone: 'urgent' | 'warn' | 'ok' }) {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const pal = {
-    urgent: { bg: T.urgentSoft, ink: '#4d1a10', dot: T.urgent },
-    warn:   { bg: T.warnSoft,   ink: '#4a3414', dot: T.warn },
-    ok:     { bg: T.okSoft,     ink: '#1b3320', dot: T.ok },
+    urgent: { bg: T.urgentSoft, ink: T.urgentInk, dot: T.urgent },
+    warn:   { bg: T.warnSoft,   ink: T.warnInk, dot: T.warn },
+    ok:     { bg: T.okSoft,     ink: T.okInk, dot: T.ok },
   }[tone];
   return (
     <View style={[styles.summaryChip, { backgroundColor: pal.bg }]}>
@@ -141,6 +146,7 @@ interface PriorityCardProps {
 }
 
 function PriorityCard({ product, urgency, onOpen, onRemove, onConsumed, onFreeze, onRecipe, canFreeze }: PriorityCardProps) {
+  const styles = useThemedStyles(createStyles);
   const { t } = useTranslation();
   const days = effectiveDays(product);
   const u = urgencyOf(days);
@@ -198,6 +204,7 @@ function PriorityCard({ product, urgency, onOpen, onRemove, onConsumed, onFreeze
 }
 
 function CompactCard({ product, onOpen }: { product: Product; onOpen: () => void }) {
+  const styles = useThemedStyles(createStyles);
   const { t } = useTranslation();
   const days = effectiveDays(product);
   const u = urgencyOf(days);
@@ -218,6 +225,7 @@ function CompactCard({ product, onOpen }: { product: Product; onOpen: () => void
 }
 
 function EmptyState() {
+  const styles = useThemedStyles(createStyles);
   const { t } = useTranslation();
   return (
     <View style={styles.emptyState}>
@@ -230,7 +238,7 @@ function EmptyState() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, SHADOW }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   scroll: { paddingBottom: 110 },
   header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14 },

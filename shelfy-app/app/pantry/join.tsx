@@ -10,9 +10,12 @@ import { usePantry } from '@/context/PantryContext';
 import PrimaryButton from '@/components/PrimaryButton';
 import QrScannerModal from '@/components/QrScannerModal';
 import { showAlert } from '@/lib/alert';
-import { T, FONTS, RADIUS, CLAY } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 
 export default function PantryJoinScreen() {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const { t } = useTranslation();
   const { joinPantry, setActivePantryId } = usePantry();
@@ -124,7 +127,7 @@ export default function PantryJoinScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -159,7 +162,7 @@ const styles = StyleSheet.create({
   dividerLine: { flex: 1, height: 1, backgroundColor: T.line },
   dividerText: { fontFamily: FONTS.sans, fontSize: 12, color: T.mute },
   codeInput: {
-    width: '100%', backgroundColor: '#ece8de', borderRadius: RADIUS.clay,
+    width: '100%', backgroundColor: T.field, borderRadius: RADIUS.clay,
     paddingVertical: 18, marginBottom: 24, boxShadow: CLAY.inset,
     fontFamily: FONTS.sansBold, fontSize: 30, color: T.ink,
     textAlign: 'center', letterSpacing: 8,

@@ -1,4 +1,7 @@
-export const T = {
+// Palette chiara (crema + verde bosco). I token oltre ai colori base servono al
+// tema scuro: `onPrimary` è il testo su un riempimento `primary`, `field` il
+// fondo dei campi di testo, `*Ink` il testo sulle tinte "soft" di stato.
+const LIGHT_T = {
   ink: '#1a2018',
   ink2: '#525a4f',
   mute: '#8b9387',
@@ -15,7 +18,44 @@ export const T = {
   urgentSoft: '#f3d6c9',
   ok: '#3f7a4a',
   okSoft: '#dce9d5',
+  onPrimary: '#fbfaf3',
+  field: '#ece8de',
+  urgentInk: '#4d1a10',
+  warnInk: '#4a3414',
+  okInk: '#1b3320',
 };
+
+// Palette scura: "la dispensa di notte". Il fondo è un nero-verde caldo (non
+// un grigio freddo né il nero puro, che con le ombre "plastilina" farebbe
+// sparire il rilievo), le superfici sono qualche gradino più chiare, il testo
+// è carta color crema. Il verde bosco, troppo scuro per risaltare, diventa
+// verde foglia: il pulsante primario si accende invece di sprofondare.
+// Contrasti: ink su bg 14:1, ink2 8:1, mute 4.8:1, onPrimary su primary 8:1.
+const DARK_T: typeof LIGHT_T = {
+  ink: '#ece9dd',
+  ink2: '#b4baa9',
+  mute: '#858e7d',
+  line: 'rgba(236, 233, 221, 0.10)',
+  bg: '#12170f',
+  surface: '#1c2319',
+  primary: '#8fbf8c',
+  primaryInk: '#c4e6bd',
+  primarySoft: '#26382a',
+  sage: '#4d6147',
+  warn: '#e0b050',
+  warnSoft: '#3a2f17',
+  urgent: '#e8795c',
+  urgentSoft: '#3c2119',
+  ok: '#7fc68a',
+  okSoft: '#1f3524',
+  onPrimary: '#0d1f10',
+  field: '#0e130c',
+  urgentInk: '#f6c4b4',
+  warnInk: '#f2d596',
+  okInk: '#b9e3be',
+};
+
+export const T = LIGHT_T;
 
 export const FONTS = {
   // Display / heading font. Era Instrument Serif (corsivo) — sostituito con
@@ -126,3 +166,89 @@ export const ZONE_MATERIAL = {
   freezer: { surface: ['#e9f1fa', '#d7e5f4'] as const, ink: '#2a4566' },
   dispensa: { surface: ['#f3e8d6', '#e7d8bf'] as const, ink: '#5a4227' },
 };
+
+// ---------------------------------------------------------------------------
+// Temi
+// ---------------------------------------------------------------------------
+// Ogni schermata legge i colori da `useTheme()` (context/ThemeContext.tsx): gli
+// export statici qui sopra restano la palette chiara, usata come valore di
+// partenza e dal codice che non è un componente.
+
+const DARK_CLAY = {
+  surface:
+    '0px 8px 16px rgba(0,0,0,0.45), ' +
+    '0px 1px 0px rgba(255,255,255,0.07) inset, ' +
+    '0px -3px 6px rgba(0,0,0,0.25) inset',
+  chip:
+    '0px 4px 10px rgba(0,0,0,0.45), ' +
+    '0px 1px 0px rgba(255,255,255,0.06) inset, ' +
+    '0px -2px 4px rgba(0,0,0,0.25) inset',
+  inset:
+    '0px 2px 5px rgba(0,0,0,0.55) inset, ' +
+    '0px -1px 0px rgba(255,255,255,0.05) inset',
+};
+
+const DARK_DEPTH = {
+  button:
+    '0px 6px 14px rgba(0,0,0,0.5), ' +
+    '0px 1px 0px rgba(255,255,255,0.28) inset, ' +
+    '0px -3px 5px rgba(20,50,25,0.25) inset',
+  buttonLight:
+    '0px 6px 12px rgba(0,0,0,0.45), ' +
+    '0px 1px 0px rgba(255,255,255,0.08) inset, ' +
+    '0px -2px 4px rgba(0,0,0,0.3) inset',
+};
+
+type Pair = readonly [string, string];
+
+export interface Theme {
+  scheme: 'light' | 'dark';
+  T: typeof LIGHT_T;
+  CLAY: { surface: string; chip: string; inset: string };
+  SHADOW: {
+    card: { boxShadow: string; elevation: number };
+    fab: { boxShadow: string; elevation: number };
+  };
+  GRADIENT: { primary: Pair };
+  DEPTH: { button: string; buttonLight: string };
+  SURFACE: { card: Pair; warm: Pair };
+  ZONE_MATERIAL: Record<'frigo' | 'freezer' | 'dispensa', { surface: Pair; ink: string }>;
+}
+
+export const LIGHT_THEME: Theme = {
+  scheme: 'light',
+  T: LIGHT_T,
+  CLAY,
+  SHADOW,
+  GRADIENT,
+  DEPTH,
+  SURFACE,
+  ZONE_MATERIAL,
+};
+
+export const DARK_THEME: Theme = {
+  scheme: 'dark',
+  T: DARK_T,
+  CLAY: DARK_CLAY,
+  SHADOW: {
+    card: { boxShadow: DARK_CLAY.surface, elevation: 3 },
+    fab: { boxShadow: '0px 8px 14px rgba(0,0,0,0.6)', elevation: 10 },
+  },
+  GRADIENT: { primary: ['#a3cf9f', '#8fbf8c'] as const },
+  DEPTH: DARK_DEPTH,
+  SURFACE: {
+    card: ['#222b1e', '#1a2117'] as const,
+    warm: ['#3a3020', '#2e2618'] as const,
+  },
+  ZONE_MATERIAL: {
+    frigo: { surface: ['#1d2f33', '#17262a'] as const, ink: '#9fd0dc' },
+    freezer: { surface: ['#1c2a3c', '#16212f'] as const, ink: '#a9c6ee' },
+    dispensa: { surface: ['#352b1d', '#2b2217'] as const, ink: '#e0c49a' },
+  },
+};
+
+// Tema in uso: lo imposta ThemeProvider a ogni cambio. Serve alle funzioni che
+// non sono componenti (es. urgencyOf) e che sono chiamate durante il render.
+let currentTheme: Theme = LIGHT_THEME;
+export const getTheme = (): Theme => currentTheme;
+export const setCurrentTheme = (theme: Theme): void => { currentTheme = theme; };

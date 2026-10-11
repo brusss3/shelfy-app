@@ -1,6 +1,6 @@
 import { doc, getDoc } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { db, functions } from './firebase';
+import { db } from './firebase';
+import { callable } from './callable';
 
 // Catalogo Shelfy: i prodotti che Open Food Facts non conosce, inseriti da chi
 // li ha scansionati. Vedi submitCatalogProduct in functions/src/index.ts.
@@ -28,7 +28,7 @@ export async function getCatalogProduct(barcode: string): Promise<CatalogProduct
 /** Aggiunge il prodotto al catalogo. Se qualcuno l'aveva già aggiunto, non
  *  sovrascrive nulla e restituisce la voce esistente (`created: false`). */
 export async function submitCatalogProduct(p: CatalogProduct): Promise<CatalogProduct & { created: boolean }> {
-  const fn = httpsCallable<CatalogProduct, CatalogProduct & { created: boolean }>(functions, 'submitCatalogProduct');
+  const fn = callable<CatalogProduct, CatalogProduct & { created: boolean }>('submitCatalogProduct');
   const res = await fn(p);
   return { ...p, ...res.data };
 }

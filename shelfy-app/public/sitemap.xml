@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://shelfy-app.it/guide/</loc>
-    <lastmod>2026-09-29</lastmod>
+    <lastmod>2026-10-02</lastmod>
   </url>
   <url>
     <loc>https://shelfy-app.it/guide/organizzare-frigorifero/</loc>
@@ -11,5 +11,17 @@
   <url>
     <loc>https://shelfy-app.it/guide/controllare-scadenze-spesa/</loc>
     <lastmod>2026-09-29</lastmod>
+  </url>
+  <url>
+    <loc>https://shelfy-app.it/guide/scadenza-o-termine-minimo-conservazione/</loc>
+    <lastmod>2026-10-02</lastmod>
+  </url>
+  <url>
+    <loc>https://shelfy-app.it/guide/congelare-alimenti-sicurezza/</loc>
+    <lastmod>2026-10-02</lastmod>
+  </url>
+  <url>
+    <loc>https://shelfy-app.it/guide/confrontare-prezzi-supermercato/</loc>
+    <lastmod>2026-10-02</lastmod>
   </url>
 </urlset>

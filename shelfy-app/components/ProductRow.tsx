@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next';
 import FoodTile from './FoodTile';
 import { Product } from '@/types';
 import { urgencyOf, effectiveDays } from '@/lib/urgency';
-import { T, FONTS, RADIUS, CLAY, SURFACE } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { usePantry } from '@/context/PantryContext';
 
@@ -21,6 +22,8 @@ const ZONE_ICONS: Record<string, string> = {
 };
 
 export default function ProductRow({ product, onPress }: Props) {
+  const { SURFACE } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const days = effectiveDays(product);
   const u = urgencyOf(days);
   const isOpened = !!product.openedAt;
@@ -64,7 +67,7 @@ export default function ProductRow({ product, onPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY }: Theme) => StyleSheet.create({
   card: {
     borderRadius: RADIUS.clay,
     padding: 12,
@@ -95,7 +98,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   openedBadge: {
-    backgroundColor: '#e8f0e8',
+    backgroundColor: T.okSoft,
     borderRadius: 9,
     paddingVertical: 2,
     paddingHorizontal: 7,
@@ -103,7 +106,7 @@ const styles = StyleSheet.create({
   openedBadgeText: {
     fontSize: 10,
     fontFamily: FONTS.sansBold,
-    color: '#3a6b3a',
+    color: T.okInk,
     letterSpacing: 0.2,
   },
   sub: {

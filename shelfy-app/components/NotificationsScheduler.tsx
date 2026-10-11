@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Product } from '@/types';
 import { subscribeToProducts } from '@/lib/firestore';
 import { scheduleExpiryNotifications, NotificationPantryGroup } from '@/lib/notifications';
@@ -19,6 +20,7 @@ interface ScopeEntry {
 // raggruppate per casa invece che per singolo prodotto).
 export default function NotificationsScheduler() {
   const { user } = useAuth();
+  const { i18n } = useTranslation();
   const { pantries, loading: pantriesLoading } = usePantry();
   const [byScope, setByScope] = useState<Record<string, ScopeEntry>>({});
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -74,7 +76,8 @@ export default function NotificationsScheduler() {
     }, 300);
 
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [byScope, user, pantriesLoading]);
+    // Cambiando lingua le notifiche già programmate vanno riscritte nella nuova.
+  }, [byScope, user, pantriesLoading, i18n.language]);
 
   return null;
 }

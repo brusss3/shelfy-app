@@ -1,10 +1,11 @@
-import { onCall, onRequest, HttpsError } from 'firebase-functions/v2/https';
+import { onCall, onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { defineSecret } from 'firebase-functions/params';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue, Transaction } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import { timingSafeEqual } from 'node:crypto';
+import { expiryReminder, toLang, Lang, fail } from './messages';
 
 initializeApp();
 
@@ -62,13 +63,13 @@ function parseRecipe(raw: string): GeneratedRecipe {
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new HttpsError('internal', 'Risposta AI non valida');
+    throw fail('internal', 'aiInvalid', 'Risposta AI non valida');
   }
   const r = parsed as Partial<GeneratedRecipe>;
   const ingredients = Array.isArray(r.ingredients) ? r.ingredients.filter((i) => i?.name) : [];
   const steps = Array.isArray(r.steps) ? r.steps.filter((s) => typeof s === 'string' && s.trim()) : [];
   if (!r.title?.trim() || ingredients.length < 1 || steps.length < 2) {
-    throw new HttpsError('internal', 'Ricetta AI incompleta');
+    throw fail('internal', 'aiIncomplete', 'Ricetta AI incompleta');
   }
   return {
     title: r.title.trim(),
@@ -116,12 +117,14 @@ async function callGroq(apiKey: string, ingredients: string[]): Promise<Generate
     }
     // 429 = quota/rate limit del piano free: per il client è indistinguibile da
     // un guasto temporaneo, in entrambi i casi deve poter riprovare più tardi.
-    throw new HttpsError('unavailable', res.status === 429 ? 'Limite Groq raggiunto' : `Groq ${res.status}`);
+    throw res.status === 429
+      ? fail('unavailable', 'aiLimit', 'Limite Groq raggiunto')
+      : fail('unavailable', 'aiUnavailable', `Groq ${res.status}`);
   }
 
   const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
   const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new HttpsError('internal', 'Risposta AI vuota');
+  if (!content) throw fail('internal', 'aiEmpty', 'Risposta AI vuota');
   return parseRecipe(content);
 }
 
@@ -129,7 +132,7 @@ export const generateDailyRecipe = onCall(
   { region: 'europe-west1', secrets: [GROQ_API_KEY], cors: true },
   async (request) => {
     const uid = request.auth?.uid;
-    if (!uid) throw new HttpsError('unauthenticated', 'Devi accedere');
+    if (!uid) throw fail('unauthenticated', 'loginRequired', 'Devi accedere');
 
     const rawIngredients = (request.data?.ingredients ?? []) as unknown;
     const ingredients = Array.isArray(rawIngredients)
@@ -139,7 +142,7 @@ export const generateDailyRecipe = onCall(
           .map((i) => i.trim().slice(0, 40))
       : [];
     if (ingredients.length === 0) {
-      throw new HttpsError('invalid-argument', 'Seleziona almeno un ingrediente');
+      throw fail('invalid-argument', 'pickIngredient', 'Seleziona almeno un ingrediente');
     }
 
     const db = getFirestore();
@@ -152,10 +155,10 @@ export const generateDailyRecipe = onCall(
       db.collection('users').doc(uid).get(),
     ]);
     if (configSnap.exists && configSnap.data()?.enabled === false) {
-      throw new HttpsError('failed-precondition', 'Le ricette AI sono temporaneamente disattivate');
+      throw fail('failed-precondition', 'aiDisabled', 'Le ricette AI sono temporaneamente disattivate');
     }
     if (userSnap.data()?.aiDisabled === true) {
-      throw new HttpsError('permission-denied', 'Le ricette AI non sono attive sul tuo account');
+      throw fail('permission-denied', 'aiNotActive', 'Le ricette AI non sono attive sul tuo account');
     }
 
     // Il piano base ha un credito settimanale, il Premium uno giornaliero: le
@@ -174,12 +177,9 @@ export const generateDailyRecipe = onCall(
     await db.runTransaction(async (tx: Transaction) => {
       const snap = await tx.get(usageRef);
       if (snap.exists) {
-        throw new HttpsError(
-          'resource-exhausted',
-          isPremium
-            ? 'Hai già generato la ricetta di oggi'
-            : 'Hai già generato la ricetta di questa settimana',
-        );
+        throw isPremium
+          ? fail('resource-exhausted', 'aiAlreadyToday', 'Hai già generato la ricetta di oggi')
+          : fail('resource-exhausted', 'aiAlreadyWeek', 'Hai già generato la ricetta di questa settimana');
       }
       tx.set(usageRef, { createdAt: FieldValue.serverTimestamp() });
     });
@@ -243,18 +243,24 @@ async function generateUniqueInviteCode(db: FirebaseFirestore.Firestore): Promis
     const snap = await db.collection('inviteCodes').doc(code).get();
     if (!snap.exists) return code;
   }
-  throw new HttpsError('internal', 'Impossibile generare un codice invito, riprova');
+  throw fail('internal', 'inviteCodeFailed', 'Impossibile generare un codice invito, riprova');
 }
 
 function requireUid(request: { auth?: { uid: string } | null }): string {
   const uid = request.auth?.uid;
-  if (!uid) throw new HttpsError('unauthenticated', 'Devi accedere');
+  if (!uid) throw fail('unauthenticated', 'loginRequired', 'Devi accedere');
   return uid;
 }
 
+// Etichetta (italiana) del campo -> chiave per la traduzione lato app.
+const FIELD_KEYS: Record<string, string> = {
+  'Nome casa': 'homeName', 'Nome utente': 'userName', Casa: 'home', Membro: 'member',
+  Catena: 'chain', Comune: 'city', Data: 'date',
+};
+
 function requireString(value: unknown, field: string, maxLen = 200): string {
   const s = typeof value === 'string' ? value.trim() : '';
-  if (!s) throw new HttpsError('invalid-argument', `${field} mancante`);
+  if (!s) throw fail('invalid-argument', `missing.${FIELD_KEYS[field] ?? 'generic'}`, `${field} mancante`);
   return s.slice(0, maxLen);
 }
 
@@ -295,7 +301,7 @@ export const joinPantry = onCall(
     const uid = requireUid(request);
     const rawCode = String(request.data?.code ?? '').trim().toUpperCase();
     if (rawCode.length !== CODE_LENGTH) {
-      throw new HttpsError('invalid-argument', 'Codice non valido');
+      throw fail('invalid-argument', 'invalidCode', 'Codice non valido');
     }
     const displayName = requireString(request.data?.displayName ?? 'Utente Shelfy', 'Nome utente', 60);
 
@@ -309,24 +315,24 @@ export const joinPantry = onCall(
       const snap = await tx.get(attemptsRef);
       const count = snap.exists ? ((snap.data()?.count as number) ?? 0) : 0;
       if (count >= MAX_JOIN_ATTEMPTS_PER_HOUR) {
-        throw new HttpsError('resource-exhausted', 'Troppi tentativi. Riprova tra un\'ora.');
+        throw fail('resource-exhausted', 'tooManyAttempts', 'Troppi tentativi. Riprova tra un\'ora.');
       }
       tx.set(attemptsRef, { count: count + 1, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     });
 
     const codeSnap = await db.collection('inviteCodes').doc(rawCode).get();
-    if (!codeSnap.exists) throw new HttpsError('not-found', 'Codice non valido o scaduto');
+    if (!codeSnap.exists) throw fail('not-found', 'codeNotFound', 'Codice non valido o scaduto');
 
     const { pantryId, expiresAt } = codeSnap.data() as { pantryId: string; expiresAt: FirebaseFirestore.Timestamp };
     if (expiresAt.toDate().getTime() < Date.now()) {
-      throw new HttpsError('not-found', 'Codice non valido o scaduto');
+      throw fail('not-found', 'codeNotFound', 'Codice non valido o scaduto');
     }
 
     const pantryRef = db.collection('pantries').doc(pantryId);
 
     return db.runTransaction(async (tx: Transaction) => {
       const pantrySnap = await tx.get(pantryRef);
-      if (!pantrySnap.exists) throw new HttpsError('not-found', 'Casa non trovata');
+      if (!pantrySnap.exists) throw fail('not-found', 'homeNotFound', 'Casa non trovata');
       const data = pantrySnap.data()!;
       const memberIds: string[] = data.memberIds ?? [];
 
@@ -336,7 +342,7 @@ export const joinPantry = onCall(
         return { id: pantryId, name: data.name as string, alreadyMember: true };
       }
       if (memberIds.length >= MAX_PANTRY_MEMBERS) {
-        throw new HttpsError('resource-exhausted', 'Questa casa ha già raggiunto il numero massimo di membri');
+        throw fail('resource-exhausted', 'homeFull', 'Questa casa ha già raggiunto il numero massimo di membri');
       }
 
       tx.update(pantryRef, {
@@ -351,9 +357,9 @@ export const joinPantry = onCall(
 async function requireOwner(db: FirebaseFirestore.Firestore, pantryId: string, uid: string) {
   const ref = db.collection('pantries').doc(pantryId);
   const snap = await ref.get();
-  if (!snap.exists) throw new HttpsError('not-found', 'Casa non trovata');
+  if (!snap.exists) throw fail('not-found', 'homeNotFound', 'Casa non trovata');
   if (snap.data()?.ownerId !== uid) {
-    throw new HttpsError('permission-denied', 'Solo chi ha creato la casa può farlo');
+    throw fail('permission-denied', 'onlyOwner', 'Solo chi ha creato la casa può farlo');
   }
   return { ref, data: snap.data()! };
 }
@@ -414,7 +420,7 @@ export const leavePantry = onCall(
       const snap = await tx.get(pantryRef);
       if (!snap.exists) return;
       if (snap.data()?.ownerId === uid) {
-        throw new HttpsError('failed-precondition', 'Chi ha creato la casa non può abbandonarla: eliminala invece');
+        throw fail('failed-precondition', 'ownerCannotLeave', 'Chi ha creato la casa non può abbandonarla: eliminala invece');
       }
       tx.update(pantryRef, {
         memberIds: FieldValue.arrayRemove(uid),
@@ -433,7 +439,7 @@ export const removeMember = onCall(
     const pantryId = requireString(request.data?.pantryId, 'Casa');
     const targetUid = requireString(request.data?.uid, 'Membro');
     if (targetUid === uid) {
-      throw new HttpsError('invalid-argument', 'Usa "abbandona" per rimuovere te stesso');
+      throw fail('invalid-argument', 'useLeave', 'Usa "abbandona" per rimuovere te stesso');
     }
     const db = getFirestore();
     const { ref } = await requireOwner(db, pantryId, uid);
@@ -457,7 +463,7 @@ export const deletePantry = onCall(
     const snap = await pantryRef.get();
     if (!snap.exists) return { ok: true };
     if (snap.data()?.ownerId !== uid) {
-      throw new HttpsError('permission-denied', 'Solo chi ha creato la casa può eliminarla');
+      throw fail('permission-denied', 'onlyOwnerDelete', 'Solo chi ha creato la casa può eliminarla');
     }
 
     const inviteRef = pantryRef.collection('private').doc('invite');
@@ -686,12 +692,13 @@ export const sendExpiryReminders = onSchedule(
     const uids = [...new Set([...groups.values()].map((g) => g.uid))];
     const userRefs = uids.map((uid) => db.collection('users').doc(uid));
     const userSnaps = userRefs.length > 0 ? await db.getAll(...userRefs) : [];
-    const userInfo = new Map<string, { token?: string; enabled: boolean }>();
+    const userInfo = new Map<string, { token?: string; enabled: boolean; lang: Lang }>();
     userSnaps.forEach((snap, i) => {
       const data = snap.data();
       userInfo.set(uids[i], {
         token: data?.webPushToken,
         enabled: data?.notificationsEnabled !== false,
+        lang: toLang(data?.language),
       });
     });
 
@@ -702,14 +709,7 @@ export const sendExpiryReminders = onSchedule(
       const info = userInfo.get(g.uid);
       if (!info?.token || !info.enabled) continue;
 
-      const where = g.pantryName
-        ? `nella casa "${g.pantryName}"`
-        : 'nella tua dispensa personale';
-      const whenLabel = g.when === 'oggi' ? 'oggi' : 'domani';
-      const title = g.when === 'oggi' ? '⏰ Shelfy — Scade oggi' : '⏰ Shelfy — Scadenza vicina';
-      const body = g.names.length === 1
-        ? `${g.names[0]} scade ${whenLabel} ${where}.`
-        : `Hai ${g.names.length} prodotti in scadenza ${whenLabel} ${where}.`;
+      const { title, body } = expiryReminder(info.lang, g.when, g.names, g.pantryName);
 
       sends.push(
         messaging.send({
@@ -761,13 +761,13 @@ function slug(s: string): string {
 // Limite giornaliero per utente (giorno civile italiano, come il credito AI):
 // un contatore in users/{uid}/{collection}/{giorno}, scrivibile solo da qui.
 async function bumpDailyCounter(
-  db: FirebaseFirestore.Firestore, uid: string, collection: string, max: number, message: string,
+  db: FirebaseFirestore.Firestore, uid: string, collection: string, max: number, limitKey: string, message: string,
 ): Promise<void> {
   const ref = db.collection('users').doc(uid).collection(collection).doc(todayKeyRome());
   await db.runTransaction(async (tx: Transaction) => {
     const snap = await tx.get(ref);
     const count = snap.exists ? ((snap.data()?.count as number) ?? 0) : 0;
-    if (count >= max) throw new HttpsError('resource-exhausted', message);
+    if (count >= max) throw fail('resource-exhausted', limitKey, message);
     tx.set(ref, { count: count + 1, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
   });
 }
@@ -778,11 +778,11 @@ export const submitPrice = onCall(
     const uid = requireUid(request);
 
     const barcode = String(request.data?.barcode ?? '').trim();
-    if (!/^\d{8,14}$/.test(barcode)) throw new HttpsError('invalid-argument', 'Codice a barre non valido');
+    if (!/^\d{8,14}$/.test(barcode)) throw fail('invalid-argument', 'invalidBarcode', 'Codice a barre non valido');
 
     const price = Number(request.data?.price);
     if (!Number.isFinite(price) || price < 0.01 || price > MAX_PRICE_EUR) {
-      throw new HttpsError('invalid-argument', 'Prezzo non valido');
+      throw fail('invalid-argument', 'invalidPrice', 'Prezzo non valido');
     }
     const priceCents = Math.round(price * 100);
 
@@ -791,7 +791,7 @@ export const submitPrice = onCall(
     const storeName = String(request.data?.store?.name ?? '').trim().slice(0, 60);
     const chainSlug = slug(chain);
     const cityKey = slug(city);
-    if (!chainSlug || !cityKey) throw new HttpsError('invalid-argument', 'Negozio non valido');
+    if (!chainSlug || !cityKey) throw fail('invalid-argument', 'invalidStore', 'Negozio non valido');
     const storeId = [chainSlug, cityKey, slug(storeName)].filter(Boolean).join('--');
 
     // La data del prezzo è quella in cui l'utente l'ha visto: mai nel futuro,
@@ -800,14 +800,14 @@ export const submitPrice = onCall(
     const now = Date.now();
     if (Number.isNaN(observedAt.getTime()) || observedAt.getTime() > now + 3600_000
       || observedAt.getTime() < now - MAX_PRICE_AGE_DAYS * 86400_000) {
-      throw new HttpsError('invalid-argument', 'Data non valida');
+      throw fail('invalid-argument', 'invalidDate', 'Data non valida');
     }
 
     const productName = String(request.data?.productName ?? '').trim().slice(0, 120);
     const db = getFirestore();
 
     await bumpDailyCounter(db, uid, 'priceSubmits', MAX_PRICE_SUBMITS_PER_DAY,
-      'Hai inviato molti prezzi oggi. Riprova domani.');
+      'limitPrices', 'Hai inviato molti prezzi oggi. Riprova domani.');
 
     const latestCol = db.collection('latestPrices');
     const known = await latestCol.where('barcode', '==', barcode).limit(50).get();
@@ -912,7 +912,7 @@ async function geocodeCity(
   }
   const url = `${NOMINATIM_API}?format=jsonv2&limit=5&countrycodes=it&q=${encodeURIComponent(city)}`;
   const res = await fetch(url, { headers: { 'User-Agent': OP_USER_AGENT } });
-  if (!res.ok) throw new HttpsError('unavailable', 'Ricerca del comune non disponibile');
+  if (!res.ok) throw fail('unavailable', 'cityLookupUnavailable', 'Ricerca del comune non disponibile');
   const rows = (await res.json()) as { lat?: string; lon?: string; addresstype?: string }[];
   // "Pisa" restituisce prima la provincia (30 km più a sud del centro): si
   // preferisce il risultato che è un abitato, non un'area amministrativa.
@@ -942,7 +942,7 @@ async function fetchOpenPrices(
       order_by: '-date', size: String(OP_PAGE_SIZE), page: String(page),
     });
     const res = await fetch(`${OP_API}?${params}`, { headers: { 'User-Agent': OP_USER_AGENT } });
-    if (!res.ok) throw new HttpsError('unavailable', 'Open Prices non disponibile');
+    if (!res.ok) throw fail('unavailable', 'openPricesUnavailable', 'Open Prices non disponibile');
     const body = (await res.json()) as { items?: any[] };
     const rows = body.items ?? [];
     for (const r of rows) {
@@ -981,7 +981,7 @@ export const getOpenPrices = onCall(
 
     const city = requireString(request.data?.city, 'Comune', 60);
     const cityKey = slug(city);
-    if (!cityKey) throw new HttpsError('invalid-argument', 'Comune non valido');
+    if (!cityKey) throw fail('invalid-argument', 'invalidCity', 'Comune non valido');
     const asked = Number(request.data?.radiusKm);
     const radiusKm = OP_RADII_KM.find((r) => r >= asked) ?? OP_RADII_KM[OP_RADII_KM.length - 1];
 
@@ -1002,9 +1002,9 @@ export const getOpenPrices = onCall(
     const missing = barcodes.filter((b) => !fresh.has(b));
     if (missing.length > 0) {
       await bumpDailyCounter(db, uid, 'openPricesCalls', MAX_OPEN_PRICES_CALLS_PER_DAY,
-        'Troppe ricerche oggi. Riprova domani.');
+        'limitSearches', 'Troppe ricerche oggi. Riprova domani.');
       const where = await geocodeCity(db, city, cityKey);
-      if (!where) throw new HttpsError('invalid-argument', 'Comune non trovato');
+      if (!where) throw fail('invalid-argument', 'cityNotFound', 'Comune non trovato');
 
       const found = await fetchOpenPrices(missing, where.lat, where.lon, radiusKm);
       const batch = db.batch();
@@ -1051,12 +1051,12 @@ export const submitCatalogProduct = onCall(
     const uid = requireUid(request);
 
     const barcode = String(request.data?.barcode ?? '').trim();
-    if (!/^\d{8,14}$/.test(barcode)) throw new HttpsError('invalid-argument', 'Codice a barre non valido');
+    if (!/^\d{8,14}$/.test(barcode)) throw fail('invalid-argument', 'invalidBarcode', 'Codice a barre non valido');
 
     const name = cleanText(request.data?.name, 120);
     // Almeno due caratteri e non solo cifre/simboli: un nome così non aiuta
     // nessuno a riconoscere il prodotto.
-    if (name.length < 2 || !/\p{L}/u.test(name)) throw new HttpsError('invalid-argument', 'Nome del prodotto non valido');
+    if (name.length < 2 || !/\p{L}/u.test(name)) throw fail('invalid-argument', 'invalidProductName', 'Nome del prodotto non valido');
     const brand = cleanText(request.data?.brand, 60);
     const qty = cleanText(request.data?.qty, 30);
 
@@ -1071,7 +1071,7 @@ export const submitCatalogProduct = onCall(
     }
 
     await bumpDailyCounter(db, uid, 'catalogSubmits', MAX_CATALOG_SUBMITS_PER_DAY,
-      'Hai aggiunto molti prodotti oggi. Riprova domani.');
+      'limitCatalog', 'Hai aggiunto molti prodotti oggi. Riprova domani.');
 
     return db.runTransaction(async (tx: Transaction) => {
       const snap = await tx.get(ref);

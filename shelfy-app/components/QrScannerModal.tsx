@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { useTranslation } from 'react-i18next';
-import { T, FONTS, RADIUS } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
 
 interface Props {
   visible: boolean;

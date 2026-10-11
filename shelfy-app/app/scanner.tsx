@@ -6,7 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { useRouter, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { T, FONTS, RADIUS, CLAY } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useThemedStyles, type Theme } from '@/context/ThemeContext';
 import { ScannedProduct, Zone, NutritionInfo, ScoreGrade } from '@/types';
 import { tintForCategory } from '@/lib/urgency';
 import { useProducts } from '@/context/ProductsContext';
@@ -135,6 +136,7 @@ async function lookupBarcode(barcode: string): Promise<LookupResult> {
 }
 
 export default function ScannerScreen() {
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const isFocused = useIsFocused();
   const { t } = useTranslation();
@@ -676,7 +678,7 @@ export default function ScannerScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0a0d09' },
 
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 },

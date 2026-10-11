@@ -5,7 +5,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { T, FONTS, RADIUS, CLAY } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 import { LatestPrice, ShoppingItem, Store, StoreInput } from '@/types';
 import {
   CHAINS, RECENT_DAYS, STALE_DAYS, ageLabel, bestRecent, formatPrice, getStoresInCity,
@@ -32,6 +33,8 @@ const sameStore = (a: StoreInput, b: StoreInput) =>
   && a.name.trim().toLowerCase() === b.name.trim().toLowerCase();
 
 export default function PriceSheet({ item, prices, onClose }: Props) {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { t } = useTranslation();
   const visible = item !== null;
 
@@ -342,7 +345,7 @@ ${t('prices.openPricesNote')}` : ''}
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY }: Theme) => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(20,28,18,0.42)', justifyContent: 'flex-end' },
   kav: { width: '100%', alignItems: 'center' },
   sheet: {
@@ -398,7 +401,7 @@ const styles = StyleSheet.create({
   },
   chipActive: { backgroundColor: T.primary },
   chipText: { fontFamily: FONTS.sansMedium, fontSize: 14, color: T.ink },
-  chipTextActive: { color: '#fbfaf3' },
+  chipTextActive: { color: T.onPrimary },
   newStore: { gap: 10, marginTop: 4 },
   privacy: { fontFamily: FONTS.sans, fontSize: 11, color: T.mute, textAlign: 'center', marginTop: 8, lineHeight: 16 },
 });

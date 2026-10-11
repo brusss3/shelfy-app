@@ -6,7 +6,8 @@ import {
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { T, FONTS, RADIUS, CLAY } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 import { useProducts } from '@/context/ProductsContext';
 import { searchProducts, ProductSuggestion } from '@/lib/productSearch';
 
@@ -23,6 +24,8 @@ interface Props {
 // (dalla dispensa e da Open Food Facts) e, se non basta, si scansiona la
 // confezione. Senza barcode un prezzo non può essere salvato.
 export default function ProductMatchSheet({ visible, initialQuery, onPick, onClose }: Props) {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { t } = useTranslation();
   const { products } = useProducts();
   const [query, setQuery] = useState(initialQuery);
@@ -171,7 +174,7 @@ export default function ProductMatchSheet({ visible, initialQuery, onPick, onClo
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY }: Theme) => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(20,28,18,0.42)', justifyContent: 'flex-end' },
   kav: { width: '100%', alignItems: 'center' },
   sheet: {
@@ -204,11 +207,11 @@ const styles = StyleSheet.create({
   cameraWrap: { height: 320, marginHorizontal: 16, borderRadius: RADIUS.lg, overflow: 'hidden', backgroundColor: '#0a0d09' },
   cameraHint: {
     position: 'absolute', top: 14, left: 0, right: 0, textAlign: 'center',
-    fontFamily: FONTS.sansSemiBold, fontSize: 14, color: '#fbfaf3',
+    fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.onPrimary,
   },
   cameraBack: {
     position: 'absolute', bottom: 14, alignSelf: 'center', backgroundColor: 'rgba(255,255,255,0.18)',
     borderRadius: RADIUS.pill, paddingVertical: 9, paddingHorizontal: 18,
   },
-  cameraBackText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: '#fbfaf3' },
+  cameraBackText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: T.onPrimary },
 });

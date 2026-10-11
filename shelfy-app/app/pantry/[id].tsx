@@ -9,6 +9,7 @@ import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { dateLocale } from '@/lib/i18n';
 import { useAuth } from '@/context/AuthContext';
 import { usePantry } from '@/context/PantryContext';
 import { subscribeToPantry, subscribeToPantryInvite } from '@/lib/pantry';
@@ -16,21 +17,21 @@ import { Pantry, PantryInvite } from '@/types';
 import PrimaryButton from '@/components/PrimaryButton';
 import Pill from '@/components/Pill';
 import { showAlert } from '@/lib/alert';
-import {
-  T, FONTS, RADIUS, CLAY,
-} from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 
 export default function PantryDetailScreen() {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   const shortDate = (iso: string | null): string => {
     if (!iso) return '';
     const d = new Date(iso);
-    const locale = i18n.language === 'it' ? 'it-IT' : 'en-US';
-    return d.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
+    return d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' });
   };
   const {
     activePantryId, setActivePantryId, renamePantry, rotateInviteCode,
@@ -370,7 +371,7 @@ export default function PantryDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   center: { justifyContent: 'center', alignItems: 'center' },
   header: {
@@ -407,7 +408,7 @@ const styles = StyleSheet.create({
   sectionHint: { fontFamily: FONTS.sans, fontSize: 12, color: T.mute, marginTop: 4, marginBottom: 14 },
 
   codeBox: {
-    backgroundColor: '#ece8de', borderRadius: RADIUS.md, paddingVertical: 16,
+    backgroundColor: T.field, borderRadius: RADIUS.md, paddingVertical: 16,
     boxShadow: CLAY.inset, alignItems: 'center',
   },
   codeText: {
@@ -454,7 +455,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: { fontFamily: FONTS.serifItalic, fontSize: 22, color: T.ink, letterSpacing: -0.3 },
   modalInput: {
-    backgroundColor: '#ece8de', borderRadius: RADIUS.input,
+    backgroundColor: T.field, borderRadius: RADIUS.input,
     paddingHorizontal: 14, paddingVertical: 12,
     fontFamily: FONTS.sans, fontSize: 15, color: T.ink,
     boxShadow: CLAY.inset,

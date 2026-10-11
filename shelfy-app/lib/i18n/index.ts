@@ -4,19 +4,21 @@ import * as Localization from 'expo-localization';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import it from './locales/it.json';
 import en from './locales/en.json';
+import es from './locales/es.json';
 
 export const LANGUAGE_STORAGE_KEY = 'shelfy_language';
-export type LanguageOption = 'system' | 'it' | 'en';
-export type AppLanguage = 'it' | 'en';
+export type LanguageOption = 'system' | 'it' | 'en' | 'es';
+export type AppLanguage = 'it' | 'en' | 'es';
 
 const resources = {
   it: { translation: it },
   en: { translation: en },
+  es: { translation: es },
 };
 
 function resolveDeviceLanguage(): AppLanguage {
   const code = Localization.getLocales()[0]?.languageCode;
-  return code === 'it' ? 'it' : 'en';
+  return code === 'it' || code === 'es' ? code : 'en';
 }
 
 let ready = false;
@@ -36,6 +38,12 @@ export async function initI18n(): Promise<void> {
     interpolation: { escapeValue: false },
   });
   ready = true;
+}
+
+/** Locale per formattare date e numeri nella lingua dell'app. */
+export function dateLocale(): string {
+  const lang = i18n.language;
+  return lang === 'it' ? 'it-IT' : lang === 'es' ? 'es-ES' : 'en-US';
 }
 
 export async function setAppLanguage(option: LanguageOption): Promise<void> {

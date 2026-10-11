@@ -6,9 +6,12 @@ import { useRecipes } from '@/context/RecipesContext';
 import { showAlert } from '@/lib/alert';
 import RecipeDetailView from '@/components/RecipeDetailView';
 import Pill from '@/components/Pill';
-import { T, FONTS } from '@/constants/theme';
+import { FONTS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 
 export default function MyRecipeDetailScreen() {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { myRecipes, publishMyRecipe, removeMyRecipe } = useRecipes();
   const router = useRouter();
@@ -108,9 +111,9 @@ export default function MyRecipeDetailScreen() {
                 onPress={handlePublish}
               >
                 {publishing ? (
-                  <ActivityIndicator color="#fbfaf3" />
+                  <ActivityIndicator color={T.onPrimary} />
                 ) : (
-                  <Text style={{ fontFamily: FONTS.sansSemiBold, fontSize: 16, color: '#fbfaf3' }}>
+                  <Text style={{ fontFamily: FONTS.sansSemiBold, fontSize: 16, color: T.onPrimary }}>
                     {t('recipeDetail.publishToCommunity')}
                   </Text>
                 )}
@@ -128,7 +131,7 @@ export default function MyRecipeDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T }: Theme) => StyleSheet.create({
   center: { flex: 1, backgroundColor: T.bg, justifyContent: 'center', alignItems: 'center' },
   metaDot: { color: T.mute, fontSize: 13 },
   sourceBadge: {

@@ -2,6 +2,7 @@
 // Richiede una build EAS/dev-client: NON funziona in Expo Go (il modulo nativo
 // RNTextRecognition non è incluso nel binario di Expo Go).
 import Constants from 'expo-constants';
+import { rowsFromBoxes, type OcrBox } from './ocrRows';
 
 const isExpoGo = Constants.executionEnvironment === 'storeClient';
 
@@ -27,5 +28,18 @@ export async function recognizeText(uri: string): Promise<string> {
     );
   }
   const result = await TextRecognition.recognize(uri);
-  return result.text ?? '';
+  // Le righe con le coordinate permettono di riunire nome e prezzo di una riga
+  // anche quando ML Kit li mette in blocchi separati (scontrini a colonne).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const boxes: OcrBox[] = (result.blocks ?? []).flatMap((b: any) =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (b.lines ?? []).map((l: any) => ({
+      text: l.text ?? '',
+      left: l.frame?.left,
+      top: l.frame?.top,
+      width: l.frame?.width,
+      height: l.frame?.height,
+    })),
+  );
+  return rowsFromBoxes(boxes) || (result.text ?? '');
 }

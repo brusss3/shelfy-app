@@ -8,24 +8,31 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
-import { T, FONTS, RADIUS, CLAY } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 import { useShopping } from '@/context/ShoppingContext';
 import { useProducts } from '@/context/ProductsContext';
 import { usePantry } from '@/context/PantryContext';
 import { useAuth } from '@/context/AuthContext';
-import { NewShoppingItem, LatestPrice, ShoppingItem } from '@/types';
+import { NewShoppingItem, LatestPrice, ShoppingFavorite, ShoppingItem } from '@/types';
 import {
   subscribeToLatestPrices, bestRecent, fetchOpenPrices, mergePrices, loadPriceArea, savePriceArea,
 } from '@/lib/prices';
 import { searchProducts, ProductSuggestion } from '@/lib/productSearch';
+import { favoriteKey } from '@/lib/shopping';
 import { showAlert } from '@/lib/alert';
 import ShoppingRow from '@/components/ShoppingRow';
 import PriceSheet from '@/components/PriceSheet';
 import PriceAreaSheet from '@/components/PriceAreaSheet';
+import TutorialModal, { HelpButton, useTutorial } from '@/components/Tutorial';
 import ProfileButton from '@/components/ProfileButton';
 import PrimaryButton from '@/components/PrimaryButton';
 
 const ZONE_ICONS: Record<string, string> = { frigo: '❄️', freezer: '🧊', dispensa: '📦' };
+
+// Una voce diventa scorciatoia dopo essere stata aggiunta almeno tante volte.
+const FAVORITE_MIN_USES = 2;
+const FAVORITE_MAX_SHOWN = 8;
 
 interface Suggestion {
   key: string;
@@ -37,12 +44,19 @@ interface Suggestion {
 }
 
 export default function ShoppingScreen() {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { t } = useTranslation();
+  // Solo dal bottone "?": è una tab, un popup alla prima apertura darebbe fastidio.
+  const tutorial = useTutorial('shopping', false);
   const router = useRouter();
   const { user } = useAuth();
   const { activePantry } = usePantry();
   const { products } = useProducts();
-  const { items, loading, openCount, addItem, toggleItem, setItemCount, removeItem, clearChecked } = useShopping();
+  const {
+    items, favorites, loading, openCount, addItem, toggleItem, setItemCount, removeItem, clearChecked,
+    removeFavorite,
+  } = useShopping();
 
   const [text, setText] = useState('');
   const [remote, setRemote] = useState<ProductSuggestion[]>([]);
@@ -61,6 +75,15 @@ export default function ShoppingScreen() {
   const inCart = useMemo(() => items.filter((i) => i.checked), [items]);
 
   const query = text.trim();
+
+  // Le voci che aggiungi spesso, come scorciatoie: quelle già da comprare
+  // non servono (aggiungerle di nuovo ne alzerebbe solo la quantità).
+  const quickAdd = useMemo<ShoppingFavorite[]>(() => {
+    const inList = new Set(open.map((i) => favoriteKey(i)));
+    return favorites
+      .filter((f) => f.uses >= FAVORITE_MIN_USES && !inList.has(f.id))
+      .slice(0, FAVORITE_MAX_SHOWN);
+  }, [favorites, open]);
 
   // Prezzi noti dei prodotti in lista (solo quelli con barcode: il testo
   // libero non ha un'identità comune a cui agganciarli). La chiave è una
@@ -196,6 +219,24 @@ export default function ShoppingScreen() {
     }
   };
 
+  const addFavorite = (f: ShoppingFavorite) => {
+    add({
+      name: f.name, brand: f.brand, qty: f.qty, barcode: f.barcode,
+      category: f.category, tint: f.tint, zone: f.zone,
+    });
+  };
+
+  const confirmRemoveFavorite = (f: ShoppingFavorite) => {
+    showAlert(
+      t('shopping.removeFavoriteTitle'),
+      t('shopping.removeFavoriteBody', { name: f.name }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('shopping.removeFavorite'), style: 'destructive', onPress: () => { removeFavorite(f.id).catch(console.warn); } },
+      ],
+    );
+  };
+
   const addFree = () => {
     if (!query) return;
     add({ name: query });
@@ -249,8 +290,12 @@ export default function ShoppingScreen() {
               </TouchableOpacity>
             </View>
           </View>
-          <ProfileButton />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <HelpButton onPress={tutorial.open} />
+            <ProfileButton />
+          </View>
         </View>
+        <TutorialModal id="shopping" visible={tutorial.visible} onClose={tutorial.close} />
 
         {loading ? (
           <View style={styles.center}><ActivityIndicator color={T.primary} size="large" /></View>
@@ -364,6 +409,33 @@ export default function ShoppingScreen() {
           </View>
         )}
 
+        {/* Scorciatoie: ciò che aggiungi spesso, a un tocco. */}
+        {query.length === 0 && quickAdd.length > 0 && (
+          <View style={styles.quickWrap}>
+            <Text style={styles.quickLabel}>{t('shopping.frequent')}</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.quickRow}
+            >
+              {quickAdd.map((f) => (
+                <TouchableOpacity
+                  key={f.id}
+                  style={styles.quickChip}
+                  onPress={() => addFavorite(f)}
+                  onLongPress={() => confirmRemoveFavorite(f)}
+                  activeOpacity={0.7}
+                  accessibilityLabel={t('shopping.a11y.quickAdd', { name: f.name })}
+                >
+                  <Ionicons name="add" size={15} color={T.primaryInk} />
+                  <Text style={styles.quickChipText} numberOfLines={1}>{f.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         <PriceSheet
           item={priceItem && priceItem.barcode ? priceItem : null}
           prices={priceItem?.barcode ? pricesByBarcode[priceItem.barcode] ?? [] : []}
@@ -431,7 +503,7 @@ export default function ShoppingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { paddingBottom: 24 },
@@ -485,12 +557,25 @@ const styles = StyleSheet.create({
   sugSub: { fontSize: 12, fontFamily: FONTS.sans, color: T.mute, marginTop: 1 },
   sugSearching: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12, paddingHorizontal: 14 },
 
+  quickWrap: { marginBottom: 4 },
+  quickLabel: {
+    fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.6,
+    textTransform: 'uppercase', marginHorizontal: 20, marginBottom: 6,
+  },
+  quickRow: { paddingHorizontal: 16, gap: 8 },
+  quickChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: 200,
+    paddingVertical: 8, paddingLeft: 10, paddingRight: 14, borderRadius: RADIUS.pill,
+    backgroundColor: T.primarySoft,
+  },
+  quickChipText: { fontSize: 14, fontFamily: FONTS.sansSemiBold, color: T.primaryInk, flexShrink: 1 },
+
   toastWrap: { alignItems: 'center', marginBottom: 8 },
   toast: {
     maxWidth: '86%', backgroundColor: T.primary, borderRadius: RADIUS.md,
     paddingVertical: 8, paddingHorizontal: 14,
   },
-  toastText: { color: '#fbfaf3', fontSize: 13, fontFamily: FONTS.sansMedium },
+  toastText: { color: T.onPrimary, fontSize: 13, fontFamily: FONTS.sansMedium },
 
   addBar: {
     flexDirection: 'row', alignItems: 'center', gap: 10,

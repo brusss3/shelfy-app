@@ -17,6 +17,8 @@ export interface ParsedReceipt {
   chain: string | null;
   /** Data dello scontrino, AAAA-MM-GG, solo se plausibile (non futura, entro 30 giorni). */
   date: string | null;
+  /** Comune del punto vendita, dall'indirizzo in intestazione ("40100 BOLOGNA BO"). */
+  city: string | null;
 }
 
 // Righe che sono chiaramente NON un prodotto: intestazioni, totali, dati fiscali.
@@ -101,6 +103,21 @@ function detectChain(lines: string[]): string | null {
   return null;
 }
 
+// "40100 BOLOGNA BO", "40100 Bologna (BO)", "Via Roma 12 40100 Bologna".
+const CAP_CITY = /\b\d{5}\s+([A-Za-zÀ-ÿ'’. -]{2,40}?)\s*(?:\(\s*[A-Za-z]{2}\s*\)|\b[A-Z]{2}\b)?\s*$/;
+
+function titleCase(s: string): string {
+  return s.toLowerCase().replace(/(^|[\s'’-])([a-zà-ÿ])/g, (_, sep, c) => sep + c.toUpperCase()).trim();
+}
+
+function detectCity(lines: string[]): string | null {
+  for (const line of lines.slice(0, 20)) {
+    const m = line.match(CAP_CITY);
+    if (m && /[A-Za-zÀ-ÿ]{3}/.test(m[1])) return titleCase(m[1].replace(/[.\s]+$/, ''));
+  }
+  return null;
+}
+
 function detectDate(text: string, now: Date): string | null {
   const re = /\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4}|\d{2})\b/g;
   for (const m of text.matchAll(re)) {
@@ -117,15 +134,73 @@ function detectDate(text: string, now: Date): string | null {
   return null;
 }
 
+// Riga di intestazione delle colonne ("DESCRIZIONE  QTA  PREZZO  IVA"): la parte
+// sopra è anagrafica del negozio e pubblicità, non prodotti.
+const COLUMN_HEADER_WORDS = /\b(descrizione|articolo|prodotto|qt[àa]|prezzo|importo|iva)\b/gi;
+// Dopo il totale non ci sono più prodotti (pagamento, riepilogo IVA, promo).
+const TOTAL_LINE = /^\s*(sub\s?totale|totale)\b/i;
+// Prezzo da solo su una riga, anche negativo (sconto).
+const PRICE_COLUMN_CELL = /^[€\s]*-?\d{1,4}[.,]\d{2}\s*(?:€|eur)?\s*[A-Za-z*]?\s*$/;
+
+/** Parte dello scontrino che contiene i prodotti: dopo l'intestazione delle
+ *  colonne (se riconoscibile) e fino al primo totale (se dopo almeno un prezzo). */
+function productSection(lines: string[]): string[] {
+  let start = 0;
+  for (let i = 0; i < Math.min(lines.length, 30); i++) {
+    const hits = lines[i].match(COLUMN_HEADER_WORDS) ?? [];
+    if (hits.length >= 2 || /\bdescrizione\b/i.test(lines[i])) {
+      start = i + 1;
+      break;
+    }
+  }
+  let end = lines.length;
+  let seenPrice = false;
+  for (let i = start; i < lines.length; i++) {
+    if (PRICE_COLUMN_CELL.test(lines[i]) || PRICE_AT_END.test(lines[i])) seenPrice = true;
+    if (seenPrice && TOTAL_LINE.test(lines[i])) {
+      end = i;
+      break;
+    }
+  }
+  return lines.slice(start, end);
+}
+
+/** Scontrini a colonne: l'OCR può dare prima tutti i nomi e poi tutti i prezzi.
+ *  Quando dopo una serie di righe senza prezzo c'è una serie di soli prezzi, li
+ *  abbina in ordine (allineati in fondo, perché in testa può restare rumore). */
+function joinPriceColumn(lines: string[]): string[] {
+  const out: string[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    // Serie di righe-nome (senza prezzo) seguita da una serie di soli prezzi.
+    let j = i;
+    while (j < lines.length && !PRICE_COLUMN_CELL.test(lines[j]) && !PRICE_AT_END.test(lines[j])) j++;
+    let k = j;
+    while (k < lines.length && PRICE_COLUMN_CELL.test(lines[k])) k++;
+    const names = j - i;
+    const prices = k - j;
+    if (prices >= 2 && names >= prices) {
+      out.push(...lines.slice(i, j - prices));
+      for (let n = 0; n < prices; n++) out.push(`${lines[j - prices + n]} ${lines[j + n]}`);
+      i = k;
+    } else {
+      out.push(...lines.slice(i, Math.max(j, i + 1)));
+      i = Math.max(j, i + 1);
+    }
+  }
+  return out;
+}
+
 export function parseReceipt(text: string, now: Date = new Date()): ParsedReceipt {
   const rawLines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const body = joinPriceColumn(productSection(rawLines));
 
   const lines: ReceiptLine[] = [];
-  for (let i = 0; i < rawLines.length; i++) {
-    const raw = rawLines[i];
+  for (let i = 0; i < body.length; i++) {
+    const raw = body[i];
     const lower = raw.toLowerCase();
     if (PRICE_ONLY.test(raw) || DATE_OR_TIME.test(raw)) continue;
-    if (isNoise(lower)) continue;
+    if (isNoise(lower) || CAP_CITY.test(raw)) continue;
 
     // Sconti e resi (importo negativo) non sono prodotti.
     if (/-\s*\d+[.,]\d{2}/.test(raw)) continue;
@@ -137,12 +212,45 @@ export function parseReceipt(text: string, now: Date = new Date()): ParsedReceip
     let priceCents = priceOfLine(raw);
     // Il nome della catena nell'intestazione non è un prodotto.
     if (priceCents === null && i < 15 && CHAIN_PATTERNS.some(([re]) => re.test(raw))) continue;
-    // Molti scontrini stampano il prezzo sulla riga dopo il nome.
-    if (priceCents === null && !WEIGHED.test(raw) && i + 1 < rawLines.length && PRICE_ONLY.test(rawLines[i + 1])) {
-      priceCents = priceOfLine(rawLines[i + 1]);
+    // Molti scontrini stampano il prezzo sulla riga dopo il nome. Se dopo c'è un
+    // altro prezzo da solo è una colonna di prezzi non abbinata: meglio nessun
+    // prezzo che quello di un altro prodotto.
+    if (
+      priceCents === null && !WEIGHED.test(raw) && i + 1 < body.length && PRICE_ONLY.test(body[i + 1]) &&
+      !(i + 2 < body.length && PRICE_ONLY.test(body[i + 2]))
+    ) {
+      priceCents = priceOfLine(body[i + 1]);
     }
     lines.push({ name: cleaned, priceCents });
   }
 
-  return { lines, chain: detectChain(rawLines), date: detectDate(text, now) };
+  return { lines, chain: detectChain(rawLines), date: detectDate(text, now), city: detectCity(rawLines) };
+}
+
+const lineKey = (l: ReceiptLine) => `${l.name.trim().toLowerCase()}|${l.priceCents ?? ''}`;
+
+/** Unisce le letture di più foto dello stesso scontrino (in ordine di scatto).
+ *  Catena, data e comune vengono dalla prima foto che li contiene, di solito
+ *  quella con l'intestazione. Una foto che ha intestazione ma nessun prezzo
+ *  contribuisce solo con quei dati: le sue righe sono pubblicità e indirizzo.
+ *  Le righe ripetute dove due foto si sovrappongono vengono contate una volta. */
+export function mergeReceipts(parts: ParsedReceipt[]): ParsedReceipt {
+  const lines: ReceiptLine[] = [];
+  for (const part of parts) {
+    const headerOnly =
+      parts.length > 1 && !!(part.chain || part.city) && part.lines.every((l) => l.priceCents === null);
+    const incoming = headerOnly ? [] : part.lines;
+    let overlap = 0;
+    for (let k = Math.min(8, lines.length, incoming.length); k > 0; k--) {
+      const tail = lines.slice(-k).map(lineKey);
+      if (incoming.slice(0, k).every((l, i) => lineKey(l) === tail[i])) { overlap = k; break; }
+    }
+    lines.push(...incoming.slice(overlap));
+  }
+  return {
+    lines,
+    chain: parts.find((p) => p.chain)?.chain ?? null,
+    date: parts.find((p) => p.date)?.date ?? null,
+    city: parts.find((p) => p.city)?.city ?? null,
+  };
 }

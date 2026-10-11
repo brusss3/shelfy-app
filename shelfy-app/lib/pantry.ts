@@ -1,8 +1,8 @@
 import {
   collection, doc, onSnapshot, query, where, updateDoc, Timestamp,
 } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { db, functions } from './firebase';
+import { db } from './firebase';
+import { callable } from './callable';
 import { Pantry, PantryInvite, PantryMember, PantryRole } from '@/types';
 
 function tsToIso(ts: unknown): string | null {
@@ -95,7 +95,7 @@ export interface CreatePantryResult {
 }
 
 export async function createPantry(name: string, displayName: string): Promise<CreatePantryResult> {
-  const call = httpsCallable<{ name: string; displayName: string }, CreatePantryResult>(functions, 'createPantry');
+  const call = callable<{ name: string; displayName: string }, CreatePantryResult>('createPantry');
   const res = await call({ name, displayName });
   return res.data;
 }
@@ -107,7 +107,7 @@ export interface JoinPantryResult {
 }
 
 export async function joinPantry(code: string, displayName: string): Promise<JoinPantryResult> {
-  const call = httpsCallable<{ code: string; displayName: string }, JoinPantryResult>(functions, 'joinPantry');
+  const call = callable<{ code: string; displayName: string }, JoinPantryResult>('joinPantry');
   const res = await call({ code: code.trim().toUpperCase(), displayName });
   return res.data;
 }
@@ -118,27 +118,27 @@ export interface RotateInviteCodeResult {
 }
 
 export async function rotateInviteCode(pantryId: string): Promise<RotateInviteCodeResult> {
-  const call = httpsCallable<{ pantryId: string }, RotateInviteCodeResult>(functions, 'rotateInviteCode');
+  const call = callable<{ pantryId: string }, RotateInviteCodeResult>('rotateInviteCode');
   const res = await call({ pantryId });
   return res.data;
 }
 
 export async function disableInviteCode(pantryId: string): Promise<void> {
-  const call = httpsCallable<{ pantryId: string }, { ok: true }>(functions, 'disableInviteCode');
+  const call = callable<{ pantryId: string }, { ok: true }>('disableInviteCode');
   await call({ pantryId });
 }
 
 export async function leavePantry(pantryId: string): Promise<void> {
-  const call = httpsCallable<{ pantryId: string }, { ok: true }>(functions, 'leavePantry');
+  const call = callable<{ pantryId: string }, { ok: true }>('leavePantry');
   await call({ pantryId });
 }
 
 export async function removeMember(pantryId: string, uid: string): Promise<void> {
-  const call = httpsCallable<{ pantryId: string; uid: string }, { ok: true }>(functions, 'removeMember');
+  const call = callable<{ pantryId: string; uid: string }, { ok: true }>('removeMember');
   await call({ pantryId, uid });
 }
 
 export async function deletePantry(pantryId: string): Promise<void> {
-  const call = httpsCallable<{ pantryId: string }, { ok: true }>(functions, 'deletePantry');
+  const call = callable<{ pantryId: string }, { ok: true }>('deletePantry');
   await call({ pantryId });
 }

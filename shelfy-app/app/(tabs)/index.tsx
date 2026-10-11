@@ -17,9 +17,8 @@ import ProductRow from '@/components/ProductRow';
 import ProfileButton from '@/components/ProfileButton';
 import PrimaryButton from '@/components/PrimaryButton';
 import { LinearGradient } from 'expo-linear-gradient';
-import {
-  T, FONTS, RADIUS, DEPTH, CLAY, SURFACE, GRADIENT, ZONE_MATERIAL,
-} from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 
 type Zone = 'all' | 'frigo' | 'freezer' | 'dispensa';
 
@@ -31,6 +30,8 @@ const ZONES: { id: Zone; labelKey: string; icon: string }[] = [
 ];
 
 export default function HomeScreen() {
+  const { T, GRADIENT, SURFACE, ZONE_MATERIAL } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { products, loading, productLimit, productsLeft } = useProducts();
   const { monetizationEnabled, onUpgradeIntent } = usePremiumGate();
   const { user } = useAuth();
@@ -124,7 +125,7 @@ export default function HomeScreen() {
                   urgentCount > 0 ? t('home.urgentCount', { count: urgentCount }) : null,
                 ].filter(Boolean).join(' · ')}
               </Text>
-              <Ionicons name="chevron-forward" size={14} color="#a86322" />
+              <Ionicons name="chevron-forward" size={14} color={T.warn} />
             </TouchableOpacity>
           )}
         </View>
@@ -194,7 +195,7 @@ export default function HomeScreen() {
               // del marchio.
               const material = z.id === 'all' ? null : ZONE_MATERIAL[z.id];
               const surface = active ? (material?.surface ?? GRADIENT.primary) : SURFACE.card;
-              const labelColor = active ? (material?.ink ?? '#fbfaf3') : T.ink;
+              const labelColor = active ? (material?.ink ?? T.onPrimary) : T.ink;
               return (
                 <TouchableOpacity key={z.id} onPress={() => setZone(z.id)} activeOpacity={0.9}>
                   <LinearGradient colors={surface} style={styles.chip}>
@@ -273,7 +274,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY, DEPTH }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   scroll: { paddingBottom: 120 },
 
@@ -307,11 +308,11 @@ const styles = StyleSheet.create({
   },
   urgentPill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#f6e7c6', borderRadius: RADIUS.md,
+    backgroundColor: T.warnSoft, borderRadius: RADIUS.md,
     paddingVertical: 7, paddingHorizontal: 12,
   },
   urgentPillIcon: { fontSize: 13 },
-  urgentPillText: { fontFamily: FONTS.sansBold, fontSize: 12, color: '#7a5a26' },
+  urgentPillText: { fontFamily: FONTS.sansBold, fontSize: 12, color: T.warnInk },
 
   limitBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
@@ -333,7 +334,7 @@ const styles = StyleSheet.create({
   // riempie, non si preme, e l'incavo lo distingue dalle superfici sollevate.
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#ece8de', borderRadius: RADIUS.input,
+    backgroundColor: T.field, borderRadius: RADIUS.input,
     paddingHorizontal: 16, paddingVertical: 12,
     marginHorizontal: 20, marginBottom: 12,
     boxShadow: CLAY.inset,

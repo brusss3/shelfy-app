@@ -18,6 +18,11 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Voci che l'utente aggiunge spesso alla lista: suggerimenti rapidi
+    match /users/{userId}/shoppingFavorites/{favId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
     // Ricette community salvate dall'utente per cucinarle dopo
     match /users/{userId}/savedRecipes/{recipeId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
@@ -174,6 +179,12 @@ service cloud.firestore {
 
       // Lista della spesa della casa: la vedono e la spuntano tutti i membri.
       match /shoppingItems/{itemId} {
+        allow read, write: if request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/pantries/$(pantryId)).data.memberIds;
+      }
+
+      // Suggerimenti rapidi della lista, condivisi come la lista stessa.
+      match /shoppingFavorites/{favId} {
         allow read, write: if request.auth != null
           && request.auth.uid in get(/databases/$(database)/documents/pantries/$(pantryId)).data.memberIds;
       }

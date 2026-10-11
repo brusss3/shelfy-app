@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import { useFonts,
   DMSans_400Regular, DMSans_500Medium, DMSans_700Bold,
 } from '@expo-google-fonts/dm-sans';
 import * as SplashScreen from 'expo-splash-screen';
 import * as NavigationBar from 'expo-navigation-bar';
 import { initI18n } from '@/lib/i18n';
+import { ThemeProvider, ThemeMode, loadThemeMode, useTheme } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { PantryProvider } from '@/context/PantryContext';
 import { ProductsProvider } from '@/context/ProductsContext';
@@ -17,6 +17,7 @@ import { CommunityProvider } from '@/context/CommunityContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { setupNotificationHandler, setupNotificationCategories } from '@/lib/notifications';
 import NotificationsScheduler from '@/components/NotificationsScheduler';
+import LanguageSync from '@/components/LanguageSync';
 import SurveyModal from '@/components/SurveyModal';
 import { captureAcquisitionSource } from '@/lib/acquisition';
 
@@ -32,6 +33,7 @@ export default function RootLayout() {
     DMSans_700Bold,
   });
   const [i18nReady, setI18nReady] = useState(false);
+  const [themeMode, setThemeMode] = useState<ThemeMode | null>(null);
 
   useEffect(() => {
     initI18n().then(() => {
@@ -42,7 +44,11 @@ export default function RootLayout() {
     });
   }, []);
 
-  const appReady = (fontsLoaded || fontError) && i18nReady;
+  // Il tema salvato si legge prima del primo render, come la lingua: senza,
+  // chi usa il tema scuro vedrebbe un lampo di chiaro a ogni avvio.
+  useEffect(() => { loadThemeMode().then(setThemeMode); }, []);
+
+  const appReady = (fontsLoaded || fontError) && i18nReady && themeMode !== null;
 
   useEffect(() => {
     // Lo splash nativo resta su finché font e lingua non sono pronti: ora
@@ -66,17 +72,27 @@ export default function RootLayout() {
   if (!appReady) return null;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <ThemeProvider initialMode={themeMode}>
+      <RootNavigator />
+    </ThemeProvider>
+  );
+}
+
+function RootNavigator() {
+  const { T } = useTheme();
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: T.bg }}>
       <AuthProvider>
         <PantryProvider>
         <NotificationsScheduler />
+        <LanguageSync />
         <SurveyModal />
         <ProductsProvider>
           <ShoppingProvider>
           <RecipesProvider>
           <CommunityProvider>
-          <StatusBar style="dark" />
-          <Stack screenOptions={{ headerShown: false }}>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: T.bg } }}>
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal' }} />

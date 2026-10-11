@@ -12,9 +12,12 @@ import { submitFeedback, FeedbackCategory, saveUserWebPushToken } from '@/lib/fi
 import { openSubscriptionManagement } from '@/lib/purchases';
 import { registerWebPush, needsHomeScreenInstall } from '@/lib/webPush';
 import { showAlert } from '@/lib/alert';
-import { LanguageOption, getStoredLanguageOption, setAppLanguage } from '@/lib/i18n';
+import { LanguageOption, getStoredLanguageOption, setAppLanguage, dateLocale } from '@/lib/i18n';
+import LanguagePicker from '@/components/LanguagePicker';
+import { Ionicons } from '@expo/vector-icons';
 import PrimaryButton from '@/components/PrimaryButton';
-import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, useThemeMode, type ThemeMode, type Theme } from '@/context/ThemeContext';
 
 const CATEGORIES: { id: FeedbackCategory; labelKey: string }[] = [
   { id: 'suggerimento', labelKey: 'settings.feedback.categories.idea' },
@@ -23,16 +26,19 @@ const CATEGORIES: { id: FeedbackCategory; labelKey: string }[] = [
   { id: 'altro', labelKey: 'settings.feedback.categories.other' },
 ];
 
-const LANGUAGE_OPTIONS: { id: LanguageOption; labelKey: string }[] = [
-  { id: 'system', labelKey: 'settings.language.system' },
-  { id: 'it', labelKey: 'settings.language.it' },
-  { id: 'en', labelKey: 'settings.language.en' },
+const THEME_OPTIONS: { id: ThemeMode; icon: 'phone-portrait-outline' | 'sunny-outline' | 'moon-outline'; labelKey: string }[] = [
+  { id: 'system', icon: 'phone-portrait-outline', labelKey: 'settings.theme.system' },
+  { id: 'light', icon: 'sunny-outline', labelKey: 'settings.theme.light' },
+  { id: 'dark', icon: 'moon-outline', labelKey: 'settings.theme.dark' },
 ];
 
 export default function SettingsScreen() {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { user, logOut, setNotificationsEnabled, monetizationEnabled } = useAuth();
   const router = useRouter();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const { mode: themeMode, setMode: setThemeMode } = useThemeMode();
 
   const [savingNotif, setSavingNotif] = useState(false);
   const [fbCategory, setFbCategory] = useState<FeedbackCategory>('bug');
@@ -54,8 +60,7 @@ export default function SettingsScreen() {
   const formatDate = (iso: string | null | undefined): string => {
     if (!iso) return '';
     const d = new Date(iso);
-    const locale = i18n.language === 'it' ? 'it-IT' : 'en-US';
-    return d.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
+    return d.toLocaleDateString(dateLocale(), { day: 'numeric', month: 'long', year: 'numeric' });
   };
 
   const onToggleNotif = async (value: boolean) => {
@@ -178,16 +183,24 @@ export default function SettingsScreen() {
 
           {/* Lingua */}
           <Section title={t('settings.language.title')}>
+            <LanguagePicker value={langOption} onChange={handleChangeLanguage} />
+          </Section>
+
+          {/* Tema */}
+          <Section title={t('settings.theme.title')}>
             <View style={styles.langRow}>
-              {LANGUAGE_OPTIONS.map((opt) => {
-                const active = langOption === opt.id;
+              {THEME_OPTIONS.map((opt) => {
+                const active = themeMode === opt.id;
                 return (
                   <TouchableOpacity
                     key={opt.id}
-                    onPress={() => handleChangeLanguage(opt.id)}
+                    onPress={() => setThemeMode(opt.id)}
                     activeOpacity={0.85}
                     style={[styles.langOpt, active && styles.langOptActive]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
                   >
+                    <Ionicons name={opt.icon} size={18} color={active ? T.primaryInk : T.ink2} />
                     <Text style={[styles.langOptText, active && styles.langOptTextActive]}>{t(opt.labelKey)}</Text>
                   </TouchableOpacity>
                 );
@@ -269,6 +282,7 @@ export default function SettingsScreen() {
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -277,7 +291,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY, SHADOW }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
 
   header: {
@@ -306,7 +320,7 @@ const styles = StyleSheet.create({
   premiumBadge: {
     backgroundColor: T.primary, borderRadius: RADIUS.tag, paddingVertical: 4, paddingHorizontal: 10,
   },
-  premiumBadgeText: { fontFamily: FONTS.sansBold, fontSize: 10, color: '#fbfaf3', letterSpacing: 0.6 },
+  premiumBadgeText: { fontFamily: FONTS.sansBold, fontSize: 10, color: T.onPrimary, letterSpacing: 0.6 },
 
   section: { gap: 8 },
   sectionTitle: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: T.mute, marginLeft: 4 },
@@ -323,13 +337,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: T.primary, borderRadius: RADIUS.lg, padding: 16, ...SHADOW.card,
   },
-  upsellTitle: { fontFamily: FONTS.sansBold, fontSize: 15, color: '#fbfaf3' },
-  upsellDesc: { fontFamily: FONTS.sans, fontSize: 12, color: 'rgba(251,250,243,0.8)', marginTop: 2 },
-  chevronLarge: { fontSize: 22, color: '#fbfaf3' },
+  upsellTitle: { fontFamily: FONTS.sansBold, fontSize: 15, color: T.onPrimary },
+  upsellDesc: { fontFamily: FONTS.sans, fontSize: 12, color: T.onPrimary, opacity: 0.8, marginTop: 2 },
+  chevronLarge: { fontSize: 22, color: T.onPrimary },
 
   langRow: { flexDirection: 'row', gap: 8 },
   langOpt: {
-    flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: RADIUS.md,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 10, borderRadius: RADIUS.md,
     backgroundColor: T.bg, borderWidth: 1, borderColor: T.line,
   },
   langOptActive: { backgroundColor: T.primarySoft, borderColor: T.primary },
@@ -345,7 +360,7 @@ const styles = StyleSheet.create({
   fbCatText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: T.ink2 },
   fbCatTextActive: { color: T.primaryInk },
   fbInput: {
-    backgroundColor: '#ece8de', borderRadius: RADIUS.input, boxShadow: CLAY.inset,
+    backgroundColor: T.field, borderRadius: RADIUS.input, boxShadow: CLAY.inset,
     padding: 12, fontFamily: FONTS.sans, fontSize: 14, color: T.ink, minHeight: 96,
   },
   logoutBtn: {

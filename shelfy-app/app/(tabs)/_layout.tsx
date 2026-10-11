@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Tabs, useRouter } from 'expo-router';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { T } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useShopping } from '@/context/ShoppingContext';
 import { registerForPushNotifications } from '@/lib/notifications';
@@ -11,6 +11,7 @@ import { saveUserPushToken } from '@/lib/firestore';
 type TabIconProps = { focused: boolean; icon: string; badge?: number };
 
 function TabIcon({ focused, icon, badge }: TabIconProps) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.tabItem}>
       <Text style={[styles.tabEmoji, { opacity: focused ? 1 : 0.5 }]}>{icon}</Text>
@@ -24,6 +25,7 @@ function TabIcon({ focused, icon, badge }: TabIconProps) {
 }
 
 export default function TabsLayout() {
+  const { T } = useTheme();
   const { user, loading } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -121,7 +123,7 @@ export default function TabsLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T }: Theme) => StyleSheet.create({
   tabItem: { alignItems: 'center', justifyContent: 'center' },
   // lineHeight esplicito: senza, i glifi emoji vengono tagliati in basso su
   // Android (metriche del font più alte del box di riga di default).
@@ -131,5 +133,5 @@ const styles = StyleSheet.create({
     borderRadius: 9, paddingHorizontal: 5, backgroundColor: T.primary,
     alignItems: 'center', justifyContent: 'center',
   },
-  badgeText: { color: '#fbfaf3', fontSize: 10, fontWeight: '700', lineHeight: 13 },
+  badgeText: { color: T.onPrimary, fontSize: 10, fontWeight: '700', lineHeight: 13 },
 });

@@ -10,11 +10,14 @@ import { useAuth } from '@/context/AuthContext';
 import { getOfferings, purchasePackage, restorePurchases, getActiveSubscriptionInfo } from '@/lib/purchases';
 import { showAlert } from '@/lib/alert';
 import PrimaryButton from '@/components/PrimaryButton';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 
 const isExpoGo = Constants.executionEnvironment === 'storeClient';
 
 export default function PaywallScreen() {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { user, setPremium, setSubscription } = useAuth();
   const router = useRouter();
   const { t, i18n } = useTranslation();
@@ -124,7 +127,7 @@ export default function PaywallScreen() {
               const isAnnual = pkg.packageType === 'ANNUAL';
               const priceValue = (pkg.product.price / 12).toFixed(2);
               const monthlyEquiv = isAnnual
-                ? t('paywall.perMonth', { price: i18n.language === 'it' ? priceValue.replace('.', ',') : priceValue })
+                ? t('paywall.perMonth', { price: (i18n.language === 'it' || i18n.language === 'es') ? priceValue.replace('.', ',') : priceValue })
                 : null;
               return (
                 <TouchableOpacity
@@ -138,12 +141,12 @@ export default function PaywallScreen() {
                       <Text style={styles.bestValueText}>{t('paywall.bestValue')}</Text>
                     </View>
                   )}
-                  <Text style={[styles.packagePeriod, isSelected && { color: '#fbfaf3' }]}>
+                  <Text style={[styles.packagePeriod, isSelected && { color: T.onPrimary }]}>
                     {pkg.packageType === 'ANNUAL' ? t('paywall.annual')
                       : pkg.packageType === 'MONTHLY' ? t('paywall.monthly')
                       : pkg.product.title}
                   </Text>
-                  <Text style={[styles.packagePrice, isSelected && { color: '#fbfaf3' }]}>
+                  <Text style={[styles.packagePrice, isSelected && { color: T.onPrimary }]}>
                     {pkg.product.priceString}
                   </Text>
                   {monthlyEquiv && (
@@ -184,7 +187,7 @@ export default function PaywallScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, SHADOW }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   scroll: { paddingHorizontal: 28, paddingBottom: 48, alignItems: 'center', paddingTop: 32 },
 
@@ -196,7 +199,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.primary, borderRadius: RADIUS.tag,
     paddingVertical: 5, paddingHorizontal: 14, marginBottom: 14,
   },
-  premiumBadgeText: { color: '#fbfaf3', fontSize: 11, fontFamily: FONTS.sansBold, letterSpacing: 1.2 },
+  premiumBadgeText: { color: T.onPrimary, fontSize: 11, fontFamily: FONTS.sansBold, letterSpacing: 1.2 },
   title: {
     fontFamily: FONTS.serifItalic, fontSize: 36, color: T.ink,
     letterSpacing: -0.8, textAlign: 'center', marginBottom: 10,
@@ -240,7 +243,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.warn, borderRadius: RADIUS.tag,
     paddingVertical: 3, paddingHorizontal: 10,
   },
-  bestValueText: { fontSize: 10, color: '#fff', fontFamily: FONTS.sansBold },
+  bestValueText: { fontSize: 10, color: T.onPrimary, fontFamily: FONTS.sansBold },
   packagePeriod: { fontSize: 13, fontFamily: FONTS.sansSemiBold, color: T.ink, marginTop: 8 },
   packagePrice: { fontSize: 22, fontFamily: FONTS.serifItalic, color: T.ink, marginTop: 4 },
   packageSub: { fontSize: 11, color: T.mute, fontFamily: FONTS.sans, marginTop: 2 },

@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import i18n from '@/lib/i18n';
+import i18n, { dateLocale } from '@/lib/i18n';
 import { useAuth } from '@/context/AuthContext';
 import {
   getAllUsers, adminSetPremium, adminSetAdmin, AdminUserRecord,
@@ -19,7 +19,8 @@ import {
 import { Survey } from '@/types';
 import { registerForPushNotifications, sendAdminTestPushNotification } from '@/lib/notifications';
 import { showAlert } from '@/lib/alert';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import { FONTS, RADIUS, getTheme } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 
 type Tab = 'users' | 'feedback' | 'notifiche' | 'ai' | 'sondaggi' | 'guide';
 type SortMode = 'newest' | 'oldest' | 'az' | 'za';
@@ -77,8 +78,7 @@ function confirm(title: string, message: string, onYes: () => void, destructive 
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return '';
-  const locale = i18n.language === 'it' ? 'it-IT' : 'en-US';
-  return new Date(iso).toLocaleDateString(locale);
+  return new Date(iso).toLocaleDateString(dateLocale());
 }
 
 function daysSince(iso: string | null | undefined): number | null {
@@ -98,6 +98,8 @@ function formatRelative(iso: string | null | undefined): string {
 }
 
 export default function AdminScreen() {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { user, updateAdminNotifSettings } = useAuth();
   const router = useRouter();
   const { t } = useTranslation();
@@ -745,7 +747,7 @@ export default function AdminScreen() {
                     onPress={handleRegisterPush}
                     disabled={registeringPush}
                   >
-                    {registeringPush ? <ActivityIndicator color="#fbfaf3" /> : (
+                    {registeringPush ? <ActivityIndicator color={T.onPrimary} /> : (
                       <Text style={styles.btnText}>{user.pushToken ? t('admin.reRegisterDevice') : t('admin.registerDevice')}</Text>
                     )}
                   </TouchableOpacity>
@@ -802,6 +804,7 @@ export default function AdminScreen() {
 }
 
 function TabBtn({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <TouchableOpacity onPress={onPress} style={[styles.tab, active && styles.tabActive]} activeOpacity={0.85}>
       <Text style={[styles.tabText, active && styles.tabTextActive]}>{label}</Text>
@@ -810,6 +813,7 @@ function TabBtn({ label, active, onPress }: { label: string; active: boolean; on
 }
 
 function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <TouchableOpacity onPress={onPress} style={[styles.chip, active && styles.chipActive]} activeOpacity={0.85}>
       <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
@@ -818,6 +822,7 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
 }
 
 function SortBtn({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <TouchableOpacity onPress={onPress} style={[styles.sortBtn, active && styles.sortBtnActive]} activeOpacity={0.85}>
       <Text style={[styles.sortBtnText, active && styles.sortBtnTextActive]}>{label}</Text>
@@ -832,6 +837,7 @@ function fbLabel(c: string) {
   return i18n.t('admin.fbCategoryOther');
 }
 function fbTagStyle(c: string) {
+  const { T } = getTheme();
   if (c === 'bug') return { backgroundColor: T.urgentSoft };
   if (c === 'suggerimento') return { backgroundColor: T.okSoft };
   if (c === 'prodotto') return { backgroundColor: T.warnSoft };
@@ -844,12 +850,13 @@ function fbStatusLabel(s: FeedbackStatus) {
   return i18n.t('admin.fbStatusNew');
 }
 function fbStatusStyle(s: FeedbackStatus) {
+  const { T } = getTheme();
   if (s === 'letto') return { backgroundColor: T.line };
   if (s === 'risolto') return { backgroundColor: T.okSoft };
   return { backgroundColor: T.urgentSoft };
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, SHADOW }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
@@ -879,13 +886,13 @@ const styles = StyleSheet.create({
   chip: { paddingVertical: 7, paddingHorizontal: 14, borderRadius: RADIUS.md, backgroundColor: T.surface, borderWidth: 1, borderColor: T.line },
   chipActive: { backgroundColor: T.primary, borderColor: T.primary },
   chipText: { fontFamily: FONTS.sansMedium, fontSize: 13, color: T.ink2 },
-  chipTextActive: { color: '#fbfaf3' },
+  chipTextActive: { color: T.onPrimary },
 
   sortRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   sortBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: RADIUS.sm, backgroundColor: T.primarySoft },
   sortBtnActive: { backgroundColor: T.primary },
   sortBtnText: { fontFamily: FONTS.sansMedium, fontSize: 12, color: T.primaryInk },
-  sortBtnTextActive: { color: '#fbfaf3' },
+  sortBtnTextActive: { color: T.onPrimary },
 
   resultCount: { fontFamily: FONTS.sans, fontSize: 12, color: T.mute },
 
@@ -912,7 +919,7 @@ const styles = StyleSheet.create({
   btnPrimary: { backgroundColor: T.primary },
   btnSecondary: { backgroundColor: T.primarySoft },
   btnDestructive: { backgroundColor: T.urgentSoft },
-  btnText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: '#fbfaf3' },
+  btnText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: T.onPrimary },
   btnTextSecondary: { color: T.primaryInk },
   btnTextDanger: { color: T.urgent },
 
@@ -948,7 +955,7 @@ const styles = StyleSheet.create({
     flex: 1, backgroundColor: T.primary, borderRadius: RADIUS.md,
     paddingVertical: 11, alignItems: 'center',
   },
-  primaryActionText: { fontFamily: FONTS.sansBold, fontSize: 14, color: '#fbfaf3' },
+  primaryActionText: { fontFamily: FONTS.sansBold, fontSize: 14, color: T.onPrimary },
 
   resultRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
   resultLabel: { flex: 1, fontFamily: FONTS.sans, fontSize: 13, color: T.ink2 },

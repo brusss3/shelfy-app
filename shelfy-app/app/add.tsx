@@ -12,7 +12,8 @@ import FoodTile from '@/components/FoodTile';
 import QuantityStepper from '@/components/QuantityStepper';
 import DateScannerModal from '@/components/DateScannerModal';
 import PrimaryButton from '@/components/PrimaryButton';
-import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 import { tintForCategory } from '@/lib/urgency';
 import { ocrAvailable } from '@/lib/ocr';
 import { showAlert } from '@/lib/alert';
@@ -48,6 +49,8 @@ function daysLeft(iso: string): number {
 }
 
 export default function AddScreen() {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const params = useLocalSearchParams();
   const { addNewProduct } = useProducts();
@@ -464,6 +467,7 @@ export default function AddScreen() {
 }
 
 function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.fieldRow}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -473,6 +477,7 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
 }
 
 function Divider() {
+  const { T } = useTheme();
   return <View style={{ height: 0.5, backgroundColor: T.line, marginLeft: 16 }} />;
 }
 
@@ -482,6 +487,7 @@ const GRADE_COLORS: Record<ScoreGrade, string> = {
 };
 
 function ScoreBadge({ label, grade }: { label: string; grade: ScoreGrade }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.scoreBadge}>
       <View style={[styles.scoreCircle, { backgroundColor: GRADE_COLORS[grade] }]}>
@@ -493,6 +499,7 @@ function ScoreBadge({ label, grade }: { label: string; grade: ScoreGrade }) {
 }
 
 function NutritionRow({ label, value, unit }: { label: string; value?: number; unit: string }) {
+  const styles = useThemedStyles(createStyles);
   if (value === undefined) return null;
   return (
     <View style={styles.nutritionRow}>
@@ -502,7 +509,7 @@ function NutritionRow({ label, value, unit }: { label: string; value?: number; u
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY, SHADOW }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   scroll: { paddingBottom: 20 },
 
@@ -555,7 +562,7 @@ const styles = StyleSheet.create({
   scoreRow: { flexDirection: 'row', gap: 24 },
   scoreBadge: { alignItems: 'center', gap: 4 },
   scoreCircle: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  scoreCircleText: { fontFamily: FONTS.sansBold, fontSize: 15, color: '#fff' },
+  scoreCircleText: { fontFamily: FONTS.sansBold, fontSize: 15, color: T.onPrimary },
   scoreLabel: { fontSize: 11, fontFamily: FONTS.sansMedium, color: T.mute },
 
   nutritionCaption: {
@@ -585,7 +592,7 @@ const styles = StyleSheet.create({
   zoneBtnActive: { backgroundColor: T.primary },
   zoneIcon: { fontSize: 22 },
   zoneLabel: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: T.ink },
-  zoneLabelActive: { color: '#fbfaf3' },
+  zoneLabelActive: { color: T.onPrimary },
 
   estimateBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -654,7 +661,7 @@ const styles = StyleSheet.create({
   pickerLabel: { fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.4 },
   pickerInput: {
     width: '100%', textAlign: 'center',
-    backgroundColor: '#ece8de', borderRadius: RADIUS.input,
+    backgroundColor: T.field, borderRadius: RADIUS.input,
     paddingVertical: 12, fontSize: 20, fontFamily: FONTS.sansBold, color: T.ink,
     boxShadow: CLAY.inset,
   },

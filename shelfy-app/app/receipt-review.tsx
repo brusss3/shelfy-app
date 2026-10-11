@@ -8,12 +8,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useProducts } from '@/context/ProductsContext';
 import { Zone } from '@/types';
-import { T, FONTS, RADIUS, SHADOW, CLAY } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 import { tintForCategory } from '@/lib/urgency';
 import { showAlert } from '@/lib/alert';
 import { usePremiumGate, isProductLimitError } from '@/lib/premiumGate';
 import PrimaryButton from '@/components/PrimaryButton';
 import ProductMatchSheet from '@/components/ProductMatchSheet';
+import TutorialModal, { HelpButton, useTutorial } from '@/components/Tutorial';
 import { CHAINS, loadPricePrefs, savePricePrefs, submitPrice } from '@/lib/prices';
 import { ProductSuggestion } from '@/lib/productSearch';
 import { ReceiptLine } from '@/lib/parseReceipt';
@@ -57,16 +59,20 @@ function parsePriceCents(text: string): number | null {
 // imposta una scadenza per riga (o applica un preset a tutte quelle vuote),
 // rimuove le righe sbagliate e conferma l'inserimento in blocco.
 export default function ReceiptReviewScreen() {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const params = useLocalSearchParams();
   const { addNewProducts } = useProducts();
   const { onProductLimit } = usePremiumGate();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const tutorial = useTutorial('receiptReview');
 
   const initialItems: ReceiptLine[] = params.items ? JSON.parse(params.items as string) : [];
   const detectedDate = typeof params.date === 'string' && params.date ? params.date : '';
   const detectedChain = typeof params.chain === 'string' ? params.chain : '';
+  const detectedCity = typeof params.city === 'string' ? params.city : '';
 
   const [rows, setRows] = useState<ReceiptRow[]>(
     initialItems.map((l) => ({
@@ -75,7 +81,7 @@ export default function ReceiptReviewScreen() {
     })),
   );
   const [matchRow, setMatchRow] = useState<number | null>(null);
-  const [city, setCity] = useState('');
+  const [city, setCity] = useState(detectedCity);
   const [chain, setChain] = useState(detectedChain);
   const [customChain, setCustomChain] = useState(
     !!detectedChain && !(CHAINS as readonly string[]).includes(detectedChain),
@@ -254,8 +260,9 @@ export default function ReceiptReviewScreen() {
             <Text style={styles.closeBtnText}>✕</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t('receiptReview.headerTitle')}</Text>
-          <View style={{ width: 40 }} />
+          <HelpButton onPress={tutorial.open} />
         </View>
+        <TutorialModal id="receiptReview" visible={tutorial.visible} onClose={tutorial.close} />
 
         <Text style={styles.intro}>
           {t('receiptReview.intro', { count: initialItems.length })}
@@ -527,7 +534,7 @@ export default function ReceiptReviewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, CLAY, SHADOW }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   scroll: { paddingBottom: 20 },
 
@@ -560,7 +567,7 @@ const styles = StyleSheet.create({
   zoneBtnActive: { backgroundColor: T.primary },
   zoneIcon: { fontSize: 22 },
   zoneLabel: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: T.ink },
-  zoneLabelActive: { color: '#fbfaf3' },
+  zoneLabelActive: { color: T.onPrimary },
 
   presets: { paddingHorizontal: 16, gap: 6, marginBottom: 20 },
   preset: {
@@ -603,7 +610,7 @@ const styles = StyleSheet.create({
   },
   miniChipActive: { backgroundColor: T.primary },
   miniChipText: { fontFamily: FONTS.sansMedium, fontSize: 13, color: T.ink },
-  miniChipTextActive: { color: '#fbfaf3' },
+  miniChipTextActive: { color: T.onPrimary },
   rowNameInput: {
     flex: 1.4, fontFamily: FONTS.sans, fontSize: 14, color: T.ink, padding: 0, fontWeight: '500',
   },
@@ -645,7 +652,7 @@ const styles = StyleSheet.create({
   pickerCol: { flex: 1, alignItems: 'center', gap: 6 },
   pickerLabel: { fontSize: 11, fontFamily: FONTS.sansBold, color: T.mute, letterSpacing: 0.4 },
   pickerInput: {
-    width: '100%', textAlign: 'center', backgroundColor: '#ece8de', borderRadius: RADIUS.input,
+    width: '100%', textAlign: 'center', backgroundColor: T.field, borderRadius: RADIUS.input,
     paddingVertical: 12, fontSize: 20, fontFamily: FONTS.sansBold, color: T.ink,
     boxShadow: CLAY.inset,
   },

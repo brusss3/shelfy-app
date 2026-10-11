@@ -4,7 +4,8 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useProducts, daysTo } from '@/context/ProductsContext';
 import FoodTile from '@/components/FoodTile';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 import { RecipeIngredient } from '@/types';
 
 interface Props {
@@ -28,6 +29,8 @@ interface Props {
 export default function RecipeDetailView({
   title, tint, desc, time, difficulty, ingredients, steps, meta, beforeIngredients, actions,
 }: Props) {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { products } = useProducts();
   const router = useRouter();
   const { t } = useTranslation();
@@ -68,7 +71,7 @@ export default function RecipeDetailView({
                 </View>
                 {p && (
                   <View style={[styles.statusBadge, { backgroundColor: days! <= 3 ? T.warnSoft : T.okSoft }]}>
-                    <Text style={{ fontSize: 11, fontFamily: FONTS.sansBold, color: days! <= 3 ? '#4a3414' : '#1b3320' }}>
+                    <Text style={{ fontSize: 11, fontFamily: FONTS.sansBold, color: days! <= 3 ? T.warnInk : T.okInk }}>
                       {days! <= 3 ? t('recipeDetail.useSoon') : t('recipeDetail.ok')}
                     </Text>
                   </View>
@@ -98,7 +101,7 @@ export default function RecipeDetailView({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, SHADOW }: Theme) => StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   scroll: { paddingBottom: 32 },
 
@@ -110,7 +113,7 @@ const styles = StyleSheet.create({
   },
   backBtnText: { fontSize: 24, color: T.ink, lineHeight: 28 },
   heroTitle: {
-    fontFamily: FONTS.serifItalic, fontSize: 36, color: '#1a2018',
+    fontFamily: FONTS.serifItalic, fontSize: 36, color: T.ink,
     letterSpacing: -0.6, lineHeight: 40,
   },
 
@@ -147,6 +150,6 @@ const styles = StyleSheet.create({
     width: 30, height: 30, borderRadius: 100, backgroundColor: T.primary,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  stepNumText: { fontFamily: FONTS.serifItalic, fontSize: 17, color: '#fbfaf3' },
+  stepNumText: { fontFamily: FONTS.serifItalic, fontSize: 17, color: T.onPrimary },
   stepText: { fontSize: 14, color: T.ink, lineHeight: 20, flex: 1, fontFamily: FONTS.sans },
 });

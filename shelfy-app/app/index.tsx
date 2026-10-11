@@ -1,9 +1,10 @@
 import { Redirect } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { View, ActivityIndicator } from 'react-native';
-import { T } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function RootIndex() {
+  const { T } = useTheme();
   const { user, loading } = useAuth();
 
   if (loading) {

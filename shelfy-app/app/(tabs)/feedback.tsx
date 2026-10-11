@@ -17,7 +17,8 @@ import { submitFeedback, FeedbackCategory } from '@/lib/firestore';
 import ProfileButton from '@/components/ProfileButton';
 import { showAlert } from '@/lib/alert';
 import PrimaryButton from '@/components/PrimaryButton';
-import { T, FONTS, RADIUS, SHADOW } from '@/constants/theme';
+import { FONTS, RADIUS } from '@/constants/theme';
+import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 
 interface CategoryOption {
   id: FeedbackCategory;
@@ -63,6 +64,8 @@ const QUICK_TAG_KEYS = ['feedback.quickTags.widget', 'feedback.quickTags.allerge
 const RATING_EMOJIS = ['😡', '😕', '😐', '😊', '🤩'];
 
 export default function FeedbackScreen() {
+  const { T } = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { user } = useAuth();
   const { t } = useTranslation();
 
@@ -297,7 +300,7 @@ export default function FeedbackScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = ({ T, SHADOW }: Theme) => StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: T.bg,
@@ -352,7 +355,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: RADIUS.md,
-    backgroundColor: '#fff',
+    backgroundColor: T.surface,
     alignItems: 'center',
     justifyContent: 'center',
     ...SHADOW.card,
@@ -397,7 +400,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   newFeedbackBtn: {
-    backgroundColor: '#fff',
+    backgroundColor: T.surface,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: RADIUS.sm,
@@ -435,7 +438,7 @@ const styles = StyleSheet.create({
   },
   categoryCardActive: {
     borderColor: T.primary,
-    backgroundColor: '#fff',
+    backgroundColor: T.surface,
     shadowColor: T.primary,
     shadowOpacity: 0.15,
   },
