@@ -12,6 +12,6 @@ shelfy-632e0-*.json
 google-play-key.json
 
 # Backup icone e log locali
-assets/_backup_old_icons/
-assets/*_old.png
+**/assets/_backup_old_icons/
+**/assets/*_old.png
 firebase-debug.log
