@@ -131,8 +131,7 @@ async function callGroq(apiKey: string, ingredients: string[]): Promise<Generate
 export const generateDailyRecipe = onCall(
   { region: 'europe-west1', secrets: [GROQ_API_KEY], cors: true },
   async (request) => {
-    const uid = request.auth?.uid;
-    if (!uid) throw fail('unauthenticated', 'loginRequired', 'Devi accedere');
+    const uid = requireUid(request);
 
     const rawIngredients = (request.data?.ingredients ?? []) as unknown;
     const ingredients = Array.isArray(rawIngredients)
@@ -246,9 +245,18 @@ async function generateUniqueInviteCode(db: FirebaseFirestore.Firestore): Promis
   throw fail('internal', 'inviteCodeFailed', 'Impossibile generare un codice invito, riprova');
 }
 
-function requireUid(request: { auth?: { uid: string } | null }): string {
+type AuthedRequest = {
+  auth?: { uid: string; token?: { firebase?: { sign_in_provider?: string } } } | null;
+};
+
+// Account vero, non ospite: le funzioni community/condivise/prezzi/AI non
+// sono per gli ospiti (accesso anonimo), che hanno solo la dispensa personale.
+function requireUid(request: AuthedRequest): string {
   const uid = request.auth?.uid;
   if (!uid) throw fail('unauthenticated', 'loginRequired', 'Devi accedere');
+  if (request.auth?.token?.firebase?.sign_in_provider === 'anonymous') {
+    throw fail('permission-denied', 'registrationRequired', 'Registrati per usare questa funzione');
+  }
   return uid;
 }
 
@@ -1087,3 +1095,7 @@ export const submitCatalogProduct = onCall(
     });
   },
 );
+
+// Dati orfani degli ospiti cancellati da Firebase dopo 30 giorni: vedi guestCleanup.ts.
+export { cleanupOrphanGuestData } from './guestCleanup';
+export { computeAdminStats, refreshAdminStats } from './adminStats';

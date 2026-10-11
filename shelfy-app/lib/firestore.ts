@@ -7,6 +7,8 @@ import { db } from './firebase';
 import { aiUsageKey } from './limits';
 import { Product, Zone, CommunityRecipe, RecipeRequest, RecipeProposal, MyRecipe, Survey } from '@/types';
 import { notifyAdminsNewFeedback } from './notifications';
+import { documentId } from 'firebase/firestore';
+import { callable } from './callable';
 import i18n from '@/lib/i18n';
 
 function tsToIso(ts: unknown): string {
@@ -49,6 +51,10 @@ export interface AdminUserRecord {
   /** Prodotti aggiunti in totale (cancellati inclusi): misura l'attivazione. */
   productsAdded: number;
   lastActiveAt: string | null;
+  /** Ospite (accesso anonimo): `isGuest: true`, o documento senza email né campo. */
+  isGuest: boolean;
+  /** Quando un ospite si è registrato (stesso uid), se è successo. */
+  upgradedAt: string | null;
 }
 
 export async function getAllUsers(): Promise<AdminUserRecord[]> {
@@ -72,10 +78,110 @@ export async function getAllUsers(): Promise<AdminUserRecord[]> {
       acquisitionSource: data.acquisition?.source ?? null,
       productsAdded: data.productsAdded ?? 0,
       lastActiveAt: data.lastActiveAt ?? null,
+      isGuest: data.isGuest === true || (!data.email && data.isGuest !== false),
+      upgradedAt: typeof data.upgradedAt === 'string' ? data.upgradedAt : null,
     };
   });
   users.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   return users;
+}
+
+// ---------------------------------------------------------------------------
+// Statistiche admin (istantanee calcolate da functions/src/adminStats.ts)
+// ---------------------------------------------------------------------------
+// Il documento `adminStats/latest` è l'ultima istantanea; `adminStats/{giorno}`
+// lo storico per i grafici. Ogni sezione può essere `null` se il server non è
+// riuscito a calcolarla: la UI mostra "—" invece di un numero sbagliato.
+
+export interface AdminFunnelRow {
+  source: string | null;
+  signups: number;
+  firstProduct: number;
+  thirdProduct: number;
+  eligible7: number;
+  returned7: number;
+}
+
+export interface AdminStatsSnapshot {
+  date: string;
+  trigger: 'schedule' | 'manual';
+  generatedAt: string;
+  trackingSince: string;
+  users: {
+    total: number; registered: number; guests: number; admins: number;
+    premium: number; waitlist: number; aiBlocked: number;
+    newToday: number; new7: number; newPrev7: number; new30: number;
+    active1: number; active7: number; active30: number; active7Guests: number;
+    productsAddedTotal: number;
+    /** Assenti nelle istantanee precedenti ai contatori. */
+    productsConsumedTotal?: number;
+    productsWastedTotal?: number;
+    retention7: { eligible: number; returned: number };
+    activation30: { signups: number; activated: number };
+    /** Ospiti diventati account registrati (documenti con `upgradedAt`). */
+    conversions?: number; conversions7?: number; conversions30?: number;
+    guestCohort30?: { started: number; converted: number };
+  } | null;
+  newUsersByDay: { date: string; registered: number; guests: number; conversions?: number }[];
+  funnel: AdminFunnelRow[];
+  products: {
+    inPantries: number; expired: number; expiringSoon: number; inShared: number;
+    byZone: Record<string, number>;
+    topCategories: { name: string; count: number }[];
+    otherCategoriesCount: number;
+  } | null;
+  community: {
+    recipes: number; recipes7d: number; ratingCount: number; ratingAvg: number | null;
+    requests: number; requestsOpen: number; proposals: number; myRecipes: number; savedRecipes: number;
+  } | null;
+  prices: {
+    observations: number; submissions: number; submissions7d: number; suspicious: number;
+    latest: number; stores: number; catalogProducts: number; shoppingItems: number;
+  } | null;
+  pantries: { shared: number; members: number } | null;
+  feedback: { total: number; open: number; read: number; resolved: number } | null;
+  surveys: { total: number; active: number } | null;
+}
+
+function statsFromDoc(data: Record<string, unknown>): AdminStatsSnapshot {
+  const s = data as unknown as AdminStatsSnapshot;
+  return {
+    ...s,
+    newUsersByDay: Array.isArray(s.newUsersByDay) ? s.newUsersByDay : [],
+    funnel: Array.isArray(s.funnel) ? s.funnel : [],
+    users: s.users ?? null,
+    products: s.products ?? null,
+    community: s.community ?? null,
+    prices: s.prices ?? null,
+    pantries: s.pantries ?? null,
+    feedback: s.feedback ?? null,
+    surveys: s.surveys ?? null,
+  };
+}
+
+export async function getAdminStatsLatest(): Promise<AdminStatsSnapshot | null> {
+  const snap = await getDoc(doc(db, 'adminStats', 'latest'));
+  return snap.exists() ? statsFromDoc(snap.data()) : null;
+}
+
+/** Istantanee giornaliere da `fromDate` (YYYY-MM-DD) in poi, in ordine di data. */
+export async function getAdminStatsHistory(fromDate: string): Promise<AdminStatsSnapshot[]> {
+  // Gli id sono date "YYYY-MM-DD": l'intervallo sull'id esclude `latest`
+  // (che inizia con una lettera) senza bisogno di indici.
+  const q = query(
+    collection(db, 'adminStats'),
+    where(documentId(), '>=', fromDate),
+    where(documentId(), '<=', '9999-12-31'),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => statsFromDoc(d.data())).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** Ricalcola subito le statistiche sul server (solo admin). */
+export async function refreshAdminStats(): Promise<AdminStatsSnapshot> {
+  const call = callable<void, Record<string, unknown>>('refreshAdminStats');
+  const res = await call();
+  return statsFromDoc(res.data);
 }
 
 // Metriche di attivazione sul documento utente: contatore cumulativo dei
@@ -84,6 +190,19 @@ export async function getAllUsers(): Promise<AdminUserRecord[]> {
 // l'azione dell'utente.
 export async function recordProductsAdded(uid: string, count: number): Promise<void> {
   await setDoc(doc(db, 'users', uid), { productsAdded: increment(count) }, { merge: true });
+}
+
+// Esito dei prodotti, in unità: mangiate (consumato) o buttate (eliminate già
+// scadute). È la misura dello spreco evitato, per la dashboard admin. Va sul
+// profilo di chi compie il gesto, anche nelle dispense condivise.
+export async function recordProductsOutcome(
+  uid: string,
+  outcome: 'consumed' | 'wasted',
+  count: number,
+): Promise<void> {
+  if (count <= 0) return;
+  const field = outcome === 'consumed' ? 'productsConsumed' : 'productsWasted';
+  await setDoc(doc(db, 'users', uid), { [field]: increment(count) }, { merge: true });
 }
 
 export async function recordActiveNow(uid: string): Promise<void> {
@@ -340,6 +459,8 @@ function recipeFromDoc(id: string, data: Record<string, unknown>): CommunityReci
     ratingSum: (data.ratingSum as number) ?? 0,
     ratingCount: (data.ratingCount as number) ?? 0,
     createdAt: tsToIso(data.createdAt),
+    // Solo le ricette Shelfy (seed) dichiarano la lingua.
+    ...(data.lang === 'it' || data.lang === 'en' || data.lang === 'es' ? { lang: data.lang } : {}),
   };
 }
 

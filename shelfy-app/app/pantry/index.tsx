@@ -13,8 +13,18 @@ import PrimaryButton from '@/components/PrimaryButton';
 import { showAlert } from '@/lib/alert';
 import { FONTS, RADIUS } from '@/constants/theme';
 import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
+import GuestGate from '@/components/GuestGate';
 
+// Gli ospiti vedono l'invito a registrarsi al posto della funzione.
 export default function PantryHubScreen() {
+  return (
+    <GuestGate feature="pantry">
+      <PantryHubScreenContent />
+    </GuestGate>
+  );
+}
+
+function PantryHubScreenContent() {
   const { T, GRADIENT, SURFACE } = useTheme();
   const styles = useThemedStyles(createStyles);
   const router = useRouter();

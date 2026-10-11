@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import i18n from '@/lib/i18n';
 import { showAlert } from '@/lib/alert';
 import { joinPremiumWaitlist } from '@/lib/firestore';
-import { FREE_PRODUCT_LIMIT, ProductLimitError } from '@/lib/limits';
+import { FREE_PRODUCT_LIMIT, GUEST_PRODUCT_LIMIT, ProductLimitError } from '@/lib/limits';
 import { useAuth } from '@/context/AuthContext';
 
 // Unico punto che decide cosa succede quando un utente del piano base tocca
@@ -27,11 +27,23 @@ export function usePremiumGate() {
     ]);
   };
 
+  const promptGuestSignup = (titleKey: string, bodyKey: string, bodyVars?: Record<string, unknown>) => {
+    showAlert(i18n.t(titleKey), i18n.t(bodyKey, bodyVars ?? {}), [
+      { text: i18n.t('common.close'), style: 'cancel' },
+      { text: i18n.t('guest.signupCta'), onPress: () => router.push('/(auth)/register') },
+    ]);
+  };
+
   return {
     monetizationEnabled,
 
     /** Limite prodotti raggiunto. */
     onProductLimit: () => {
+      // Per l'ospite il passo successivo non è Premium ma registrarsi.
+      if (user?.isGuest) {
+        promptGuestSignup('guest.limitTitle', 'guest.limitBody', { limit: GUEST_PRODUCT_LIMIT, freeLimit: FREE_PRODUCT_LIMIT });
+        return;
+      }
       if (monetizationEnabled) {
         showAlert(i18n.t('limits.productLimitTitle'), i18n.t('limits.productLimitBody', { limit: FREE_PRODUCT_LIMIT }), [
           { text: i18n.t('common.cancel'), style: 'cancel' },
@@ -44,6 +56,10 @@ export function usePremiumGate() {
 
     /** Invito a sbloccare mostrato fuori da un errore (banner, ricette). */
     onUpgradeIntent: () => {
+      if (user?.isGuest) {
+        router.push('/(auth)/register');
+        return;
+      }
       if (monetizationEnabled) {
         router.push('/paywall');
         return;

@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '@/context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useProducts } from '@/context/ProductsContext';
 import { Zone } from '@/types';
@@ -67,6 +68,9 @@ export default function ReceiptReviewScreen() {
   const { onProductLimit } = usePremiumGate();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  // I prezzi della community si inviano solo con un account: l'ospite
+  // salva i prodotti e basta, senza la sezione negozio.
+  const isGuest = !!useAuth().user?.isGuest;
   const tutorial = useTutorial('receiptReview');
 
   const initialItems: ReceiptLine[] = params.items ? JSON.parse(params.items as string) : [];
@@ -153,7 +157,7 @@ export default function ReceiptReviewScreen() {
 
   const validRows = rows.filter((r) => r.name.trim().length > 0);
   const storeReady = chain.trim().length > 0 && city.trim().length > 0;
-  const priceRows = validRows.filter((r) => !!r.barcode && parsePriceCents(r.price) !== null);
+  const priceRows = isGuest ? [] : validRows.filter((r) => !!r.barcode && parsePriceCents(r.price) !== null);
   const canSave = !!zone && validRows.length > 0 && validRows.every((r) => !!r.expiry);
 
   // Invia i prezzi delle righe collegate a un prodotto, tre alla volta. Un
@@ -307,6 +311,7 @@ export default function ReceiptReviewScreen() {
         </ScrollView>
 
         {/* Negozio e data: servono a salvare i prezzi */}
+        {!isGuest && <>
         <Text style={styles.sectionLabel}>{t('receiptReview.storeSection')}</Text>
         <View style={styles.storeCard}>
           <Text style={styles.storeHint}>{t('receiptReview.storeHint')}</Text>
@@ -378,6 +383,7 @@ export default function ReceiptReviewScreen() {
               : t('receiptReview.pricesNone')}
           </Text>
         </View>
+        </>}
 
         {/* Rows */}
         <Text style={styles.sectionLabel}>{t('receiptReview.productsSection', { count: rows.length })}</Text>

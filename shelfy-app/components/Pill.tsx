@@ -1,5 +1,6 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import { Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import PressableScale from '@/components/PressableScale';
 import { FONTS } from '@/constants/theme';
 import { useTheme, type Theme } from '@/context/ThemeContext';
 
@@ -35,11 +36,10 @@ export default function Pill({ children, onPress, variant = 'primary', size = 'm
   const s = sizeStyles[size];
 
   return (
-    <TouchableOpacity
+    <PressableScale
       onPress={onPress}
       disabled={disabled}
-      activeOpacity={0.8}
-      style={[
+      contentStyle={[
         styles.base,
         {
           backgroundColor: v.bg,
@@ -57,7 +57,7 @@ export default function Pill({ children, onPress, variant = 'primary', size = 'm
       ) : (
         children
       )}
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 

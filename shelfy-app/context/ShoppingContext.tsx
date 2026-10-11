@@ -39,8 +39,9 @@ export function ShoppingProvider({ children }: { children: React.ReactNode }) {
   const [favorites, setFavorites] = useState<ShoppingFavorite[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Gli ospiti non hanno la lista della spesa (regole: isRegistered).
   useEffect(() => {
-    if (!user) {
+    if (!user || user.isGuest) {
       setItems([]);
       setLoading(false);
       return;
@@ -55,19 +56,19 @@ export function ShoppingProvider({ children }: { children: React.ReactNode }) {
     return unsub;
     // Solo l'uid, come ProductsContext: `user` cambia identità a ogni
     // snapshot del documento utente e farebbe lampeggiare la schermata.
-  }, [user?.uid, activePantryId]);
+  }, [user?.uid, user?.isGuest, activePantryId]);
 
   // I preferiti sono accessori: un errore (es. regole non ancora aggiornate)
   // lascia la lista funzionante, solo senza scorciatoie.
   useEffect(() => {
-    if (!user) { setFavorites([]); return; }
+    if (!user || user.isGuest) { setFavorites([]); return; }
     return subscribeToFavorites(
       user.uid,
       activePantryId,
       setFavorites,
       (err) => { console.warn('[ShoppingContext] preferiti:', err); setFavorites([]); },
     );
-  }, [user?.uid, activePantryId]);
+  }, [user?.uid, user?.isGuest, activePantryId]);
 
   const openCount = useMemo(
     () => items.reduce((n, i) => (i.checked ? n : n + 1), 0),
@@ -77,6 +78,7 @@ export function ShoppingProvider({ children }: { children: React.ReactNode }) {
   const addItem = useCallback(
     async (data: NewShoppingItem): Promise<AddResult> => {
       if (!user) throw new Error(i18n.t('serverErrors.loginRequired'));
+      if (user.isGuest) throw new Error(i18n.t('serverErrors.registrationRequired'));
       const name = data.name.trim();
       // Stesso prodotto già da comprare: stesso barcode, o — per le voci a
       // testo libero — stesso nome. Se è già nel carrello conta come nuovo

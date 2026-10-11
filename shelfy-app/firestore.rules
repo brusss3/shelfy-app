@@ -8,6 +8,14 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
+    // Account vero, non ospite. Gli ospiti (accesso anonimo, per provare
+    // l'app) hanno solo la dispensa personale: niente spesa, ricette,
+    // community. Lo stesso controllo sta nelle Cloud Function (requireUid).
+    function isRegistered() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != "anonymous";
+    }
+
     // Ogni utente gestisce solo i propri prodotti
     match /users/{userId}/products/{productId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
@@ -15,23 +23,23 @@ service cloud.firestore {
 
     // Lista della spesa personale
     match /users/{userId}/shoppingItems/{itemId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isRegistered() && request.auth.uid == userId;
     }
 
     // Voci che l'utente aggiunge spesso alla lista: suggerimenti rapidi
     match /users/{userId}/shoppingFavorites/{favId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isRegistered() && request.auth.uid == userId;
     }
 
     // Ricette community salvate dall'utente per cucinarle dopo
     match /users/{userId}/savedRecipes/{recipeId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isRegistered() && request.auth.uid == userId;
     }
 
     // Ricette personali (generate dall'AI o scritte dall'utente): private
     // finché non vengono pubblicate nella community.
     match /users/{userId}/myRecipes/{recipeId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isRegistered() && request.auth.uid == userId;
     }
 
     // Contatore delle generazioni AI giornaliere: l'utente lo legge per sapere
@@ -105,34 +113,34 @@ service cloud.firestore {
     // solo per l'autore. Eccezione: chiunque può aggiornare SOLO ratingSum/
     // ratingCount (il voto), mai gli altri campi della ricetta.
     match /communityRecipes/{recipeId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && request.resource.data.authorId == request.auth.uid;
-      allow update: if request.auth != null && (
+      allow read: if isRegistered();
+      allow create: if isRegistered() && request.resource.data.authorId == request.auth.uid;
+      allow update: if isRegistered() && (
         resource.data.authorId == request.auth.uid ||
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratingSum', 'ratingCount'])
       );
-      allow delete: if request.auth != null && resource.data.authorId == request.auth.uid;
+      allow delete: if isRegistered() && resource.data.authorId == request.auth.uid;
 
       // Un voto per utente: id documento = uid di chi vota.
       match /ratings/{uid} {
-        allow read: if request.auth != null;
-        allow create, update, delete: if request.auth != null && request.auth.uid == uid;
+        allow read: if isRegistered();
+        allow create, update, delete: if isRegistered() && request.auth.uid == uid;
       }
     }
 
     // Richieste d'aiuto ("mi scadono questi ingredienti"): lettura pubblica,
     // solo l'autore può modificarle/chiuderle/cancellarle.
     match /recipeRequests/{requestId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && request.resource.data.authorId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.authorId == request.auth.uid;
+      allow read: if isRegistered();
+      allow create: if isRegistered() && request.resource.data.authorId == request.auth.uid;
+      allow update, delete: if isRegistered() && resource.data.authorId == request.auth.uid;
 
       // Proposte di ricetta a una richiesta: chiunque può proporre, solo chi
       // ha proposto può ritirare la propria proposta.
       match /proposals/{proposalId} {
-        allow read: if request.auth != null;
-        allow create: if request.auth != null && request.resource.data.authorId == request.auth.uid;
-        allow delete: if request.auth != null && resource.data.authorId == request.auth.uid;
+        allow read: if isRegistered();
+        allow create: if isRegistered() && request.resource.data.authorId == request.auth.uid;
+        allow delete: if isRegistered() && resource.data.authorId == request.auth.uid;
       }
     }
 
@@ -253,6 +261,13 @@ service cloud.firestore {
 
     match /users/{userId}/catalogSubmits/{day} {
       allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    // Istantanee della dashboard admin: le scrivono solo le Cloud Function
+    // computeAdminStats / refreshAdminStats (functions/src/adminStats.ts).
+    match /adminStats/{docId} {
+      allow read: if isAdmin();
       allow write: if false;
     }
 

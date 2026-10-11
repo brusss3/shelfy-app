@@ -18,6 +18,7 @@ import PrimaryButton from '@/components/PrimaryButton';
 import { FONTS, RADIUS } from '@/constants/theme';
 import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 import { CommunityRecipe, RecipeRequest } from '@/types';
+import GuestGate from '@/components/GuestGate';
 
 type View_ = 'recipes' | 'requests' | 'mine';
 
@@ -29,14 +30,23 @@ function matchCount(recipe: CommunityRecipe, expiringNames: string[]): number {
   ).length;
 }
 
+// Gli ospiti vedono l'invito a registrarsi al posto della funzione.
 export default function RecipesScreen() {
+  return (
+    <GuestGate feature="recipes">
+      <RecipesScreenContent />
+    </GuestGate>
+  );
+}
+
+function RecipesScreenContent() {
   const { T } = useTheme();
   const styles = useThemedStyles(createStyles);
   const { products } = useProducts();
-  const { recipes, requests, loading } = useCommunity();
+  const { recipes: allRecipes, requests, loading } = useCommunity();
   const { myRecipes, savedRecipes } = useRecipes();
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [view, setView] = useState<View_>('recipes');
 
   const expiringProducts = useMemo(
@@ -44,6 +54,16 @@ export default function RecipesScreen() {
     [products],
   );
   const expiringNames = useMemo(() => expiringProducts.map((p) => p.name), [expiringProducts]);
+
+  // Prima le ricette nella lingua dell'app (e quelle senza lingua, scritte
+  // dagli utenti), poi le altre: restano visibili, solo più in basso. Dentro
+  // ogni gruppo vale l'ordine del feed (più recenti prima).
+  const lang = i18n.language.slice(0, 2);
+  const recipes = useMemo(() => {
+    const mine = allRecipes.filter((r) => !r.lang || r.lang === lang);
+    const others = allRecipes.filter((r) => r.lang && r.lang !== lang);
+    return [...mine, ...others];
+  }, [allRecipes, lang]);
 
   const openRequests = useMemo(() => requests.filter((r) => r.status === 'open'), [requests]);
   const closedRequests = useMemo(() => requests.filter((r) => r.status === 'closed'), [requests]);

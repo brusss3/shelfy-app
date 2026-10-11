@@ -12,8 +12,18 @@ import QrScannerModal from '@/components/QrScannerModal';
 import { showAlert } from '@/lib/alert';
 import { FONTS, RADIUS } from '@/constants/theme';
 import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
+import GuestGate from '@/components/GuestGate';
 
+// Gli ospiti vedono l'invito a registrarsi al posto della funzione.
 export default function PantryJoinScreen() {
+  return (
+    <GuestGate feature="pantry">
+      <PantryJoinScreenContent />
+    </GuestGate>
+  );
+}
+
+function PantryJoinScreenContent() {
   const { T } = useTheme();
   const styles = useThemedStyles(createStyles);
   const router = useRouter();

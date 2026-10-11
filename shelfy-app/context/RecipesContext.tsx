@@ -39,7 +39,10 @@ export function RecipesProvider({ children }: { children: React.ReactNode }) {
   const [aiGloballyEnabled, setAiGloballyEnabled] = useState(true);
 
   useEffect(() => {
-    if (!user) { setSavedRecipes([]); setMyRecipes([]); setAiCreditUsed(false); return; }
+    if (!user || user.isGuest) {
+      setSavedRecipes([]); setMyRecipes([]); setAiCreditUsed(false); setLoading(false);
+      return;
+    }
     setLoading(true);
 
     const savedRef = collection(db, 'users', user.uid, 'savedRecipes');
@@ -56,7 +59,7 @@ export function RecipesProvider({ children }: { children: React.ReactNode }) {
     hasUsedAiCredit(user.uid, !!user.isPremium).then(setAiCreditUsed).catch(() => {});
 
     return () => { unsubSaved(); unsubMine(); unsubAi(); };
-  }, [user?.uid, user?.isPremium]);
+  }, [user?.uid, user?.isPremium, user?.isGuest]);
 
   const refreshAiUsage = useCallback(async () => {
     if (!user) return;

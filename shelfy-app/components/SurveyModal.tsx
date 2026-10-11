@@ -22,9 +22,10 @@ export default function SurveyModal() {
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    if (!user) { setSurvey(null); setVisible(false); return; }
+    // I sondaggi sono per chi usa Shelfy davvero, non per chi lo sta provando.
+    if (!user || user.isGuest) { setSurvey(null); setVisible(false); return; }
     return subscribeToActiveSurvey(setSurvey, () => {});
-  }, [user?.uid]);
+  }, [user?.uid, user?.isGuest]);
 
   useEffect(() => {
     if (!survey || !user) return;

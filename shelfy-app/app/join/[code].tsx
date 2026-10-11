@@ -9,6 +9,7 @@ import { usePantry } from '@/context/PantryContext';
 import PrimaryButton from '@/components/PrimaryButton';
 import { FONTS, RADIUS } from '@/constants/theme';
 import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
+import GuestGate from '@/components/GuestGate';
 
 // Destinazione del deep link shelfy://join/CODE — sia da QR letto da
 // un'altra fotocamera (es. quella di sistema) sia da un link condiviso via
@@ -16,7 +17,16 @@ import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 // raggiungibile dall'hub), questa route tenta l'ingresso in automatico
 // appena atterra, e gestisce da sola il caso "utente non loggato" — cosa che
 // pantry/join.tsx non deve fare perché è sempre dietro l'auth gate delle tab.
+// Gli ospiti vedono l'invito a registrarsi al posto della funzione.
 export default function JoinByLinkScreen() {
+  return (
+    <GuestGate feature="pantry">
+      <JoinByLinkScreenContent />
+    </GuestGate>
+  );
+}
+
+function JoinByLinkScreenContent() {
   const { T } = useTheme();
   const styles = useThemedStyles(createStyles);
   const { code: rawCode } = useLocalSearchParams<{ code: string }>();

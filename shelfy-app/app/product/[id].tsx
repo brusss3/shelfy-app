@@ -243,6 +243,8 @@ export default function ProductDetailScreen() {
   // Ultima unità finita: è il momento in cui si pensa a ricomprarlo. Si torna
   // indietro subito (il prodotto non esiste più) e la domanda compare sopra.
   const askAddToList = (p: Product) => {
+    // Gli ospiti non hanno la lista della spesa.
+    if (user?.isGuest) return;
     showAlert(
       t('product.finishedTitle', { name: p.name }),
       t('product.finishedBody'),
@@ -635,6 +637,7 @@ export default function ProductDetailScreen() {
         </View>
 
         {/* Ricompra */}
+        {!user?.isGuest && (
         <View style={styles.section}>
           <Pill
             variant="ghost"
@@ -648,6 +651,7 @@ export default function ProductDetailScreen() {
             </Text>
           </Pill>
         </View>
+        )}
 
         {/* Delete */}
         <View style={styles.section}>

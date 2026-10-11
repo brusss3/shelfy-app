@@ -6,6 +6,7 @@ import { useProducts, daysTo } from '@/context/ProductsContext';
 import FoodTile from '@/components/FoodTile';
 import { FONTS, RADIUS } from '@/constants/theme';
 import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
+import { difficultyLabel } from '@/lib/recipePrompt';
 import { RecipeIngredient } from '@/types';
 
 interface Props {
@@ -49,7 +50,7 @@ export default function RecipeDetailView({
           {meta}
           <Text style={styles.metaItem}>⏱ {time}</Text>
           <Text style={styles.metaDot}>·</Text>
-          <Text style={styles.metaItem}>🔥 {difficulty}</Text>
+          <Text style={styles.metaItem}>🔥 {difficultyLabel(difficulty)}</Text>
         </View>
         {!!desc && <Text style={styles.desc}>{desc}</Text>}
 

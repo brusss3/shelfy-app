@@ -28,7 +28,8 @@ export function CommunityProvider({ children }: { children: React.ReactNode }) {
   const [requestsLoaded, setRequestsLoaded] = useState(false);
 
   useEffect(() => {
-    if (!user) { setRecipes([]); setRequests([]); return; }
+    // Community chiusa agli ospiti (regole: isRegistered).
+    if (!user || user.isGuest) { setRecipes([]); setRequests([]); return; }
     const unsubRecipes = subscribeToCommunityRecipes((data) => {
       setRecipes(data);
       setRecipesLoaded(true);
@@ -38,7 +39,7 @@ export function CommunityProvider({ children }: { children: React.ReactNode }) {
       setRequestsLoaded(true);
     }, () => setRequestsLoaded(true));
     return () => { unsubRecipes(); unsubRequests(); };
-  }, [user?.uid]);
+  }, [user?.uid, user?.isGuest]);
 
   const createRecipe = useCallback(
     async (data: Omit<CommunityRecipe, 'id' | 'authorId' | 'authorName' | 'ratingSum' | 'ratingCount' | 'createdAt'>) => {

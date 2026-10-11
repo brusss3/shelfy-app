@@ -11,7 +11,7 @@ import { useCommunity } from '@/context/CommunityContext';
 import { useRecipes } from '@/context/RecipesContext';
 import { createProposal } from '@/lib/firestore';
 import { showAlert } from '@/lib/alert';
-import { RECIPE_TINTS as TINTS, RECIPE_DIFFICULTIES as DIFFICULTIES } from '@/lib/recipePrompt';
+import { RECIPE_TINTS as TINTS, RECIPE_DIFFICULTIES as DIFFICULTIES, difficultyLabel } from '@/lib/recipePrompt';
 import PrimaryButton from '@/components/PrimaryButton';
 import { FONTS, RADIUS } from '@/constants/theme';
 import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
@@ -170,7 +170,7 @@ export default function CreateRecipeScreen() {
                 onPress={() => setDifficulty(d)}
                 activeOpacity={0.85}
               >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>{d}</Text>
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{difficultyLabel(d)}</Text>
               </TouchableOpacity>
             );
           })}

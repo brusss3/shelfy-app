@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, Image, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ScrollView, Linking,
@@ -30,7 +30,9 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const [guestLoading, setGuestLoading] = useState(false);
+  const { user, signIn, signInAsGuest } = useAuth();
+  const isGuest = !!user?.isGuest;
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -47,6 +49,28 @@ export default function LoginScreen() {
       showAlert(t('auth.login.failedTitle'), authErrorMessage(e, t('auth.login.failedFallback')));
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Prova senza account: dispensa personale con pochi prodotti, il resto
+  // si sblocca registrandosi (vedi lib/limits.ts e firestore.rules).
+  // Si entra nell'app solo quando l'utente ospite è pronto nel contesto:
+  // andandoci subito, le tab lo troverebbero ancora nullo e rimanderebbero qui.
+  useEffect(() => {
+    if (guestLoading && isGuest) {
+      setGuestLoading(false);
+      router.replace('/(tabs)');
+    }
+  }, [guestLoading, isGuest]);
+
+  const handleGuest = async () => {
+    if (isGuest) { router.replace('/(tabs)'); return; }
+    setGuestLoading(true);
+    try {
+      await signInAsGuest();
+    } catch (e: any) {
+      setGuestLoading(false);
+      showAlert(t('common.error'), authErrorMessage(e, t('guest.startFailed')));
     }
   };
 
@@ -122,6 +146,18 @@ export default function LoginScreen() {
           </Link>
         </View>
 
+        <TouchableOpacity
+          style={styles.guestButton}
+          onPress={handleGuest}
+          disabled={guestLoading}
+          accessibilityRole="button"
+        >
+          <Text style={styles.guestButtonText}>
+            {isGuest ? t('guest.continueAsGuest') : t('guest.tryWithoutAccount')}
+          </Text>
+          {!isGuest && <Text style={styles.guestButtonHint}>{t('guest.tryHint')}</Text>}
+        </TouchableOpacity>
+
         <Text style={styles.guidesLink} onPress={openGuides} accessibilityRole="link">
           {t('auth.login.guidesLink')}
         </Text>
@@ -174,6 +210,13 @@ const createStyles = ({ T, CLAY, SHADOW }: Theme) => StyleSheet.create({
     fontFamily: FONTS.sansMedium, fontSize: 13, color: T.ink2,
     textAlign: 'center', marginTop: 16, textDecorationLine: 'underline',
   },
+  guestButton: {
+    alignSelf: 'center', alignItems: 'center', marginTop: 18,
+    paddingVertical: 10, paddingHorizontal: 18, borderRadius: RADIUS.input,
+    borderWidth: 1, borderColor: T.line,
+  },
+  guestButtonText: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.ink },
+  guestButtonHint: { fontFamily: FONTS.sans, fontSize: 12, color: T.mute, marginTop: 2 },
   forgotLink: {
     fontFamily: FONTS.sansMedium, fontSize: 13, color: T.primary,
     textAlign: 'right', marginTop: 10,

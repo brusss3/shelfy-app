@@ -1,9 +1,10 @@
 import React from 'react';
 import {
-  ActivityIndicator, Platform, StyleProp, StyleSheet, Text, TextStyle, TouchableOpacity, View, ViewStyle,
+  ActivityIndicator, Platform, StyleProp, StyleSheet, Text, TextStyle, View, ViewStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import PressableScale from '@/components/PressableScale';
 import { FONTS, RADIUS } from '@/constants/theme';
 import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 
@@ -63,10 +64,9 @@ export default function PrimaryButton({
   const circleIconSize = Math.round(size * 0.42);
 
   return (
-    <TouchableOpacity
+    <PressableScale
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.85}
       accessibilityLabel={accessibilityLabel ?? label}
       style={[fullWidth && { alignSelf: 'stretch' }, containerStyle, (disabled || loading) && styles.disabled]}
     >
@@ -114,7 +114,7 @@ export default function PrimaryButton({
           </View>
         )}
       </LinearGradient>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 

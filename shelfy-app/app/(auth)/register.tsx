@@ -20,7 +20,8 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signUp } = useAuth();
+  const { user, signUp } = useAuth();
+  const isGuest = !!user?.isGuest;
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -58,6 +59,8 @@ export default function RegisterScreen() {
 
         <View style={styles.card}>
           <Text style={styles.formTitle}>{t('auth.register.title')}</Text>
+          {/* Da ospite: la dispensa di prova non si perde registrandosi. */}
+          {isGuest && <Text style={styles.guestNote}>{t('guest.registerKeepsData')}</Text>}
 
           {[
             { label: t('auth.register.nameLabel'), value: name, onChange: setName, placeholder: t('auth.register.namePlaceholder'), autoComplete: 'name' as const, keyboard: 'default' as const },
@@ -101,6 +104,12 @@ export default function RegisterScreen() {
           <Text style={styles.footerText}>{t('auth.register.haveAccount')}</Text>
           <Link href="/(auth)/login" style={styles.footerLink}>{t('auth.register.loginLink')}</Link>
         </View>
+
+        {isGuest && (
+          <Text style={styles.guestBack} onPress={() => router.replace('/(tabs)')} accessibilityRole="link">
+            {t('guest.continueAsGuest')}
+          </Text>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -137,4 +146,12 @@ const createStyles = ({ T, CLAY, SHADOW }: Theme) => StyleSheet.create({
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
   footerText: { fontFamily: FONTS.sans, fontSize: 14, color: T.mute },
   footerLink: { fontFamily: FONTS.sansSemiBold, fontSize: 14, color: T.primary },
+  guestNote: {
+    fontFamily: FONTS.sans, fontSize: 13, color: T.ink2, lineHeight: 19,
+    marginTop: -10, marginBottom: 16,
+  },
+  guestBack: {
+    fontFamily: FONTS.sansMedium, fontSize: 13, color: T.mute,
+    textAlign: 'center', marginTop: 16, textDecorationLine: 'underline',
+  },
 });

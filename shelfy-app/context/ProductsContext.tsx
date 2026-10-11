@@ -2,11 +2,11 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { Product, Zone } from '@/types';
 import {
   subscribeToProducts, addProduct, addProductsBulk, updateProduct,
-  deleteProduct, moveProductZone, consumeOneUnit, openOneUnit, recordProductsAdded,
+  deleteProduct, moveProductZone, consumeOneUnit, openOneUnit, recordProductsAdded, recordProductsOutcome,
 } from '@/lib/firestore';
 import { subscribeToConsumedAction } from '@/lib/notifications';
-import { FREE_PRODUCT_LIMIT, ProductLimitError } from '@/lib/limits';
-import { daysTo } from '@/lib/urgency';
+import { FREE_PRODUCT_LIMIT, GUEST_PRODUCT_LIMIT, ProductLimitError } from '@/lib/limits';
+import { daysTo, effectiveDays } from '@/lib/urgency';
 import { useAuth } from './AuthContext';
 import { usePantry } from './PantryContext';
 
@@ -79,14 +79,19 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user) return;
     return subscribeToConsumedAction((productId, pantryId) => {
-      consumeOneUnit(user.uid, pantryId, productId).catch(console.warn);
+      consumeOneUnit(user.uid, pantryId, productId)
+        .then(() => recordProductsOutcome(user.uid, 'consumed', 1))
+        .catch(console.warn);
     });
   }, [user]);
 
+  // L'ospite ha un tetto tutto suo, più basso, e solo la dispensa personale.
   // Il tetto vale solo sulla dispensa personale di un account base: una casa
   // condivisa è una risorsa di gruppo, bloccarla penalizzerebbe anche i membri
   // Premium.
-  const productLimit = !user?.isPremium && activePantryId === null ? FREE_PRODUCT_LIMIT : null;
+  const productLimit = user?.isGuest
+    ? GUEST_PRODUCT_LIMIT
+    : !user?.isPremium && activePantryId === null ? FREE_PRODUCT_LIMIT : null;
   const productsLeft = productLimit === null ? null : Math.max(0, productLimit - products.length);
 
   const addNewProduct = useCallback(
@@ -111,12 +116,19 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
     [user, activePantryId, productLimit, products.length],
   );
 
+  // Eliminare un prodotto già scaduto vuol dire buttarlo: conta come spreco.
+  // Prima della scadenza invece può essere un errore o un regalo, e non si
+  // conta né come mangiato né come buttato.
   const removeProduct = useCallback(
     async (id: string) => {
       if (!user) return;
+      const product = products.find((p) => p.id === id);
       await deleteProduct(user.uid, activePantryId, id);
+      if (product && effectiveDays(product) < 0) {
+        recordProductsOutcome(user.uid, 'wasted', product.count ?? 1).catch(() => {});
+      }
     },
-    [user, activePantryId],
+    [user, activePantryId, products],
   );
 
   const changeZone = useCallback(
@@ -139,6 +151,7 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
     async (id: string) => {
       if (!user) return;
       await consumeOneUnit(user.uid, activePantryId, id);
+      recordProductsOutcome(user.uid, 'consumed', 1).catch(() => {});
     },
     [user, activePantryId],
   );
@@ -146,9 +159,11 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
   const consumeAll = useCallback(
     async (id: string) => {
       if (!user) return;
+      const product = products.find((p) => p.id === id);
       await deleteProduct(user.uid, activePantryId, id);
+      recordProductsOutcome(user.uid, 'consumed', product?.count ?? 1).catch(() => {});
     },
-    [user, activePantryId],
+    [user, activePantryId, products],
   );
 
   const markOpened = useCallback(

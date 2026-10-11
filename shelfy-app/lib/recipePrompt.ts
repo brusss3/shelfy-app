@@ -10,6 +10,20 @@ export const RECIPE_TINTS = ['#e6efde', '#f1ede0', '#f3e9e0', '#f4e9c8', '#e8dcc
 // devono combaciare con quelli del form di creazione manuale.
 export const RECIPE_DIFFICULTIES = ['Facile', 'Media', 'Difficile'] as const;
 
+// Il valore salvato resta quello italiano (o quello scritto dall'AI nella
+// lingua del prompt): si traduce solo a schermo. Valori sconosciuti
+// (ricette vecchie, testo libero) passano così come sono.
+const DIFFICULTY_KEYS: Record<string, 'easy' | 'medium' | 'hard'> = {
+  facile: 'easy', easy: 'easy', 'fácil': 'easy', facil: 'easy',
+  media: 'medium', medium: 'medium', intermedia: 'medium',
+  difficile: 'hard', hard: 'hard', 'difícil': 'hard', dificil: 'hard',
+};
+
+export function difficultyLabel(value: string): string {
+  const key = DIFFICULTY_KEYS[value.trim().toLowerCase()];
+  return key ? i18n.t(`recipes.difficulty.${key}`) : value;
+}
+
 export const MAX_PROMPT_RECIPES = 3;
 // Tetti difensivi sul JSON incollato: il testo arriva da fuori, non ci si fida.
 const MAX_IMPORT_RECIPES = 5;

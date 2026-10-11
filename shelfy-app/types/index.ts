@@ -59,6 +59,9 @@ export interface CommunityRecipe {
   ratingSum: number;
   ratingCount: number;
   createdAt: string;
+  // Lingua della ricetta: presente sulle ricette editoriali di Shelfy
+  // (scripts/seed-recipes); assente su quelle pubblicate dagli utenti.
+  lang?: 'it' | 'en' | 'es';
 }
 
 export interface SavedRecipe extends CommunityRecipe {
@@ -125,6 +128,8 @@ export interface User {
   adminNotifFeedback?: boolean;
   /** Blocco AI sul singolo account, impostabile solo dall'admin. */
   aiDisabled?: boolean;
+  /** Ospite (accesso anonimo): solo dispensa personale, con tetto ridotto. */
+  isGuest?: boolean;
 }
 
 /** Sondaggio mostrato in popup: una domanda, più opzioni, una risposta sola. */

@@ -5,6 +5,10 @@
 /** Prodotti massimi nella dispensa personale per un account base. */
 export const FREE_PRODUCT_LIMIT = 50;
 
+/** Prodotti massimi per un ospite (accesso senza account): abbastanza per
+ *  provare scanner e scadenze, poco per farne a meno di registrarsi. */
+export const GUEST_PRODUCT_LIMIT = 10;
+
 /** Sollevato quando un account base prova a superare FREE_PRODUCT_LIMIT. */
 export class ProductLimitError extends Error {
   constructor() {

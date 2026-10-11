@@ -27,6 +27,7 @@ import PriceAreaSheet from '@/components/PriceAreaSheet';
 import TutorialModal, { HelpButton, useTutorial } from '@/components/Tutorial';
 import ProfileButton from '@/components/ProfileButton';
 import PrimaryButton from '@/components/PrimaryButton';
+import GuestGate from '@/components/GuestGate';
 
 const ZONE_ICONS: Record<string, string> = { frigo: '❄️', freezer: '🧊', dispensa: '📦' };
 
@@ -43,7 +44,16 @@ interface Suggestion {
   zoneIcon?: string;
 }
 
+// Gli ospiti vedono l'invito a registrarsi al posto della funzione.
 export default function ShoppingScreen() {
+  return (
+    <GuestGate feature="shopping">
+      <ShoppingScreenContent />
+    </GuestGate>
+  );
+}
+
+function ShoppingScreenContent() {
   const { T } = useTheme();
   const styles = useThemedStyles(createStyles);
   const { t } = useTranslation();

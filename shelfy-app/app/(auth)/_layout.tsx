@@ -6,8 +6,10 @@ export default function AuthLayout() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
+  // L'ospite resta qui: login e registrazione sono proprio il suo modo di
+  // diventare account. Appena lo diventa (isGuest false) si torna all'app.
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && user && !user.isGuest) {
       router.replace('/(tabs)');
     }
   }, [user, loading]);

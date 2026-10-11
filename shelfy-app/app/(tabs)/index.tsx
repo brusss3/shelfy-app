@@ -17,6 +17,7 @@ import ProductRow from '@/components/ProductRow';
 import ProfileButton from '@/components/ProfileButton';
 import PrimaryButton from '@/components/PrimaryButton';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { Easing, FadeInDown, FadeOut, LayoutAnimationConfig, LinearTransition } from 'react-native-reanimated';
 import { FONTS, RADIUS } from '@/constants/theme';
 import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 
@@ -28,6 +29,12 @@ const ZONES: { id: Zone; labelKey: string; icon: string }[] = [
   { id: 'freezer',  labelKey: 'common.zones.freezer',  icon: '🧊' },
   { id: 'dispensa', labelKey: 'common.zones.dispensa', icon: '📦' },
 ];
+
+// Fuori dal componente: ricostruire i builder a ogni render costa.
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
+const ROW_ENTER = FadeInDown.duration(250).easing(EASE_OUT);
+const ROW_EXIT = FadeOut.duration(180);
+const ROW_LAYOUT = LinearTransition.duration(200).easing(EASE_OUT);
 
 export default function HomeScreen() {
   const { T, GRADIENT, SURFACE, ZONE_MATERIAL } = useTheme();
@@ -109,7 +116,7 @@ export default function HomeScreen() {
         <View style={styles.statsRow}>
           <Text style={styles.statsCount}>
             {productLimit !== null
-              ? t('home.productCountLimited', { count: products.length, limit: productLimit })
+              ? t(user?.isGuest ? 'guest.productCount' : 'home.productCountLimited', { count: products.length, limit: productLimit })
               : t('home.productCount', { count: products.length })}
           </Text>
           {urgentCount + expiredCount > 0 && (
@@ -131,22 +138,27 @@ export default function HomeScreen() {
         </View>
 
         {/* Piano base: il tetto si fa vedere solo quando è vicino, così non
-            diventa rumore per chi ha la dispensa mezza vuota. */}
-        {productsLeft !== null && productsLeft <= 5 && (
+            diventa rumore per chi ha la dispensa mezza vuota. L'ospite invece
+            lo vede sempre: è il suo promemoria che registrarsi sblocca tutto. */}
+        {productsLeft !== null && (user?.isGuest || productsLeft <= 5) && (
           <TouchableOpacity
             style={[styles.limitBanner, productsLeft === 0 && styles.limitBannerFull]}
             onPress={onUpgradeIntent}
             activeOpacity={0.85}
           >
-            <Text style={styles.limitBannerIcon}>{productsLeft === 0 ? '🔒' : '✨'}</Text>
+            <Text style={styles.limitBannerIcon}>{productsLeft === 0 ? '🔒' : user?.isGuest ? '👋' : '✨'}</Text>
             <View style={{ flex: 1 }}>
               <Text style={styles.limitBannerTitle}>
                 {productsLeft === 0
                   ? t('home.limitReachedTitle', { limit: productLimit })
-                  : t('home.limitNearTitle', { count: productsLeft })}
+                  : user?.isGuest
+                    ? t('guest.bannerTitle', { count: productsLeft })
+                    : t('home.limitNearTitle', { count: productsLeft })}
               </Text>
               <Text style={styles.limitBannerDesc}>
-                {monetizationEnabled ? t('home.limitUpsellDesc') : t('home.limitSoonDesc')}
+                {user?.isGuest
+                  ? t('guest.bannerDesc')
+                  : monetizationEnabled ? t('home.limitUpsellDesc') : t('home.limitSoonDesc')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={T.primaryInk} />
@@ -220,18 +232,25 @@ export default function HomeScreen() {
           </Text>
         </View>
 
+        {/* Si anima solo ciò che cambia davvero: un prodotto aggiunto entra,
+            uno consumato esce e gli altri scorrono a chiudere il buco. Cambiare
+            zona o ricerca rimonta la config (key) e salta gli ingressi: è un
+            gesto da decine di volte al giorno, la lista deve esserci già. */}
+        <LayoutAnimationConfig skipEntering key={`${zone}|${query}`}>
         <View style={styles.list}>
           {filtered.map((p) => (
-            <ProductRow
-              key={p.id}
-              product={p}
-              onPress={() => router.push(`/product/${p.id}`)}
-            />
+            <Animated.View key={p.id} entering={ROW_ENTER} exiting={ROW_EXIT} layout={ROW_LAYOUT}>
+              <ProductRow
+                product={p}
+                onPress={() => router.push(`/product/${p.id}`)}
+              />
+            </Animated.View>
           ))}
           {filtered.length === 0 && (
             <Text style={styles.empty}>{t('home.emptyFiltered')}</Text>
           )}
         </View>
+        </LayoutAnimationConfig>
       </ScrollView>
 
       {/* Barra azione: lo scan è il gesto primario, sempre al centro — stessa

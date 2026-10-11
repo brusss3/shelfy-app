@@ -50,8 +50,11 @@ export default function SettingsScreen() {
     getStoredLanguageOption().then(setLangOption);
   }, []);
 
-  const initial = user?.displayName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? 'U';
-  const name = user?.displayName ?? '—';
+  const isGuest = !!user?.isGuest;
+  const name = isGuest ? t('guest.profileName') : user?.displayName ?? '—';
+  const initial = isGuest
+    ? name[0].toUpperCase()
+    : user?.displayName?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? 'U';
   const email = user?.email ?? '';
   const isPremium = !!user?.isPremium;
   const notifEnabled = user?.notificationsEnabled ?? true;
@@ -84,8 +87,9 @@ export default function SettingsScreen() {
     await openSubscriptionManagement();
   };
 
+  // Un ospite che esce perde la dispensa: non c'è un account per rientrare.
   const handleLogout = () => {
-    showAlert(t('settings.logout.confirmTitle'), t('settings.logout.confirmBody'), [
+    showAlert(t('settings.logout.confirmTitle'), isGuest ? t('guest.logoutWarning') : t('settings.logout.confirmBody'), [
       { text: t('common.cancel'), style: 'cancel' },
       { text: t('settings.logout.confirm'), style: 'destructive', onPress: () => logOut() },
     ]);
@@ -167,7 +171,21 @@ export default function SettingsScreen() {
           {/* Senza piani in vendita l'invito sparisce del tutto: in
               Impostazioni non c'è un limite da spiegare, sarebbe solo una
               promessa di qualcosa che non si può ancora comprare. */}
-          {!isPremium && monetizationEnabled && (
+          {isGuest && (
+            <TouchableOpacity
+              style={styles.upsellCard}
+              onPress={() => router.push('/(auth)/register')}
+              activeOpacity={0.85}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.upsellTitle}>{t('guest.settingsTitle')}</Text>
+                <Text style={styles.upsellDesc}>{t('guest.settingsDesc')}</Text>
+              </View>
+              <Text style={styles.chevronLarge}>›</Text>
+            </TouchableOpacity>
+          )}
+
+          {!isPremium && !isGuest && monetizationEnabled && (
             <TouchableOpacity
               style={styles.upsellCard}
               onPress={() => router.push('/paywall')}
