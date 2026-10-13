@@ -278,7 +278,10 @@ function ShoppingScreenContent() {
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* Anche su Android serve il padding: con la grafica a bordo schermo il
+          sistema non ridimensiona più la finestra e la tastiera coprirebbe la
+          barra di inserimento in fondo. */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>{t('shopping.title')}</Text>
