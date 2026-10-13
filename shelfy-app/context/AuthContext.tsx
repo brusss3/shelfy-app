@@ -384,7 +384,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // iOS/Android: idToken ottenuto via expo-auth-session → credenziale Firebase.
+  // iOS/Android: idToken ottenuto via Google Sign-In → credenziale Firebase.
   const signInWithGoogleCredential = async (idToken: string) => {
     await linkOrSwitch(GoogleAuthProvider.credential(idToken));
   };

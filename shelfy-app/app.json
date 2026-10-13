@@ -2,7 +2,7 @@
   "expo": {
     "name": "Shelfy",
     "slug": "shelfy",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -67,8 +67,15 @@
       ],
       "react-native-edge-to-edge",
       "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "buildArchs": ["arm64-v8a"]
+          }
+        }
+      ],
       "@react-native-google-signin/google-signin",
-      "expo-sharing",
       "expo-localization",
       "expo-status-bar"
     ],
