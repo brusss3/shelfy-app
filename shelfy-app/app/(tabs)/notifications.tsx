@@ -13,6 +13,10 @@ import ProfileButton from '@/components/ProfileButton';
 import { FONTS, RADIUS } from '@/constants/theme';
 import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
 import { Product } from '@/types';
+import Animated, { Easing, FadeOut, LayoutAnimationConfig, LinearTransition } from 'react-native-reanimated';
+
+const CARD_EXIT = FadeOut.duration(180);
+const CARD_LAYOUT = LinearTransition.duration(220).easing(Easing.bezier(0.23, 1, 0.32, 1));
 
 export default function NotificationsScreen() {
   const styles = useThemedStyles(createStyles);
@@ -30,6 +34,10 @@ export default function NotificationsScreen() {
   return (
     <SafeAreaView style={styles.root}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* Qui le azioni (consumato, congela, elimina) si toccano sulla card:
+            la card esce e le altre scorrono, così si vede che è fatta.
+            Niente ingressi all'apertura della tab: è un gesto frequente. */}
+        <LayoutAnimationConfig skipEntering>
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <View>
@@ -56,49 +64,58 @@ export default function NotificationsScreen() {
         {scaduti.length > 0 && (
           <Section title={t('notifications.sections.expired')}>
             {scaduti.map((p) => (
-              <PriorityCard key={p.id} product={p} urgency="scaduto"
-                onOpen={() => router.push(`/product/${p.id}`)}
-                onRemove={() => removeProduct(p.id)}
-                onConsumed={() => consumeOne(p.id)}
-              />
+              <Animated.View key={p.id} exiting={CARD_EXIT} layout={CARD_LAYOUT}>
+                <PriorityCard product={p} urgency="scaduto"
+                  onOpen={() => router.push(`/product/${p.id}`)}
+                  onRemove={() => removeProduct(p.id)}
+                  onConsumed={() => consumeOne(p.id)}
+                />
+              </Animated.View>
             ))}
           </Section>
         )}
         {oggi.length > 0 && (
           <Section title={t('notifications.sections.today')}>
             {oggi.map((p) => (
-              <PriorityCard key={p.id} product={p} urgency="oggi"
-                onOpen={() => router.push(`/product/${p.id}`)}
-                onFreeze={() => changeZone(p.id, 'freezer')}
-                onConsumed={() => consumeOne(p.id)}
-                onRecipe={() => router.push('/(tabs)/recipes')}
-                canFreeze={['Pesce','Carne','Pane','Verdura'].includes(p.category)}
-              />
+              <Animated.View key={p.id} exiting={CARD_EXIT} layout={CARD_LAYOUT}>
+                <PriorityCard product={p} urgency="oggi"
+                  onOpen={() => router.push(`/product/${p.id}`)}
+                  onFreeze={() => changeZone(p.id, 'freezer')}
+                  onConsumed={() => consumeOne(p.id)}
+                  onRecipe={() => router.push('/(tabs)/recipes')}
+                  canFreeze={['Pesce','Carne','Pane','Verdura'].includes(p.category)}
+                />
+              </Animated.View>
             ))}
           </Section>
         )}
         {urgenti.length > 0 && (
           <Section title={t('notifications.sections.upcoming')}>
             {urgenti.map((p) => (
-              <PriorityCard key={p.id} product={p} urgency="urgente"
-                onOpen={() => router.push(`/product/${p.id}`)}
-                onFreeze={() => changeZone(p.id, 'freezer')}
-                onConsumed={() => consumeOne(p.id)}
-                onRecipe={() => router.push('/(tabs)/recipes')}
-                canFreeze={['Pesce','Carne','Pane','Verdura'].includes(p.category)}
-              />
+              <Animated.View key={p.id} exiting={CARD_EXIT} layout={CARD_LAYOUT}>
+                <PriorityCard product={p} urgency="urgente"
+                  onOpen={() => router.push(`/product/${p.id}`)}
+                  onFreeze={() => changeZone(p.id, 'freezer')}
+                  onConsumed={() => consumeOne(p.id)}
+                  onRecipe={() => router.push('/(tabs)/recipes')}
+                  canFreeze={['Pesce','Carne','Pane','Verdura'].includes(p.category)}
+                />
+              </Animated.View>
             ))}
           </Section>
         )}
         {prossimi.length > 0 && (
           <Section title={t('notifications.sections.thisWeek')}>
             {prossimi.map((p) => (
-              <CompactCard key={p.id} product={p}
-                onOpen={() => router.push(`/product/${p.id}`)}
-              />
+              <Animated.View key={p.id} exiting={CARD_EXIT} layout={CARD_LAYOUT}>
+                <CompactCard product={p}
+                  onOpen={() => router.push(`/product/${p.id}`)}
+                />
+              </Animated.View>
             ))}
           </Section>
         )}
+        </LayoutAnimationConfig>
       </ScrollView>
     </SafeAreaView>
   );

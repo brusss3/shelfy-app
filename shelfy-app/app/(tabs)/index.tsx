@@ -1,11 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import { useProducts } from '@/context/ProductsContext';
 import { usePremiumGate } from '@/lib/premiumGate';
@@ -13,7 +14,10 @@ import { useAuth } from '@/context/AuthContext';
 import { usePantry } from '@/context/PantryContext';
 import { urgencyOf, effectiveDays } from '@/lib/urgency';
 import { ocrAvailable } from '@/lib/ocr';
-import ProductRow from '@/components/ProductRow';
+import SwipeableProductRow from '@/components/SwipeableProductRow';
+import UndoToast from '@/components/UndoToast';
+import UpdateBanner from '@/components/UpdateBanner';
+import { useProductQuickActions } from '@/lib/useProductQuickActions';
 import ProfileButton from '@/components/ProfileButton';
 import PrimaryButton from '@/components/PrimaryButton';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -36,15 +40,21 @@ const ROW_ENTER = FadeInDown.duration(250).easing(EASE_OUT);
 const ROW_EXIT = FadeOut.duration(180);
 const ROW_LAYOUT = LinearTransition.duration(200).easing(EASE_OUT);
 
+// Il suggerimento dello swipe (la prima riga che accenna il gesto) si vede una volta sola.
+const SWIPE_HINT_KEY = 'shelfy.hint.swipeRow';
+// Quanto resta illuminata una riga appena aggiunta.
+const HIGHLIGHT_MS = 1700;
+
 export default function HomeScreen() {
   const { T, GRADIENT, SURFACE, ZONE_MATERIAL } = useTheme();
   const styles = useThemedStyles(createStyles);
   const { products, loading, productLimit, productsLeft } = useProducts();
   const { monetizationEnabled, onUpgradeIntent } = usePremiumGate();
   const { user } = useAuth();
-  const { activePantry } = usePantry();
+  const { activePantry, activePantryId } = usePantry();
   const router = useRouter();
   const { t } = useTranslation();
+  const quick = useProductQuickActions();
   const [zone, setZone] = useState<Zone>('all');
   const [query, setQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -61,6 +71,39 @@ export default function HomeScreen() {
       )
       .sort((a, b) => effectiveDays(a) - effectiveDays(b));
   }, [products, zone, query]);
+  const visible = quick.applyPending(filtered);
+
+  // Prodotti nuovi rispetto all'ultima volta che la home era a schermo: si
+  // aggiungono da un popup, quindi l'ingresso nella lista avviene di nascosto.
+  // Al ritorno la riga si illumina una volta, così si vede dove è finita.
+  const seenRef = useRef<{ pantry: string | null; ids: Set<string> } | null>(null);
+  const [highlightIds, setHighlightIds] = useState<Set<string>>(new Set());
+  const idsKey = products.map((p) => p.id).join(',');
+  useFocusEffect(useCallback(() => {
+    if (loading) return;
+    const ids = new Set(products.map((p) => p.id));
+    const prev = seenRef.current;
+    seenRef.current = { pantry: activePantryId, ids };
+    // Primo caricamento o cambio di dispensa: è tutto "nuovo", niente da segnalare.
+    if (!prev || prev.pantry !== activePantryId) return;
+    const fresh = [...ids].filter((id) => !prev.ids.has(id));
+    if (fresh.length === 0) return;
+    setHighlightIds(new Set(fresh));
+    const timer = setTimeout(() => setHighlightIds(new Set()), HIGHLIGHT_MS);
+    return () => clearTimeout(timer);
+  }, [idsKey, loading, activePantryId]));
+
+  const [peekId, setPeekId] = useState<string | null>(null);
+  const hintChecked = useRef(false);
+  useEffect(() => {
+    if (loading || hintChecked.current || filtered.length === 0) return;
+    hintChecked.current = true;
+    AsyncStorage.getItem(SWIPE_HINT_KEY).then((v) => {
+      if (v) return;
+      setPeekId(filtered[0].id);
+      AsyncStorage.setItem(SWIPE_HINT_KEY, '1').catch(() => {});
+    }).catch(() => {});
+  }, [loading, filtered.length]);
 
   const urgentCount = products.filter((p) => { const d = effectiveDays(p); return d >= 0 && d <= 3; }).length;
   const expiredCount = products.filter((p) => effectiveDays(p) < 0).length;
@@ -107,6 +150,8 @@ export default function HomeScreen() {
             <ProfileButton />
           </View>
         </View>
+
+        <UpdateBanner />
 
         {/* Statistica compatta: il conteggio è un dato, le urgenze sono
             un'azione — per quello c'è già la tab Notifiche (sezioni per
@@ -238,15 +283,20 @@ export default function HomeScreen() {
             gesto da decine di volte al giorno, la lista deve esserci già. */}
         <LayoutAnimationConfig skipEntering key={`${zone}|${query}`}>
         <View style={styles.list}>
-          {filtered.map((p) => (
+          {visible.map((p) => (
             <Animated.View key={p.id} entering={ROW_ENTER} exiting={ROW_EXIT} layout={ROW_LAYOUT}>
-              <ProductRow
+              <SwipeableProductRow
                 product={p}
                 onPress={() => router.push(`/product/${p.id}`)}
+                onConsume={() => quick.consume(p)}
+                onDiscard={() => quick.discard(p)}
+                onShop={quick.shop ? () => quick.shop!(p) : undefined}
+                peek={p.id === peekId}
+                highlight={highlightIds.has(p.id)}
               />
             </Animated.View>
           ))}
-          {filtered.length === 0 && (
+          {visible.length === 0 && (
             <Text style={styles.empty}>{t('home.emptyFiltered')}</Text>
           )}
         </View>
@@ -289,6 +339,11 @@ export default function HomeScreen() {
           <View style={styles.actionSide} />
         )}
       </View>
+
+      {/* Sopra la barra azioni: conferma dello swipe, con Annulla. */}
+      {quick.toast && (
+        <UndoToast key={quick.toast.key} message={quick.toast.message} actions={quick.toast.actions} bottom={76} />
+      )}
     </SafeAreaView>
   );
 }

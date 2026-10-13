@@ -229,23 +229,8 @@ export async function scheduleExpiryNotifications(
 }
 
 // --- Notifiche push Admin (Expo Push API) ---
-
-interface AdminPushRecipient {
-  uid: string;
-  pushToken: string;
-}
-
-async function getAdminPushRecipients(prefField: 'adminNotifNewUsers' | 'adminNotifFeedback'): Promise<AdminPushRecipient[]> {
-  const snap = await getDocs(query(collection(db, 'users'), where('isAdmin', '==', true)));
-  const recipients: AdminPushRecipient[] = [];
-  snap.docs.forEach((d) => {
-    const data = d.data();
-    const token: string | undefined = data.pushToken;
-    const enabled: boolean = data[prefField] !== false;
-    if (token && enabled) recipients.push({ uid: d.id, pushToken: token });
-  });
-  return recipients;
-}
+// Gli avvisi per nuovi utenti e feedback partono dal server (functions/src/adminNotify.ts);
+// da qui resta solo il push di prova delle impostazioni admin.
 
 export async function sendExpoPushNotification(
   tokens: string[],
@@ -287,33 +272,6 @@ export async function sendExpoPushNotification(
     console.warn('[notifications] Expo push errors:', errors);
     throw new Error(errors.map((e) => e.details?.error ?? e.message ?? i18n.t('pushNotifications.unknownError')).join(', '));
   }
-}
-
-export async function notifyAdminsNewUser(newUser: { email: string; displayName?: string | null }): Promise<void> {
-  const recipients = await getAdminPushRecipients('adminNotifNewUsers');
-  if (recipients.length === 0) return;
-  const who = newUser.displayName ? `${newUser.displayName} (${newUser.email})` : newUser.email;
-  await sendExpoPushNotification(recipients.map((r) => r.pushToken), {
-    title: i18n.t('pushNotifications.newUserTitle'),
-    body: who,
-    data: { type: 'new_user' },
-  });
-}
-
-export async function notifyAdminsNewFeedback(feedback: {
-  email: string;
-  displayName?: string | null;
-  category: string;
-  message: string;
-}): Promise<void> {
-  const recipients = await getAdminPushRecipients('adminNotifFeedback');
-  if (recipients.length === 0) return;
-  const who = feedback.displayName ? `${feedback.displayName} (${feedback.email})` : feedback.email;
-  await sendExpoPushNotification(recipients.map((r) => r.pushToken), {
-    title: i18n.t('pushNotifications.newFeedbackTitle'),
-    body: `${who}: ${feedback.message.slice(0, 100)}`,
-    data: { type: 'new_feedback' },
-  });
 }
 
 export async function sendAdminTestPushNotification(token: string): Promise<void> {

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Shelfy — Elimina il tuo account</title>
+<meta name="description" content="Come eliminare il tuo account Shelfy e i tuoi dati: dall'app o via email, cosa viene cancellato, cosa resta in forma anonima e cosa fare con l'abbonamento." />
+<style>
+  :root {
+    --ink: #2f2a20;
+    --ink2: #6b6353;
+    --bg: #f5f3ec;
+    --surface: #ffffff;
+    --primary: #2f4a31;
+    --line: rgba(47,42,32,0.12);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 48px 24px 80px; }
+  header { margin-bottom: 32px; }
+  .badge {
+    display: inline-block; background: var(--primary); color: #fbfaf3;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 100px; margin-bottom: 16px;
+  }
+  h1 { font-size: 30px; margin: 0 0 8px; color: var(--ink); }
+  .updated { color: var(--ink2); font-size: 13px; margin: 0; }
+  .langSwitch { margin-top: 20px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .langBtn {
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+    padding: 6px 14px; border-radius: 100px; font-size: 13px; font-weight: 600;
+    cursor: pointer;
+  }
+  .langBtn.active { background: var(--primary); color: #fbfaf3; border-color: var(--primary); }
+  section { margin-bottom: 28px; }
+  h2 { font-size: 18px; color: var(--ink); margin: 0 0 10px; }
+  p, li { color: var(--ink2); font-size: 15px; }
+  ul, ol { padding-left: 20px; margin: 8px 0; }
+  a { color: var(--primary); font-weight: 600; }
+  .card {
+    background: var(--surface); border-radius: 16px; padding: 18px 20px;
+    margin-bottom: 10px; border: 1px solid var(--line);
+  }
+  .card h3 { font-size: 14px; margin: 0 0 6px; color: var(--ink); }
+  .card p, .card ul { margin: 0; font-size: 13.5px; }
+  .card ul { padding-left: 18px; }
+  .card li { font-size: 13.5px; }
+  .warn { border-color: var(--primary); }
+  footer { border-top: 1px solid var(--line); margin-top: 40px; padding-top: 20px; }
+  footer p { font-size: 13px; }
+  /* Italiano di default (anche senza JavaScript); EN/ES si attivano via classe sul body. */
+  [data-lang="en"], [data-lang="es"] { display: none; }
+  body.lang-en [data-lang="it"], body.lang-es [data-lang="it"] { display: none; }
+  body.lang-en [data-lang="en"], body.lang-es [data-lang="es"] { display: block; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="badge">Shelfy</span>
+      <h1 data-lang="it">Come eliminare il tuo account e i tuoi dati</h1>
+      <h1 data-lang="en">How to delete your account and data</h1>
+      <h1 data-lang="es">Cómo eliminar tu cuenta y tus datos</h1>
+      <p class="updated" data-lang="it">Ultimo aggiornamento: 13 ottobre 2026</p>
+      <p class="updated" data-lang="en">Last updated: October 13, 2026</p>
+      <p class="updated" data-lang="es">Última actualización: 13 de octubre de 2026</p>
+      <div class="langSwitch">
+        <button class="langBtn active" onclick="setLang('it')" id="btn-it">Italiano</button>
+        <button class="langBtn" onclick="setLang('en')" id="btn-en">English</button>
+        <button class="langBtn" onclick="setLang('es')" id="btn-es">Español</button>
+      </div>
+    </header>
+
+    <!-- ===================== ITALIANO ===================== -->
+    <div data-lang="it">
+      <p>Puoi eliminare il tuo account Shelfy e i dati associati in qualsiasi momento, direttamente dall'app o scrivendoci. Questa pagina vale per l'app Shelfy (Android, web e iOS) e per il sito shelfy-app.it.</p>
+
+      <section>
+        <h2>1. Dall'app (il modo più rapido)</h2>
+        <ol>
+          <li>Apri Shelfy e accedi con il tuo account.</li>
+          <li>Vai su <strong>Impostazioni → Account</strong>.</li>
+          <li>Tocca <strong>Elimina account</strong> e conferma.</li>
+        </ol>
+        <p>L'eliminazione è <strong>immediata e non si può annullare</strong>. Se vuoi conservare una copia dei tuoi dati, prima tocca <strong>Scarica i miei dati</strong> nella stessa schermata: riceverai un file JSON.</p>
+      </section>
+
+      <section>
+        <h2>2. Via email (se non riesci ad accedere all'app)</h2>
+        <p>Scrivi a <a href="mailto:business.shelfy@gmail.com?subject=Richiesta%20di%20eliminazione%20account">business.shelfy@gmail.com</a> dall'indirizzo email con cui ti sei registrato, indicando:</p>
+        <ul>
+          <li>l'oggetto "Richiesta di eliminazione account";</li>
+          <li>l'email dell'account da eliminare e, se la ricordi, il nome visualizzato (gli account con Accesso Google usano l'email Google);</li>
+          <li>la richiesta di cancellazione dell'account e di tutti i dati associati.</li>
+        </ul>
+        <p>Potremmo chiederti una conferma per verificare che la richiesta sia tua. Rispondiamo senza ingiustificato ritardo e comunque entro un mese.</p>
+      </section>
+
+      <section>
+        <h2>3. Cosa viene eliminato, cosa diventa anonimo e cosa resta</h2>
+        <div class="card">
+          <h3>Eliminato subito</h3>
+          <ul>
+            <li>Il tuo profilo (email, nome, lingua, preferenze) e l'accesso all'account.</li>
+            <li>La tua dispensa personale, la lista della spesa e i preferiti.</li>
+            <li>Le ricette salvate e le tue ricette personali.</li>
+            <li>I token di notifica del dispositivo.</li>
+            <li>I feedback e le risposte ai sondaggi che hai inviato.</li>
+            <li>Il collegamento tra te e i prezzi o i prodotti del catalogo che hai segnalato (i prezzi e i prodotti pubblici non riportano l'autore e restano).</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Resta in forma anonima</h3>
+          <ul>
+            <li>Le ricette, le proposte di ricetta e le richieste che hai pubblicato nella community restano visibili, ma l'autore appare come <strong>"Utente eliminato"</strong>. Se non vuoi che restino, eliminale tu dall'app prima di eliminare l'account.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Dispense condivise</h3>
+          <ul>
+            <li>Vieni rimosso da tutte le dispense condivise di cui fai parte.</li>
+            <li>Se eri il creatore e ci sono altri membri, la proprietà passa a un altro membro.</li>
+            <li>Se eri l'unico membro, la dispensa viene eliminata con i suoi prodotti.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Copie tecniche e obblighi di legge</h3>
+          <ul>
+            <li>Copie di sicurezza (backup) presso Google Firebase possono restare per i tempi dei normali cicli tecnici, senza essere usate.</li>
+            <li>Se in futuro saranno venduti piani a pagamento, i dati contabili e fiscali relativi agli acquisti andranno conservati per il periodo richiesto dalla legge.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <h2>4. Hai un abbonamento a pagamento?</h2>
+        <div class="card warn">
+          <p><strong>Eliminare l'account NON annulla l'abbonamento.</strong> Se hai attivato un piano a pagamento, disdicilo tu da Google Play (Pagamenti e abbonamenti → Abbonamenti) o da App Store (Impostazioni → il tuo nome → Abbonamenti), altrimenti lo store continuerà ad addebitarti. Fallo prima di eliminare l'account. Al momento Shelfy non ha piani a pagamento in vendita.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>5. Account ospite</h2>
+        <p>Se usi Shelfy in modalità ospite (senza registrazione) non devi fare nulla: l'account ospite e i suoi dati vengono eliminati automaticamente dopo 30 giorni. Se vuoi cancellarlo prima, usa Elimina account in Impostazioni oppure scrivici.</p>
+      </section>
+
+      <section>
+        <h2>6. Solo alcuni dati?</h2>
+        <p>Se non vuoi eliminare l'account ma solo alcuni dati, puoi cancellare singoli prodotti, ricette o contenuti dall'app, oppure scriverci per esercitare i tuoi diritti di accesso, rettifica, limitazione o opposizione. Tutti i dettagli sono nell'<a href="/privacy" data-nav>Informativa sulla Privacy</a>.</p>
+      </section>
+    </div>
+
+    <!-- ===================== ENGLISH ===================== -->
+    <div data-lang="en">
+      <p>You can delete your Shelfy account and associated data at any time, directly in the app or by writing to us. This page applies to the Shelfy app (Android, web and iOS) and to the shelfy-app.it website.</p>
+
+      <section>
+        <h2>1. In the app (the quickest way)</h2>
+        <ol>
+          <li>Open Shelfy and sign in to your account.</li>
+          <li>Go to <strong>Settings → Account</strong>.</li>
+          <li>Tap <strong>Delete account</strong> and confirm.</li>
+        </ol>
+        <p>Deletion is <strong>immediate and cannot be undone</strong>. If you want to keep a copy of your data, first tap <strong>Download my data</strong> on the same screen: you will get a JSON file.</p>
+      </section>
+
+      <section>
+        <h2>2. By email (if you cannot access the app)</h2>
+        <p>Write to <a href="mailto:business.shelfy@gmail.com?subject=Account%20deletion%20request">business.shelfy@gmail.com</a> from the email address you signed up with, including:</p>
+        <ul>
+          <li>the subject "Account deletion request";</li>
+          <li>the email of the account to delete and, if you remember it, the display name (accounts using Google Sign-In use the Google email);</li>
+          <li>a request to delete the account and all associated data.</li>
+        </ul>
+        <p>We may ask you for confirmation to check that the request is yours. We reply without undue delay and in any case within one month.</p>
+      </section>
+
+      <section>
+        <h2>3. What is deleted, what becomes anonymous and what remains</h2>
+        <div class="card">
+          <h3>Deleted immediately</h3>
+          <ul>
+            <li>Your profile (email, name, language, preferences) and your sign-in access.</li>
+            <li>Your personal pantry, shopping list and favourites.</li>
+            <li>Saved recipes and your own recipes.</li>
+            <li>Your device notification tokens.</li>
+            <li>Feedback and survey answers you sent.</li>
+            <li>The link between you and the prices or catalogue products you reported (public prices and products do not show the author and remain).</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Remains, anonymised</h3>
+          <ul>
+            <li>Recipes, recipe proposals and requests you published to the community stay visible, but the author appears as <strong>"Deleted user"</strong>. If you do not want them to stay, delete them yourself in the app before deleting your account.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Shared pantries</h3>
+          <ul>
+            <li>You are removed from all shared pantries you belong to.</li>
+            <li>If you were the owner and other members remain, ownership passes to another member.</li>
+            <li>If you were the only member, the pantry is deleted along with its products.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Technical copies and legal obligations</h3>
+          <ul>
+            <li>Backup copies at Google Firebase may remain for the duration of normal technical cycles, without being used.</li>
+            <li>If paid plans are sold in future, accounting and tax records of purchases must be kept for the period required by law.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <h2>4. Do you have a paid subscription?</h2>
+        <div class="card warn">
+          <p><strong>Deleting your account does NOT cancel your subscription.</strong> If you activated a paid plan, cancel it yourself in Google Play (Payments &amp; subscriptions → Subscriptions) or the App Store (Settings → your name → Subscriptions), otherwise the store will keep charging you. Do this before deleting the account. At the moment Shelfy has no paid plans on sale.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>5. Guest accounts</h2>
+        <p>If you use Shelfy in guest mode (without signing up) you do not need to do anything: the guest account and its data are automatically deleted after 30 days. If you want to delete it sooner, use Delete account in Settings or write to us.</p>
+      </section>
+
+      <section>
+        <h2>6. Only some data?</h2>
+        <p>If you do not want to delete the account but only some data, you can delete individual products, recipes or content in the app, or write to us to exercise your rights of access, rectification, restriction or objection. Full details are in the <a href="/privacy" data-nav>Privacy Policy</a>.</p>
+      </section>
+    </div>
+
+    <!-- ===================== ESPAÑOL ===================== -->
+    <div data-lang="es">
+      <p>Puedes eliminar tu cuenta de Shelfy y los datos asociados en cualquier momento, directamente desde la app o escribiéndonos. Esta página se aplica a la app Shelfy (Android, web e iOS) y al sitio shelfy-app.it.</p>
+
+      <section>
+        <h2>1. Desde la app (la forma más rápida)</h2>
+        <ol>
+          <li>Abre Shelfy e inicia sesión con tu cuenta.</li>
+          <li>Ve a <strong>Ajustes → Cuenta</strong>.</li>
+          <li>Pulsa <strong>Eliminar cuenta</strong> y confirma.</li>
+        </ol>
+        <p>La eliminación es <strong>inmediata y no se puede deshacer</strong>. Si quieres conservar una copia de tus datos, antes pulsa <strong>Descargar mis datos</strong> en la misma pantalla: recibirás un archivo JSON.</p>
+      </section>
+
+      <section>
+        <h2>2. Por correo (si no puedes acceder a la app)</h2>
+        <p>Escribe a <a href="mailto:business.shelfy@gmail.com?subject=Solicitud%20de%20eliminaci%C3%B3n%20de%20cuenta">business.shelfy@gmail.com</a> desde la dirección de correo con la que te registraste, indicando:</p>
+        <ul>
+          <li>el asunto "Solicitud de eliminación de cuenta";</li>
+          <li>el correo de la cuenta que quieres eliminar y, si lo recuerdas, el nombre visible (las cuentas con acceso de Google usan el correo de Google);</li>
+          <li>la petición de eliminar la cuenta y todos los datos asociados.</li>
+        </ul>
+        <p>Podemos pedirte una confirmación para comprobar que la solicitud es tuya. Respondemos sin dilación indebida y, en todo caso, en el plazo de un mes.</p>
+      </section>
+
+      <section>
+        <h2>3. Qué se elimina, qué pasa a ser anónimo y qué permanece</h2>
+        <div class="card">
+          <h3>Se elimina de inmediato</h3>
+          <ul>
+            <li>Tu perfil (correo, nombre, idioma, preferencias) y tu acceso a la cuenta.</li>
+            <li>Tu despensa personal, lista de la compra y favoritos.</li>
+            <li>Las recetas guardadas y tus recetas propias.</li>
+            <li>Los tokens de notificación de tus dispositivos.</li>
+            <li>Los comentarios y respuestas a encuestas que enviaste.</li>
+            <li>El vínculo entre tú y los precios o productos del catálogo que indicaste (los precios y productos públicos no muestran al autor y permanecen).</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Permanece de forma anónima</h3>
+          <ul>
+            <li>Las recetas, propuestas de receta y peticiones que publicaste en la comunidad siguen visibles, pero el autor aparece como <strong>"Usuario eliminado"</strong>. Si no quieres que permanezcan, elimínalas tú en la app antes de eliminar la cuenta.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Despensas compartidas</h3>
+          <ul>
+            <li>Se te retira de todas las despensas compartidas de las que formas parte.</li>
+            <li>Si eras el creador y quedan otros miembros, la propiedad pasa a otro miembro.</li>
+            <li>Si eras el único miembro, la despensa se elimina junto con sus productos.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Copias técnicas y obligaciones legales</h3>
+          <ul>
+            <li>Las copias de seguridad (backups) en Google Firebase pueden permanecer durante los ciclos técnicos normales, sin ser utilizadas.</li>
+            <li>Si en el futuro se venden planes de pago, los datos contables y fiscales de las compras deberán conservarse durante el periodo exigido por la ley.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <h2>4. ¿Tienes una suscripción de pago?</h2>
+        <div class="card warn">
+          <p><strong>Eliminar la cuenta NO cancela la suscripción.</strong> Si activaste un plan de pago, cancélalo tú en Google Play (Pagos y suscripciones → Suscripciones) o en App Store (Ajustes → tu nombre → Suscripciones); de lo contrario, la tienda seguirá cobrándote. Hazlo antes de eliminar la cuenta. Por ahora Shelfy no tiene planes de pago a la venta.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>5. Cuentas de invitado</h2>
+        <p>Si usas Shelfy en modo invitado (sin registrarte) no tienes que hacer nada: la cuenta de invitado y sus datos se eliminan automáticamente a los 30 días. Si quieres borrarla antes, usa Eliminar cuenta en Ajustes o escríbenos.</p>
+      </section>
+
+      <section>
+        <h2>6. ¿Solo algunos datos?</h2>
+        <p>Si no quieres eliminar la cuenta sino solo algunos datos, puedes borrar productos, recetas o contenidos concretos en la app, o escribirnos para ejercer tus derechos de acceso, rectificación, limitación u oposición. Todos los detalles están en la <a href="/privacy" data-nav>Política de Privacidad</a>.</p>
+      </section>
+    </div>
+
+    <footer>
+      <p data-lang="it"><a href="/privacy" data-nav>Privacy</a> · <a href="/termini" data-nav>Termini di servizio</a> · <a href="/elimina-account" data-nav>Elimina account</a> · <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a></p>
+      <p data-lang="en"><a href="/privacy" data-nav>Privacy</a> · <a href="/termini" data-nav>Terms of Service</a> · <a href="/elimina-account" data-nav>Delete account</a> · <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a></p>
+      <p data-lang="es"><a href="/privacy" data-nav>Privacidad</a> · <a href="/termini" data-nav>Términos del servicio</a> · <a href="/elimina-account" data-nav>Eliminar cuenta</a> · <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a></p>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      var LANGS = ['it', 'en', 'es'];
+      var TITLES = {
+        it: 'Shelfy — Elimina il tuo account',
+        en: 'Shelfy — Delete your account',
+        es: 'Shelfy — Elimina tu cuenta'
+      };
+      function setLang(lang, remember) {
+        if (LANGS.indexOf(lang) < 0) lang = 'it';
+        document.body.className = 'lang-' + lang;
+        document.documentElement.lang = lang;
+        document.title = TITLES[lang];
+        LANGS.forEach(function (l) {
+          document.getElementById('btn-' + l).classList.toggle('active', l === lang);
+        });
+        document.querySelectorAll('a[data-nav]').forEach(function (a) {
+          a.setAttribute('href', a.getAttribute('href').split('#')[0] + '#' + lang);
+        });
+        if (remember && window.history && history.replaceState) {
+          try { history.replaceState(null, '', '#' + lang); } catch (e) {}
+        }
+      }
+      window.setLang = function (lang) { setLang(lang, true); };
+      var hash = (location.hash || '').replace('#', '');
+      var start = LANGS.indexOf(hash) >= 0 ? hash : ((navigator.language || 'it').slice(0, 2).toLowerCase());
+      setLang(LANGS.indexOf(start) >= 0 ? start : 'it', false);
+    })();
+  </script>
+</body>
+</html>

@@ -25,6 +25,8 @@ interface ProductsContextType {
   editProduct: (id: string, data: Partial<Product>) => Promise<void>;
   consumeOne: (id: string) => Promise<void>;
   consumeAll: (id: string) => Promise<void>;
+  /** Buttato esplicitamente (swipe in home): spreco, a prescindere dalla scadenza. */
+  discardProduct: (id: string) => Promise<void>;
   markOpened: (id: string, openExpiry: string) => Promise<void>;
   daysTo: (iso: string) => number;
 }
@@ -166,6 +168,16 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
     [user, activePantryId, products],
   );
 
+  const discardProduct = useCallback(
+    async (id: string) => {
+      if (!user) return;
+      const product = products.find((p) => p.id === id);
+      await deleteProduct(user.uid, activePantryId, id);
+      recordProductsOutcome(user.uid, 'wasted', product?.count ?? 1).catch(() => {});
+    },
+    [user, activePantryId, products],
+  );
+
   const markOpened = useCallback(
     async (id: string, openExpiry: string) => {
       if (!user) return;
@@ -176,7 +188,7 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ProductsContext.Provider
-      value={{ products, loading, productLimit, productsLeft, addNewProduct, addNewProducts, removeProduct, changeZone, editProduct, consumeOne, consumeAll, markOpened, daysTo }}
+      value={{ products, loading, productLimit, productsLeft, addNewProduct, addNewProducts, removeProduct, changeZone, editProduct, consumeOne, consumeAll, discardProduct, markOpened, daysTo }}
     >
       {children}
     </ProductsContext.Provider>

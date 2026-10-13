@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Shelfy — Termini di Servizio</title>
+<meta name="description" content="Termini di servizio di Shelfy: regole d'uso dell'app, account e modalità ospite, piani, community, avvertenze alimentari e responsabilità." />
+<style>
+  :root {
+    --ink: #2f2a20;
+    --ink2: #6b6353;
+    --bg: #f5f3ec;
+    --surface: #ffffff;
+    --primary: #2f4a31;
+    --line: rgba(47,42,32,0.12);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 48px 24px 80px; }
+  header { margin-bottom: 32px; }
+  .badge {
+    display: inline-block; background: var(--primary); color: #fbfaf3;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 100px; margin-bottom: 16px;
+  }
+  h1 { font-size: 30px; margin: 0 0 8px; color: var(--ink); }
+  .updated { color: var(--ink2); font-size: 13px; margin: 0; }
+  .langSwitch { margin-top: 20px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .langBtn {
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+    padding: 6px 14px; border-radius: 100px; font-size: 13px; font-weight: 600;
+    cursor: pointer;
+  }
+  .langBtn.active { background: var(--primary); color: #fbfaf3; border-color: var(--primary); }
+  section { margin-bottom: 28px; }
+  h2 { font-size: 18px; color: var(--ink); margin: 0 0 10px; }
+  p, li { color: var(--ink2); font-size: 15px; }
+  ul { padding-left: 20px; margin: 8px 0; }
+  a { color: var(--primary); font-weight: 600; }
+  .card {
+    background: var(--surface); border-radius: 16px; padding: 18px 20px;
+    margin-bottom: 10px; border: 1px solid var(--line);
+  }
+  .card h3 { font-size: 14px; margin: 0 0 6px; color: var(--ink); }
+  .card p { margin: 0; font-size: 13.5px; }
+  footer { border-top: 1px solid var(--line); margin-top: 40px; padding-top: 20px; }
+  footer p { font-size: 13px; }
+  /* Italiano di default (anche senza JavaScript); EN/ES si attivano via classe sul body. */
+  [data-lang="en"], [data-lang="es"] { display: none; }
+  body.lang-en [data-lang="it"], body.lang-es [data-lang="it"] { display: none; }
+  body.lang-en [data-lang="en"], body.lang-es [data-lang="es"] { display: block; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="badge">Shelfy</span>
+      <h1 data-lang="it">Termini di Servizio</h1>
+      <h1 data-lang="en">Terms of Service</h1>
+      <h1 data-lang="es">Términos del Servicio</h1>
+      <p class="updated" data-lang="it">Ultimo aggiornamento: 13 ottobre 2026</p>
+      <p class="updated" data-lang="en">Last updated: October 13, 2026</p>
+      <p class="updated" data-lang="es">Última actualización: 13 de octubre de 2026</p>
+      <div class="langSwitch">
+        <button class="langBtn active" onclick="setLang('it')" id="btn-it">Italiano</button>
+        <button class="langBtn" onclick="setLang('en')" id="btn-en">English</button>
+        <button class="langBtn" onclick="setLang('es')" id="btn-es">Español</button>
+      </div>
+    </header>
+
+    <!-- ===================== ITALIANO ===================== -->
+    <div data-lang="it">
+      <p>Usando Shelfy accetti questi termini. Sono scritti in modo semplice; se qualcosa non ti torna, scrivici. Il trattamento dei dati personali è descritto nell'<a href="/privacy" data-nav>Informativa sulla Privacy</a>.</p>
+
+      <section>
+        <h2>1. Chi siamo e informazioni legali</h2>
+        <!-- TODO(titolare): P.IVA e sede legale prima di attivare i piani a pagamento -->
+        <p>Shelfy (app e sito shelfy-app.it) è fornita da Andrea Casula, persona fisica. Contatto: <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a>.</p>
+        <p><strong>Informazioni legali.</strong> Il servizio è attualmente fornito da una persona fisica, a titolo gratuito. I dati identificativi completi del fornitore (partita IVA e sede) saranno pubblicati qui prima dell'attivazione di eventuali piani a pagamento.</p>
+      </section>
+
+      <section>
+        <h2>2. Il servizio</h2>
+        <p>Shelfy è un'app gratuita contro lo spreco alimentare: ti aiuta a tenere traccia di alimenti e scadenze in frigo, freezer e dispensa, a ricevere promemoria, a gestire una lista della spesa, a condividere una dispensa con le persone che inviti, a trovare e condividere ricette e a consultare prezzi indicativi dei prodotti. Funziona su Android, sul web (anche come PWA) e, dove disponibile, su iOS.</p>
+      </section>
+
+      <section>
+        <h2>3. Account e modalità ospite</h2>
+        <ul>
+          <li>Puoi registrarti con email e password o con l'Accesso Google. Devi fornire dati veri, tenere riservate le credenziali e avvisarci se sospetti un accesso non autorizzato. Sei responsabile dell'attività del tuo account.</li>
+          <li>Per registrarti devi avere almeno 14 anni.</li>
+          <li><strong>Modalità ospite</strong>: puoi provare l'app senza registrarti, con la sola dispensa personale (massimo 10 prodotti) e senza lista della spesa, community, dispensa condivisa, prezzi o funzioni a pagamento. Gli account ospite e i loro dati sono eliminati automaticamente dopo 30 giorni. Se ti registri dall'account ospite, i dati vengono mantenuti.</li>
+          <li>Puoi eliminare l'account in qualsiasi momento da <strong>Impostazioni → Account</strong> (vedi <a href="/elimina-account" data-nav>Come eliminare il tuo account</a>).</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>4. Piano gratuito e Premium</h2>
+        <p>Shelfy è oggi gratuita. Alcune funzioni hanno limiti d'uso (ad esempio il numero di prodotti nella dispensa personale, 10 per gli ospiti). In futuro potremmo introdurre piani a pagamento (Premium) o modificare i limiti del piano gratuito: lo faremo con un preavviso adeguato e senza addebitarti nulla senza il tuo acquisto esplicito.</p>
+        <ul>
+          <li>Prima di ogni acquisto vedrai nello store prezzo, durata, rinnovo e modalità di disdetta.</li>
+          <li>Gli abbonamenti sono fatturati e gestiti da Google Play o App Store (o, per eventuali acquisti dal web, dal fornitore di pagamenti indicato al momento dell'acquisto). Si rinnovano automaticamente finché non li disdici dallo store; la disdetta ha effetto alla fine del periodo già pagato. Eliminare l'account in Shelfy <strong>non</strong> annulla l'abbonamento.</li>
+          <li>Se sei un consumatore, hai in genere diritto di recedere entro 14 giorni dagli acquisti a distanza, salvo le eccezioni di legge per contenuti e servizi digitali (art. 59 Codice del consumo), ad esempio quando l'esecuzione è iniziata con il tuo consenso espresso e la presa d'atto della perdita del recesso. Le condizioni precise e le richieste di rimborso seguono le regole dello store e ti saranno indicate al momento dell'acquisto.</li>
+        </ul>
+        <p>Al momento non sono in vendita piani a pagamento.</p>
+      </section>
+
+      <section>
+        <h2>5. Uso consentito</h2>
+        <p>Usa Shelfy in modo lecito e rispettoso. Non puoi, ad esempio:</p>
+        <ul>
+          <li>violare la legge o diritti altrui;</li>
+          <li>provare ad accedere a dati o account non tuoi, indovinare codici di invito o aggirare limiti e protezioni;</li>
+          <li>caricare codice dannoso, sovraccaricare il servizio o fare estrazione automatica massiva (scraping);</li>
+          <li>inviare contenuti falsi, spam, prezzi o prodotti inventati;</li>
+          <li>copiare o rivendere il servizio o i contenuti editoriali di Shelfy senza permesso.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>6. Contenuti degli utenti e community</h2>
+        <ul>
+          <li>Ricette, valutazioni, richieste, proposte, prezzi e prodotti del catalogo che invii restano tuoi. Pubblicandoli ci concedi una licenza gratuita, non esclusiva, per ospitarli, mostrarli e riprodurli nell'app e nel sito finché restano pubblicati, per far funzionare il servizio.</li>
+          <li>Garantisci di avere il diritto di pubblicarli (non copiare ricette o testi protetti da diritto d'autore altrui) e che non siano illegali, offensivi, discriminatori, ingannevoli o lesivi della privacy di altri.</li>
+          <li>Possiamo rimuovere o modificare contenuti che violano questi termini o la legge, e sospendere chi li invia. Puoi segnalarci contenuti inappropriati all'indirizzo email di contatto.</li>
+          <li>Le ricette "ufficiali" di Shelfy sono testi originali scritti da Shelfy. Le ricette della community sono pubblicate dagli utenti sotto la loro responsabilità e non sono verificate da noi.</li>
+          <li>Se elimini l'account, le ricette, proposte e richieste già pubblicate restano visibili in forma anonima; prima di eliminare l'account puoi cancellare quelle che non vuoi lasciare.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>7. Sicurezza alimentare: leggi questa sezione</h2>
+        <ul>
+          <li>Le date di scadenza e i suggerimenti sui tempi di conservazione (anche dopo l'apertura o in freezer) sono <strong>indicativi</strong>. Prima di consumare un alimento controlla sempre il prodotto, l'etichetta e le sue condizioni (aspetto, odore). Nel dubbio, non consumarlo.</li>
+          <li>Shelfy non sostituisce il parere di un medico, di un dietista o di un esperto di sicurezza alimentare.</li>
+          <li><strong>Allergeni e intolleranze</strong>: i dati su ingredienti, allergeni e valori nutrizionali provengono da fonti di terze parti o dagli utenti e possono essere incompleti o errati. Leggi sempre l'etichetta del prodotto.</li>
+          <li>Le ricette, comprese quelle create o generate con assistenti esterni (ad esempio incollando un testo nell'app) o pubblicate dalla community, non sono verificate: controlla cottura, conservazione e ingredienti.</li>
+          <li>Il riconoscimento di testo di scontrini e date può sbagliare: verifica sempre i dati prima di salvarli.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>8. Prezzi e dati di terze parti</h2>
+        <p>I prezzi mostrati sono <strong>indicativi</strong>: provengono da segnalazioni della community e dal progetto Open Prices di Open Food Facts, possono essere vecchi o errati e non costituiscono un'offerta. Verifica il prezzo in negozio. I dati sui prodotti derivano da Open Food Facts (© contributori di Open Food Facts, licenza ODbL) e i dati geografici da OpenStreetMap (© contributori di OpenStreetMap, licenza ODbL). Se riutilizzi questi dati, rispetta le rispettive licenze. Maggiori informazioni sui servizi di terze parti nell'<a href="/privacy" data-nav>Informativa sulla Privacy</a>.</p>
+      </section>
+
+      <section>
+        <h2>9. Disponibilità e modifiche</h2>
+        <p>Facciamo il possibile perché Shelfy funzioni bene, ma il servizio è offerto "così com'è": può avere interruzioni, errori o manutenzioni e non garantiamo che sia sempre disponibile o privo di difetti. Possiamo aggiungere, modificare o rimuovere funzioni; se una modifica ti danneggia in modo rilevante, ti avviseremo con un preavviso ragionevole quando possibile. Ti consigliamo di non usare l'app come unico archivio di informazioni importanti.</p>
+      </section>
+
+      <section>
+        <h2>10. Responsabilità</h2>
+        <p>Nei limiti consentiti dalla legge, il fornitore non risponde di danni indiretti o di perdite (ad esempio cibo gettato o consumato oltre la scadenza, prezzi non corretti) derivanti dall'uso del servizio o dall'affidamento a informazioni indicative o fornite da terzi e dagli utenti. Nulla in questi termini esclude o limita la responsabilità che non può essere esclusa o limitata per legge, in particolare per dolo o colpa grave, per morte o lesioni personali, né i diritti inderogabili che la legge ti riconosce come consumatore.</p>
+      </section>
+
+      <section>
+        <h2>11. Sospensione e cessazione</h2>
+        <p>Puoi smettere di usare Shelfy ed eliminare l'account quando vuoi. Possiamo sospendere o chiudere un account in caso di violazione di questi termini, di uso abusivo o per obblighi di legge, di norma con un avviso. Possiamo anche cessare il servizio, con un preavviso ragionevole quando possibile. In caso di cessazione, per quanto possibile ti permetteremo di scaricare i tuoi dati.</p>
+      </section>
+
+      <section>
+        <h2>12. Legge applicabile e foro</h2>
+        <p>Questi termini sono regolati dalla legge italiana. Se sei un consumatore, restano ferme le norme imperative di tutela del consumatore del tuo Paese di residenza e il foro competente è quello della tua residenza o domicilio, se in Italia o in un altro Stato dell'UE secondo le norme applicabili. Prima di rivolgerti a un giudice, puoi contattarci: cercheremo una soluzione amichevole.</p>
+      </section>
+
+      <section>
+        <h2>13. Modifiche ai termini</h2>
+        <p>Possiamo aggiornare questi termini, ad esempio quando introduciamo nuove funzioni o piani. La data di "ultimo aggiornamento" indica la versione più recente; per le modifiche rilevanti ti avviseremo nell'app o via email. Se continui a usare Shelfy dopo l'entrata in vigore delle modifiche, le accetti; se non sei d'accordo, puoi eliminare l'account.</p>
+      </section>
+
+      <section>
+        <h2>14. Contatti</h2>
+        <p>Per domande, segnalazioni o reclami: <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a>.</p>
+      </section>
+    </div>
+
+    <!-- ===================== ENGLISH ===================== -->
+    <div data-lang="en">
+      <p>By using Shelfy you accept these terms. They are written in plain language; if anything is unclear, write to us. Personal data processing is described in the <a href="/privacy" data-nav>Privacy Policy</a>.</p>
+
+      <section>
+        <h2>1. Who we are and legal information</h2>
+        <!-- TODO(titolare): P.IVA e sede legale prima di attivare i piani a pagamento -->
+        <p>Shelfy (app and shelfy-app.it website) is provided by Andrea Casula, an individual. Contact: <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a>.</p>
+        <p><strong>Legal information.</strong> The service is currently provided by an individual, free of charge. The provider's full identification details (VAT number and registered address) will be published here before any paid plan is activated.</p>
+      </section>
+
+      <section>
+        <h2>2. The service</h2>
+        <p>Shelfy is a free anti-food-waste app: it helps you keep track of food and expiry dates in your fridge, freezer and pantry, get reminders, manage a shopping list, share a pantry with people you invite, find and share recipes and look up indicative product prices. It works on Android, on the web (also as a PWA) and, where available, on iOS.</p>
+      </section>
+
+      <section>
+        <h2>3. Accounts and guest mode</h2>
+        <ul>
+          <li>You can sign up with email and password or with Google Sign-In. You must provide accurate information, keep your credentials confidential and tell us if you suspect unauthorised access. You are responsible for activity on your account.</li>
+          <li>You must be at least 14 years old to sign up.</li>
+          <li><strong>Guest mode</strong>: you can try the app without signing up, with the personal pantry only (maximum 10 products) and without shopping list, community, shared pantry, prices or paid features. Guest accounts and their data are automatically deleted after 30 days. If you sign up from a guest account, your data is kept.</li>
+          <li>You can delete your account at any time from <strong>Settings → Account</strong> (see <a href="/elimina-account" data-nav>How to delete your account</a>).</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>4. Free plan and Premium</h2>
+        <p>Shelfy is currently free. Some features have usage limits (for example the number of products in your personal pantry, 10 for guests). In the future we may introduce paid plans (Premium) or change the free plan's limits: we will do so with adequate prior notice and without charging you anything unless you explicitly make a purchase.</p>
+        <ul>
+          <li>Before any purchase you will see the price, duration, renewal and cancellation terms in the store.</li>
+          <li>Subscriptions are billed and managed by Google Play or the App Store (or, for any purchases on the web, by the payment provider named at purchase). They renew automatically until you cancel in the store; cancellation takes effect at the end of the period already paid. Deleting your Shelfy account does <strong>not</strong> cancel the subscription.</li>
+          <li>If you are a consumer, you generally have the right to withdraw from distance purchases within 14 days, subject to the legal exceptions for digital content and services (Art. 59 of the Italian Consumer Code), for example where performance has started with your express consent and acknowledgement that you lose the right of withdrawal. The exact conditions and refund requests follow the store's rules and will be shown at purchase.</li>
+        </ul>
+        <p>No paid plans are currently on sale.</p>
+      </section>
+
+      <section>
+        <h2>5. Acceptable use</h2>
+        <p>Use Shelfy lawfully and respectfully. For example, you may not:</p>
+        <ul>
+          <li>break the law or others' rights;</li>
+          <li>try to access data or accounts that are not yours, guess invite codes or bypass limits and protections;</li>
+          <li>upload malicious code, overload the service or run mass automated extraction (scraping);</li>
+          <li>submit false content, spam, or invented prices or products;</li>
+          <li>copy or resell the service or Shelfy's editorial content without permission.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>6. User content and community</h2>
+        <ul>
+          <li>Recipes, ratings, requests, proposals, prices and catalogue products you submit remain yours. By publishing them you grant us a free, non-exclusive licence to host, display and reproduce them in the app and website while they remain published, in order to run the service.</li>
+          <li>You warrant that you have the right to publish them (do not copy recipes or texts protected by someone else's copyright) and that they are not unlawful, offensive, discriminatory, misleading or harmful to others' privacy.</li>
+          <li>We may remove or edit content that breaches these terms or the law, and suspend those who submit it. You can report inappropriate content to the contact email.</li>
+          <li>Shelfy's "official" recipes are original texts written by Shelfy. Community recipes are published by users under their own responsibility and are not verified by us.</li>
+          <li>If you delete your account, recipes, proposals and requests already published remain visible anonymously; before deleting your account you can delete the ones you do not want to leave behind.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>7. Food safety: please read this section</h2>
+        <ul>
+          <li>Expiry dates and shelf-life suggestions (including after opening or in the freezer) are <strong>indicative</strong>. Before eating any food always check the product, its label and its condition (appearance, smell). When in doubt, do not eat it.</li>
+          <li>Shelfy is not a substitute for the advice of a doctor, dietitian or food-safety expert.</li>
+          <li><strong>Allergens and intolerances</strong>: ingredient, allergen and nutrition data come from third-party sources or users and may be incomplete or wrong. Always read the product label.</li>
+          <li>Recipes, including those created or generated with external assistants (for example by pasting text into the app) or published by the community, are not verified: check cooking, storage and ingredients.</li>
+          <li>Text recognition on receipts and dates can make mistakes: always check the data before saving.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>8. Prices and third-party data</h2>
+        <p>Prices shown are <strong>indicative</strong>: they come from community reports and from the Open Prices project by Open Food Facts, may be outdated or wrong and are not an offer. Check the price in store. Product data comes from Open Food Facts (© Open Food Facts contributors, ODbL licence) and geographic data from OpenStreetMap (© OpenStreetMap contributors, ODbL licence). If you reuse this data, respect the respective licences. More about third-party services in the <a href="/privacy" data-nav>Privacy Policy</a>.</p>
+      </section>
+
+      <section>
+        <h2>9. Availability and changes</h2>
+        <p>We do our best to keep Shelfy running well, but the service is offered "as is": it may have interruptions, errors or maintenance and we do not guarantee it will always be available or defect-free. We may add, change or remove features; if a change significantly harms you, we will give reasonable notice where possible. We recommend not relying on the app as the only store of important information.</p>
+      </section>
+
+      <section>
+        <h2>10. Liability</h2>
+        <p>To the extent permitted by law, the provider is not liable for indirect damages or losses (for example food thrown away or eaten past its date, incorrect prices) arising from use of the service or reliance on indicative information or information provided by third parties and users. Nothing in these terms excludes or limits liability that cannot be excluded or limited by law, in particular for wilful misconduct or gross negligence, for death or personal injury, nor the mandatory rights the law gives you as a consumer.</p>
+      </section>
+
+      <section>
+        <h2>11. Suspension and termination</h2>
+        <p>You can stop using Shelfy and delete your account whenever you want. We may suspend or close an account for breach of these terms, abusive use or legal obligations, normally with notice. We may also discontinue the service, with reasonable notice where possible. If we do, we will let you download your data where possible.</p>
+      </section>
+
+      <section>
+        <h2>12. Governing law and jurisdiction</h2>
+        <p>These terms are governed by Italian law. If you are a consumer, the mandatory consumer-protection rules of your country of residence still apply and the competent court is that of your residence or domicile, in Italy or in another EU country under the applicable rules. Before going to court you can contact us: we will try to find an amicable solution.</p>
+      </section>
+
+      <section>
+        <h2>13. Changes to these terms</h2>
+        <p>We may update these terms, for example when we introduce new features or plans. The "last updated" date shows the latest version; for significant changes we will tell you in the app or by email. If you keep using Shelfy after the changes take effect, you accept them; if you disagree, you can delete your account.</p>
+      </section>
+
+      <section>
+        <h2>14. Contact</h2>
+        <p>For questions, reports or complaints: <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a>.</p>
+      </section>
+    </div>
+
+    <!-- ===================== ESPAÑOL ===================== -->
+    <div data-lang="es">
+      <p>Al usar Shelfy aceptas estos términos. Están escritos en lenguaje sencillo; si algo no te queda claro, escríbenos. El tratamiento de datos personales se describe en la <a href="/privacy" data-nav>Política de Privacidad</a>.</p>
+
+      <section>
+        <h2>1. Quiénes somos e información legal</h2>
+        <!-- TODO(titolare): P.IVA e sede legale prima di attivare i piani a pagamento -->
+        <p>Shelfy (app y sitio shelfy-app.it) la proporciona Andrea Casula, persona física. Contacto: <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a>.</p>
+        <p><strong>Información legal.</strong> El servicio lo presta actualmente una persona física, de forma gratuita. Los datos identificativos completos del proveedor (número de IVA y domicilio) se publicarán aquí antes de activar cualquier plan de pago.</p>
+      </section>
+
+      <section>
+        <h2>2. El servicio</h2>
+        <p>Shelfy es una app gratuita contra el desperdicio de alimentos: te ayuda a controlar alimentos y caducidades en la nevera, el congelador y la despensa, a recibir recordatorios, a gestionar una lista de la compra, a compartir una despensa con las personas que invites, a encontrar y compartir recetas y a consultar precios orientativos de productos. Funciona en Android, en la web (también como PWA) y, donde esté disponible, en iOS.</p>
+      </section>
+
+      <section>
+        <h2>3. Cuentas y modo invitado</h2>
+        <ul>
+          <li>Puedes registrarte con correo y contraseña o con el acceso de Google. Debes facilitar datos veraces, mantener tus credenciales en secreto y avisarnos si sospechas un acceso no autorizado. Eres responsable de la actividad de tu cuenta.</li>
+          <li>Para registrarte debes tener al menos 14 años.</li>
+          <li><strong>Modo invitado</strong>: puedes probar la app sin registrarte, solo con la despensa personal (máximo 10 productos) y sin lista de la compra, comunidad, despensa compartida, precios ni funciones de pago. Las cuentas de invitado y sus datos se eliminan automáticamente a los 30 días. Si te registras desde una cuenta de invitado, tus datos se conservan.</li>
+          <li>Puedes eliminar la cuenta en cualquier momento desde <strong>Ajustes → Cuenta</strong> (consulta <a href="/elimina-account" data-nav>Cómo eliminar tu cuenta</a>).</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>4. Plan gratuito y Premium</h2>
+        <p>Shelfy es hoy gratuita. Algunas funciones tienen límites de uso (por ejemplo, el número de productos de la despensa personal, 10 para invitados). En el futuro podríamos introducir planes de pago (Premium) o cambiar los límites del plan gratuito: lo haremos con un preaviso adecuado y sin cobrarte nada si no realizas una compra de forma expresa.</p>
+        <ul>
+          <li>Antes de cualquier compra verás en la tienda el precio, la duración, la renovación y la forma de cancelar.</li>
+          <li>Las suscripciones las factura y gestiona Google Play o App Store (o, en compras desde la web, el proveedor de pagos indicado al comprar). Se renuevan automáticamente hasta que las canceles en la tienda; la cancelación surte efecto al final del periodo ya pagado. Eliminar tu cuenta de Shelfy <strong>no</strong> cancela la suscripción.</li>
+          <li>Si eres consumidor, por lo general tienes derecho a desistir de las compras a distancia en un plazo de 14 días, salvo las excepciones legales para contenidos y servicios digitales (art. 59 del Código de Consumo italiano), por ejemplo cuando la ejecución ha comenzado con tu consentimiento expreso y el reconocimiento de que pierdes el derecho de desistimiento. Las condiciones exactas y las solicitudes de reembolso siguen las reglas de la tienda y se te indicarán en el momento de la compra.</li>
+        </ul>
+        <p>Por ahora no hay planes de pago a la venta.</p>
+      </section>
+
+      <section>
+        <h2>5. Uso permitido</h2>
+        <p>Usa Shelfy de forma lícita y respetuosa. Por ejemplo, no puedes:</p>
+        <ul>
+          <li>infringir la ley o los derechos de otros;</li>
+          <li>intentar acceder a datos o cuentas que no son tuyos, adivinar códigos de invitación o eludir límites y protecciones;</li>
+          <li>subir código malicioso, sobrecargar el servicio o realizar extracción automática masiva (scraping);</li>
+          <li>enviar contenido falso, spam, o precios o productos inventados;</li>
+          <li>copiar o revender el servicio o el contenido editorial de Shelfy sin permiso.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>6. Contenido de los usuarios y comunidad</h2>
+        <ul>
+          <li>Las recetas, valoraciones, peticiones, propuestas, precios y productos del catálogo que envíes siguen siendo tuyos. Al publicarlos nos concedes una licencia gratuita y no exclusiva para alojarlos, mostrarlos y reproducirlos en la app y el sitio mientras permanezcan publicados, para hacer funcionar el servicio.</li>
+          <li>Garantizas que tienes derecho a publicarlos (no copies recetas ni textos protegidos por derechos de autor ajenos) y que no son ilícitos, ofensivos, discriminatorios, engañosos ni lesivos para la privacidad de otros.</li>
+          <li>Podemos retirar o modificar contenido que infrinja estos términos o la ley, y suspender a quien lo envíe. Puedes comunicarnos contenido inapropiado en el correo de contacto.</li>
+          <li>Las recetas "oficiales" de Shelfy son textos originales escritos por Shelfy. Las recetas de la comunidad las publican los usuarios bajo su responsabilidad y nosotros no las verificamos.</li>
+          <li>Si eliminas tu cuenta, las recetas, propuestas y peticiones ya publicadas siguen visibles de forma anónima; antes de eliminar la cuenta puedes borrar las que no quieras dejar.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>7. Seguridad alimentaria: lee esta sección</h2>
+        <ul>
+          <li>Las fechas de caducidad y las sugerencias de tiempos de conservación (también tras abrir el envase o en el congelador) son <strong>orientativas</strong>. Antes de consumir un alimento comprueba siempre el producto, su etiqueta y su estado (aspecto, olor). Si dudas, no lo consumas.</li>
+          <li>Shelfy no sustituye el consejo de un médico, un dietista o un experto en seguridad alimentaria.</li>
+          <li><strong>Alérgenos e intolerancias</strong>: los datos de ingredientes, alérgenos y valores nutricionales proceden de fuentes de terceros o de los usuarios y pueden ser incompletos o erróneos. Lee siempre la etiqueta del producto.</li>
+          <li>Las recetas, incluidas las creadas o generadas con asistentes externos (por ejemplo, pegando un texto en la app) o publicadas por la comunidad, no están verificadas: comprueba cocción, conservación e ingredientes.</li>
+          <li>El reconocimiento de texto en tickets y fechas puede equivocarse: verifica siempre los datos antes de guardarlos.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>8. Precios y datos de terceros</h2>
+        <p>Los precios mostrados son <strong>orientativos</strong>: proceden de aportaciones de la comunidad y del proyecto Open Prices de Open Food Facts, pueden estar desactualizados o ser erróneos y no constituyen una oferta. Comprueba el precio en la tienda. Los datos de productos proceden de Open Food Facts (© colaboradores de Open Food Facts, licencia ODbL) y los datos geográficos de OpenStreetMap (© colaboradores de OpenStreetMap, licencia ODbL). Si reutilizas estos datos, respeta las licencias correspondientes. Más información sobre los servicios de terceros en la <a href="/privacy" data-nav>Política de Privacidad</a>.</p>
+      </section>
+
+      <section>
+        <h2>9. Disponibilidad y cambios</h2>
+        <p>Hacemos lo posible para que Shelfy funcione bien, pero el servicio se ofrece "tal cual": puede tener interrupciones, errores o mantenimientos, y no garantizamos que esté siempre disponible ni libre de defectos. Podemos añadir, modificar o retirar funciones; si un cambio te perjudica de forma relevante, te avisaremos con un preaviso razonable cuando sea posible. Te recomendamos no usar la app como único archivo de información importante.</p>
+      </section>
+
+      <section>
+        <h2>10. Responsabilidad</h2>
+        <p>En la medida permitida por la ley, el proveedor no responde de daños indirectos ni de pérdidas (por ejemplo, comida tirada o consumida pasada su fecha, precios incorrectos) derivados del uso del servicio o de confiar en información orientativa o proporcionada por terceros y usuarios. Nada en estos términos excluye ni limita la responsabilidad que no pueda excluirse o limitarse por ley, en particular por dolo o negligencia grave, por muerte o lesiones personales, ni los derechos irrenunciables que la ley te reconoce como consumidor.</p>
+      </section>
+
+      <section>
+        <h2>11. Suspensión y terminación</h2>
+        <p>Puedes dejar de usar Shelfy y eliminar tu cuenta cuando quieras. Podemos suspender o cerrar una cuenta por incumplimiento de estos términos, uso abusivo u obligaciones legales, normalmente con aviso. También podemos dejar de prestar el servicio, con preaviso razonable cuando sea posible. En ese caso, en la medida de lo posible te permitiremos descargar tus datos.</p>
+      </section>
+
+      <section>
+        <h2>12. Ley aplicable y jurisdicción</h2>
+        <p>Estos términos se rigen por la ley italiana. Si eres consumidor, siguen aplicándose las normas imperativas de protección del consumidor de tu país de residencia y el tribunal competente es el de tu residencia o domicilio, en Italia o en otro Estado de la UE conforme a las normas aplicables. Antes de acudir a un tribunal puedes contactarnos: intentaremos buscar una solución amistosa.</p>
+      </section>
+
+      <section>
+        <h2>13. Cambios en estos términos</h2>
+        <p>Podemos actualizar estos términos, por ejemplo al introducir nuevas funciones o planes. La fecha de "última actualización" indica la versión más reciente; ante cambios relevantes te avisaremos en la app o por correo. Si sigues usando Shelfy tras la entrada en vigor de los cambios, los aceptas; si no estás de acuerdo, puedes eliminar tu cuenta.</p>
+      </section>
+
+      <section>
+        <h2>14. Contacto</h2>
+        <p>Para preguntas, avisos o reclamaciones: <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a>.</p>
+      </section>
+    </div>
+
+    <footer>
+      <p data-lang="it"><a href="/privacy" data-nav>Privacy</a> · <a href="/termini" data-nav>Termini di servizio</a> · <a href="/elimina-account" data-nav>Elimina account</a> · <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a></p>
+      <p data-lang="en"><a href="/privacy" data-nav>Privacy</a> · <a href="/termini" data-nav>Terms of Service</a> · <a href="/elimina-account" data-nav>Delete account</a> · <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a></p>
+      <p data-lang="es"><a href="/privacy" data-nav>Privacidad</a> · <a href="/termini" data-nav>Términos del servicio</a> · <a href="/elimina-account" data-nav>Eliminar cuenta</a> · <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a></p>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      var LANGS = ['it', 'en', 'es'];
+      var TITLES = {
+        it: 'Shelfy — Termini di Servizio',
+        en: 'Shelfy — Terms of Service',
+        es: 'Shelfy — Términos del Servicio'
+      };
+      function setLang(lang, remember) {
+        if (LANGS.indexOf(lang) < 0) lang = 'it';
+        document.body.className = 'lang-' + lang;
+        document.documentElement.lang = lang;
+        document.title = TITLES[lang];
+        LANGS.forEach(function (l) {
+          document.getElementById('btn-' + l).classList.toggle('active', l === lang);
+        });
+        document.querySelectorAll('a[data-nav]').forEach(function (a) {
+          a.setAttribute('href', a.getAttribute('href').split('#')[0] + '#' + lang);
+        });
+        if (remember && window.history && history.replaceState) {
+          try { history.replaceState(null, '', '#' + lang); } catch (e) {}
+        }
+      }
+      window.setLang = function (lang) { setLang(lang, true); };
+      var hash = (location.hash || '').replace('#', '');
+      var start = LANGS.indexOf(hash) >= 0 ? hash : ((navigator.language || 'it').slice(0, 2).toLowerCase());
+      setLang(LANGS.indexOf(start) >= 0 ? start : 'it', false);
+    })();
+  </script>
+</body>
+</html>

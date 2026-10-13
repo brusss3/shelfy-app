@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { submitFeedback, FeedbackCategory, saveUserWebPushToken } from '@/lib/firestore';
 import { openSubscriptionManagement } from '@/lib/purchases';
+import { downloadMyData, deleteMyAccount, needsRecentLogin } from '@/lib/account';
 import { registerWebPush, needsHomeScreenInstall } from '@/lib/webPush';
 import { showAlert } from '@/lib/alert';
 import { LanguageOption, getStoredLanguageOption, setAppLanguage, dateLocale } from '@/lib/i18n';
@@ -45,6 +46,8 @@ export default function SettingsScreen() {
   const [fbMessage, setFbMessage] = useState('');
   const [sendingFb, setSendingFb] = useState(false);
   const [langOption, setLangOption] = useState<LanguageOption>('system');
+  const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     getStoredLanguageOption().then(setLangOption);
@@ -92,6 +95,54 @@ export default function SettingsScreen() {
     showAlert(t('settings.logout.confirmTitle'), isGuest ? t('guest.logoutWarning') : t('settings.logout.confirmBody'), [
       { text: t('common.cancel'), style: 'cancel' },
       { text: t('settings.logout.confirm'), style: 'destructive', onPress: () => logOut() },
+    ]);
+  };
+
+  // Portabilità (GDPR art. 20): tutti i dati dell'utente in un file JSON.
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await downloadMyData();
+    } catch (e: any) {
+      showAlert(t('common.error'), e?.message ?? t('account.exportFailed'));
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Cancellazione (GDPR art. 17): irreversibile, quindi due passaggi chiari.
+  // L'abbonamento non si disdice da qui: lo dice il testo, se ce n'è uno attivo.
+  const handleDeleteAccount = () => {
+    const hasSubscription = !!user?.isPremium || !!user?.subscriptionType;
+    const body = [
+      isGuest ? t('account.deleteBodyGuest') : t('account.deleteBody'),
+      hasSubscription ? t('account.deleteSubscriptionWarning') : null,
+    ].filter(Boolean).join('\n\n');
+    showAlert(t('account.deleteTitle'), body, [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('account.deleteConfirm'),
+        style: 'destructive',
+        onPress: async () => {
+          setDeleting(true);
+          try {
+            await deleteMyAccount();
+            await logOut();
+            showAlert(t('account.deletedTitle'), t('account.deletedBody'));
+          } catch (e: any) {
+            if (needsRecentLogin(e)) {
+              showAlert(t('account.recentLoginTitle'), t('account.recentLoginBody'), [
+                { text: t('common.cancel'), style: 'cancel' },
+                { text: t('account.recentLoginCta'), onPress: () => logOut() },
+              ]);
+            } else {
+              showAlert(t('common.error'), e?.message ?? t('account.deleteFailed'));
+            }
+          } finally {
+            setDeleting(false);
+          }
+        },
+      },
     ]);
   };
 
@@ -287,6 +338,32 @@ export default function SettingsScreen() {
             />
           </Section>
 
+          {/* Account: i diritti dell'utente sui propri dati, sempre a portata di mano. */}
+          <Section title={t('account.title')}>
+            <TouchableOpacity style={styles.row} onPress={handleExport} disabled={exporting} activeOpacity={0.8}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowLabel}>{t('account.export')}</Text>
+                <Text style={styles.rowSub}>{t('account.exportDesc')}</Text>
+              </View>
+              {exporting ? <ActivityIndicator color={T.primary} /> : <Ionicons name="download-outline" size={20} color={T.primary} />}
+            </TouchableOpacity>
+            <View style={styles.divider} />
+            <TouchableOpacity style={styles.row} onPress={handleDeleteAccount} disabled={deleting} activeOpacity={0.8}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.rowLabel, { color: T.urgent }]}>{t('account.delete')}</Text>
+                <Text style={styles.rowSub}>{t('account.deleteDesc')}</Text>
+              </View>
+              {deleting ? <ActivityIndicator color={T.urgent} /> : <Ionicons name="trash-outline" size={20} color={T.urgent} />}
+            </TouchableOpacity>
+          </Section>
+
+          {/* Note legali, licenze e crediti. */}
+          <TouchableOpacity style={styles.legalRow} onPress={() => router.push('/legal')} activeOpacity={0.85}>
+            <Ionicons name="document-text-outline" size={20} color={T.primary} />
+            <Text style={styles.legalRowText}>{t('legal.title')}</Text>
+            <Ionicons name="chevron-forward" size={18} color={T.mute} />
+          </TouchableOpacity>
+
           {/* Logout */}
           <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.85}>
             <Text style={styles.logoutText}>{t('settings.logout.button')}</Text>
@@ -347,6 +424,13 @@ const createStyles = ({ T, CLAY, SHADOW }: Theme) => StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
   rowLabel: { fontFamily: FONTS.sansSemiBold, fontSize: 15, color: T.ink },
   rowSub: { fontFamily: FONTS.sans, fontSize: 12, color: T.mute, marginTop: 3, lineHeight: 17 },
+
+  divider: { height: 1, backgroundColor: T.line, marginVertical: 14 },
+  legalRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: T.surface, borderRadius: RADIUS.lg, padding: 16, ...SHADOW.card,
+  },
+  legalRowText: { flex: 1, fontFamily: FONTS.sansSemiBold, fontSize: 15, color: T.ink },
 
   smallBtn: { backgroundColor: T.primarySoft, borderRadius: RADIUS.md, paddingVertical: 9, paddingHorizontal: 14 },
   smallBtnText: { fontFamily: FONTS.sansSemiBold, fontSize: 13, color: T.primaryInk },

@@ -58,6 +58,18 @@
     }
   },
   "home": {
+    "swipe": {
+      "shop": "Shopping",
+      "consume": "Eaten",
+      "discard": "Binned",
+      "undo": "Undo",
+      "addToList": "Add to list",
+      "consumedToast": "{{name}} marked as eaten",
+      "discardedToast": "{{name}} thrown away",
+      "consumedAndListed": "{{name}} eaten and added to your list",
+      "addedToList": "{{name}} added to your list",
+      "alreadyInList": "{{name}} was already on your list: quantity increased"
+    },
     "greeting": {
       "morning": "Good morning",
       "afternoon": "Good afternoon",
@@ -1198,6 +1210,13 @@
     "label": "Download the Android app",
     "hint": "Installed outside the Play Store: Android may show a warning, confirm to continue."
   },
+  "update": {
+    "newVersion": "A new version of Shelfy is available.",
+    "download": "Download",
+    "later": "Later",
+    "ready": "Update ready.",
+    "restart": "Restart"
+  },
   "guest": {
     "tryWithoutAccount": "Try without an account",
     "tryHint": "Up to 10 products, sign up whenever you like",
@@ -1234,7 +1253,78 @@
       }
     }
   },
+  "account": {
+    "title": "Account",
+    "export": "Download my data",
+    "exportDesc": "A file with all the data in your account.",
+    "exportFailed": "I can't prepare the file right now. Please try again shortly.",
+    "delete": "Delete account",
+    "deleteDesc": "Delete your account and your data.",
+    "deleteTitle": "Delete your account?",
+    "deleteBody": "We immediately delete your profile, pantry, shopping list, personal recipes and your submissions. Recipes you published stay, without your name. This can't be undone.",
+    "deleteBodyGuest": "We immediately delete the trial pantry and all the data of this guest session. This can't be undone.",
+    "deleteSubscriptionWarning": "Note: your subscription isn't cancelled from here. Cancel it in your store (Google Play or App Store), otherwise it will keep renewing.",
+    "deleteConfirm": "Delete forever",
+    "deletedTitle": "Account deleted",
+    "deletedBody": "We've deleted your account and your data.",
+    "recentLoginTitle": "Sign in again",
+    "recentLoginBody": "For security, you must have signed in recently before deleting your account. Log out, sign in again and retry.",
+    "recentLoginCta": "Log out",
+    "deleteFailed": "I couldn't delete the account. Please retry or contact us."
+  },
+  "legal": {
+    "title": "Information and legal notices",
+    "privacy": "Privacy policy",
+    "terms": "Terms of service",
+    "licenses": "Open source licenses",
+    "credits": "Credits and data sources",
+    "deleteInfo": "How to delete your account and data",
+    "contact": "Contact",
+    "controller": "Data controller: Andrea Casula",
+    "foodNotice": "Expiry dates and storage tips are indicative: always check the package, the label and the condition of the product. Shelfy is not a substitute for medical or dietary advice.",
+    "consentRow": "Guide-of-origin tracking",
+    "consentGranted": "Allowed",
+    "consentDenied": "Not allowed",
+    "consentUnset": "Not chosen yet",
+    "consentReset": "Change choice",
+    "licensesIntro": "Shelfy is also built with free software. Here are the open source components included in the app, with their licenses.",
+    "licensesCount": "{{count}} components",
+    "licensesTexts": "License texts",
+    "licensesOther": "Other components",
+    "licensesFonts": "DM Sans typeface, © The DM Sans Project Authors, SIL Open Font License 1.1 (openfontlicense.org).",
+    "licensesServices": "Google ML Kit (on-device text recognition) and Google Firebase services are subject to Google's own terms.",
+    "creditsIntro": "Shelfy uses open data and third-party services. Thanks to everyone who makes them available.",
+    "credits_off_title": "Open Food Facts",
+    "credits_off_body": "Product data read from barcodes (name, brand, category, quantity) comes from Open Food Facts, a collaborative open database. It is available under the Open Database License (ODbL) v1.0; individual contents under the Database Contents License. © Open Food Facts contributors.",
+    "credits_prices_title": "Open Prices",
+    "credits_prices_body": "Prices marked \"Open Prices\" come from Open Prices, Open Food Facts' crowdsourced price project, under the open ODbL license. They are indicative.",
+    "credits_osm_title": "OpenStreetMap",
+    "credits_osm_body": "To look up prices near you we convert the town you type into coordinates with Nominatim. Data © OpenStreetMap contributors, available under the ODbL.",
+    "credits_community_title": "Shelfy community",
+    "credits_community_body": "\"Community\" prices and products added to the catalog are entered anonymously by Shelfy users and are indicative. \"Shelfy\" recipes are original texts written for the app; the others are published by users under their own responsibility.",
+    "credits_fonts_title": "Fonts and icons",
+    "credits_fonts_body": "DM Sans typeface © The DM Sans Project Authors, under the SIL Open Font License 1.1. Ionicons icons under the MIT license.",
+    "credits_ocr_title": "Reading receipts and dates",
+    "credits_ocr_body": "On your phone, text recognition uses Google ML Kit directly on the device; on the web it uses Tesseract.js (Apache 2.0). Photos are not sent to our servers.",
+    "credits_services_title": "Services",
+    "credits_services_body": "Shelfy uses Google Firebase (sign-in, database, notifications, hosting), RevenueCat (subscriptions) and Expo (app updates). Details are in the Privacy policy."
+  },
+  "consent": {
+    "title": "Which guide did you come from?",
+    "body": "To understand which guides are useful, we can remember in your browser the name of the guide you came from and link it to your account if you sign up. If you decline, Shelfy works just the same.",
+    "accept": "Accept",
+    "reject": "Decline",
+    "more": "Privacy policy"
+  },
+  "legalNotice": {
+    "prefix": "By using Shelfy you accept the ",
+    "terms": "Terms of service",
+    "middle": " and confirm you have read the ",
+    "privacy": "Privacy policy",
+    "suffix": "."
+  },
   "serverErrors": {
+    "recentLoginRequired": "For security, please sign in again and retry.",
     "adminOnly": "Admins only.",
     "registrationRequired": "Sign up to use this feature.",
     "loginRequired": "You need to log in.",

@@ -6,7 +6,6 @@ import {
 import { db } from './firebase';
 import { aiUsageKey } from './limits';
 import { Product, Zone, CommunityRecipe, RecipeRequest, RecipeProposal, MyRecipe, Survey } from '@/types';
-import { notifyAdminsNewFeedback } from './notifications';
 import { documentId } from 'firebase/firestore';
 import { callable } from './callable';
 import i18n from '@/lib/i18n';
@@ -427,12 +426,7 @@ export async function submitFeedback(payload: {
     ...payload,
     createdAt: serverTimestamp(),
   });
-  notifyAdminsNewFeedback({
-    email: payload.email,
-    displayName: payload.displayName,
-    category: payload.category,
-    message: payload.message,
-  }).catch((e) => console.warn('[firestore] notifyAdminsNewFeedback failed:', e));
+  // L'avviso agli admin parte dal server (functions/src/adminNotify.ts).
 }
 
 // ---------------------------------------------------------------------------

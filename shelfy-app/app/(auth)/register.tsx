@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { authErrorMessage } from '@/lib/authErrors';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
 import PrimaryButton from '@/components/PrimaryButton';
+import LegalNotice from '@/components/LegalNotice';
 import { showAlert } from '@/lib/alert';
 import { FONTS, RADIUS } from '@/constants/theme';
 import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
@@ -104,6 +105,8 @@ export default function RegisterScreen() {
           <Text style={styles.footerText}>{t('auth.register.haveAccount')}</Text>
           <Link href="/(auth)/login" style={styles.footerLink}>{t('auth.register.loginLink')}</Link>
         </View>
+
+        <LegalNotice />
 
         {isGuest && (
           <Text style={styles.guestBack} onPress={() => router.replace('/(tabs)')} accessibilityRole="link">

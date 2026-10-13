@@ -20,6 +20,20 @@ $dir = Join-Path $projectRoot "public\download"
 New-Item -ItemType Directory -Force $dir | Out-Null
 Invoke-WebRequest -Uri $build.artifacts.buildUrl -OutFile (Join-Path $dir "shelfy.apk")
 
+# L'app (components/UpdateBanner.tsx) confronta la propria runtimeVersion con
+# questa: se è diversa, il codice nativo è cambiato e propone di scaricare
+# l'APK. Gli aggiornamenti solo JavaScript viaggiano con scripts/publish-update.ps1.
+$runtime = $build.runtime.version
+if (-not $runtime) { Write-Warning "La build non ha runtimeVersion (precede expo-updates?): il banner di nuova versione non scatterà." }
+$version = [ordered]@{
+  runtimeVersion = $runtime
+  buildId        = $build.id
+  apkUrl         = "https://shelfy-632e0.web.app/download/shelfy.apk"
+  publishedAt    = (Get-Date).ToUniversalTime().ToString("o")
+} | ConvertTo-Json
+[System.IO.File]::WriteAllText((Join-Path $dir "version.json"), $version, (New-Object System.Text.UTF8Encoding($false)))
+Write-Host "==> version.json: runtimeVersion $runtime" -ForegroundColor Cyan
+
 # L'export web copia public/ in dist/, poi si pubblica tutto.
 & (Join-Path $PSScriptRoot "deploy-web.ps1")
 Write-Host "==> APK online: https://shelfy-632e0.web.app/download/shelfy.apk" -ForegroundColor Green

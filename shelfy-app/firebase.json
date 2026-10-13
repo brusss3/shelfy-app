@@ -19,6 +19,13 @@
     ],
     "headers": [
       {
+        "source": "/download/version.json",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache" },
+          { "key": "Access-Control-Allow-Origin", "value": "*" }
+        ]
+      },
+      {
         "source": "/download/shelfy.apk",
         "headers": [
           { "key": "Content-Type", "value": "application/vnd.android.package-archive" },

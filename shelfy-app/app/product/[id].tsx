@@ -8,6 +8,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useProducts } from '@/context/ProductsContext';
 import { useAuth } from '@/context/AuthContext';
+import { shoppingItemOf } from '@/lib/shopping';
 import { usePantry } from '@/context/PantryContext';
 import { useShopping } from '@/context/ShoppingContext';
 import { urgencyOf, shortDate, daysTo } from '@/lib/urgency';
@@ -45,16 +46,6 @@ const PRESETS = [
   { d: 30, labelKey: 'common.presets.d30' },
   { d: 90, labelKey: 'common.presets.d90' },
 ];
-
-// Cosa finisce in lista quando si ricompra un prodotto della dispensa: tutto
-// ciò che lo identifica (barcode incluso, così una voce già presente si
-// riconosce e ne sale la quantità), non scadenza e zona di quella confezione.
-function shoppingItemOf(p: Product): NewShoppingItem {
-  return {
-    name: p.name, brand: p.brand || undefined, qty: p.qty || undefined,
-    barcode: p.barcode, category: p.category, tint: p.tint, zone: p.zone,
-  };
-}
 
 function addDays(n: number): string {
   return new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);

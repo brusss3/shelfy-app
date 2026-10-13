@@ -1099,3 +1099,7 @@ export const submitCatalogProduct = onCall(
 // Dati orfani degli ospiti cancellati da Firebase dopo 30 giorni: vedi guestCleanup.ts.
 export { cleanupOrphanGuestData } from './guestCleanup';
 export { computeAdminStats, refreshAdminStats } from './adminStats';
+// Diritti sui dati (GDPR): esportazione e cancellazione dell'account, vedi account.ts.
+export { exportMyData, deleteMyAccount } from './account';
+// Avvisi agli admin per nuovi utenti e feedback (prima partivano dal client e le regole li bloccavano).
+export { notifyAdminsNewUserTrigger, notifyAdminsNewFeedbackTrigger } from './adminNotify';

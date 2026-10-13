@@ -10,6 +10,7 @@ import { authErrorMessage } from '@/lib/authErrors';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
 import PrimaryButton from '@/components/PrimaryButton';
 import ApkDownloadButton from '@/components/ApkDownloadButton';
+import LegalNotice from '@/components/LegalNotice';
 import { showAlert } from '@/lib/alert';
 import { FONTS, RADIUS } from '@/constants/theme';
 import { useTheme, useThemedStyles, type Theme } from '@/context/ThemeContext';
@@ -157,6 +158,8 @@ export default function LoginScreen() {
           </Text>
           {!isGuest && <Text style={styles.guestButtonHint}>{t('guest.tryHint')}</Text>}
         </TouchableOpacity>
+
+        <LegalNotice />
 
         <Text style={styles.guidesLink} onPress={openGuides} accessibilityRole="link">
           {t('auth.login.guidesLink')}

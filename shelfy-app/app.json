@@ -73,6 +73,14 @@
       "expo-status-bar"
     ],
     "scheme": "shelfy",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/8ca5efb5-8143-4d62-b20e-a3185df70768",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "experiments": {
       "typedRoutes": true
     },

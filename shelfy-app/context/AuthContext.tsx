@@ -25,7 +25,6 @@ import { auth, db } from '@/lib/firebase';
 import { readGuestProducts, writeGuestProducts } from '@/lib/guest';
 import { initPurchases, checkPremiumStatus } from '@/lib/purchases';
 import { User, SubscriptionType } from '@/types';
-import { notifyAdminsNewUser } from '@/lib/notifications';
 import { subscribeToMonetizationEnabled, recordActiveNow } from '@/lib/firestore';
 import { getAcquisition } from '@/lib/acquisition';
 
@@ -163,15 +162,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 ...(firebaseUser.isAnonymous ? { isGuest: true } : {}),
                 ...acquisitionField(),
               }, { merge: true }).catch((e) => console.warn('[AuthContext] auto-provision failed:', e));
-
-              // Un ospite non è ancora un utente: l'avviso parte quando si
-              // registra (upgradeGuestDoc).
-              if (!firebaseUser.isAnonymous) {
-                notifyAdminsNewUser({
-                  email: firebaseUser.email ?? '',
-                  displayName: firebaseUser.displayName,
-                }).catch((e) => console.warn('[AuthContext] notifyAdminsNewUser failed:', e));
-              }
+              // L'avviso agli admin per i nuovi utenti parte dal server quando
+              // nasce il documento (functions/src/adminNotify.ts): gli ospiti non contano.
             }
 
             const data = snap.data();
@@ -267,9 +259,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isGuest: false,
         upgradedAt: new Date().toISOString(),
       }, { merge: true });
-      notifyAdminsNewUser({ email: email ?? '', displayName }).catch((e) =>
-        console.warn('[AuthContext] notifyAdminsNewUser failed:', e),
-      );
     } catch (err) {
       console.warn('[AuthContext] guest upgrade doc failed:', err);
     }
@@ -342,9 +331,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         createdAt: new Date().toISOString(),
         ...acquisitionField(),
       });
-      notifyAdminsNewUser({ email, displayName: name }).catch((e) =>
-        console.warn('[AuthContext] notifyAdminsNewUser failed:', e),
-      );
     } catch (err) {
       console.warn('[AuthContext] user doc creation failed:', err);
     }

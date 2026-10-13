@@ -58,6 +58,18 @@
     }
   },
   "home": {
+    "swipe": {
+      "shop": "Compra",
+      "consume": "Consumido",
+      "discard": "Tirado",
+      "undo": "Deshacer",
+      "addToList": "Añadir a la lista",
+      "consumedToast": "{{name}} consumido",
+      "discardedToast": "{{name}} tirado",
+      "consumedAndListed": "{{name}} consumido y añadido a la lista",
+      "addedToList": "{{name}} añadido a la lista",
+      "alreadyInList": "{{name}} ya estaba en la lista: cantidad aumentada"
+    },
     "greeting": {
       "morning": "Buenos días",
       "afternoon": "Buenas tardes",
@@ -1198,6 +1210,13 @@
     "label": "Descargar la app para Android",
     "hint": "Instalada fuera de Play Store: Android puede mostrar un aviso, confirma para continuar."
   },
+  "update": {
+    "newVersion": "Hay una nueva versión de Shelfy disponible.",
+    "download": "Descargar",
+    "later": "Más tarde",
+    "ready": "Actualización lista.",
+    "restart": "Reiniciar"
+  },
   "guest": {
     "tryWithoutAccount": "Probar sin cuenta",
     "tryHint": "Hasta 10 productos, regístrate cuando quieras",
@@ -1234,7 +1253,78 @@
       }
     }
   },
+  "account": {
+    "title": "Cuenta",
+    "export": "Descargar mis datos",
+    "exportDesc": "Un archivo con todos los datos de tu cuenta.",
+    "exportFailed": "No puedo preparar el archivo ahora. Inténtalo de nuevo en un momento.",
+    "delete": "Eliminar cuenta",
+    "deleteDesc": "Borra tu cuenta y tus datos.",
+    "deleteTitle": "¿Eliminar la cuenta?",
+    "deleteBody": "Borramos de inmediato tu perfil, la despensa, la lista de la compra, las recetas personales y tus envíos. Las recetas que publicaste se quedan, sin tu nombre. No se puede deshacer.",
+    "deleteBodyGuest": "Borramos de inmediato la despensa de prueba y todos los datos de esta sesión de invitado. No se puede deshacer.",
+    "deleteSubscriptionWarning": "Atención: la suscripción no se cancela desde aquí. Cancélala en tu tienda (Google Play o App Store); si no, seguirá renovándose.",
+    "deleteConfirm": "Eliminar para siempre",
+    "deletedTitle": "Cuenta eliminada",
+    "deletedBody": "Hemos borrado tu cuenta y tus datos.",
+    "recentLoginTitle": "Inicia sesión de nuevo",
+    "recentLoginBody": "Por seguridad, antes de eliminar la cuenta debes haber iniciado sesión hace poco. Sal, inicia sesión de nuevo e inténtalo otra vez.",
+    "recentLoginCta": "Salir",
+    "deleteFailed": "No he podido eliminar la cuenta. Inténtalo de nuevo o escríbenos."
+  },
+  "legal": {
+    "title": "Información y avisos legales",
+    "privacy": "Política de privacidad",
+    "terms": "Términos del servicio",
+    "licenses": "Licencias de código abierto",
+    "credits": "Créditos y fuentes de datos",
+    "deleteInfo": "Cómo eliminar tu cuenta y tus datos",
+    "contact": "Contacto",
+    "controller": "Responsable del tratamiento: Andrea Casula",
+    "foodNotice": "Las fechas de caducidad y los consejos de conservación son orientativos: comprueba siempre el envase, la etiqueta y el estado del producto. Shelfy no sustituye el consejo de un médico o nutricionista.",
+    "consentRow": "Seguimiento de la guía de origen",
+    "consentGranted": "Permitido",
+    "consentDenied": "No permitido",
+    "consentUnset": "Aún sin elegir",
+    "consentReset": "Cambiar elección",
+    "licensesIntro": "Shelfy también está hecha con software libre. Estos son los componentes de código abierto incluidos en la app, con su licencia.",
+    "licensesCount": "{{count}} componentes",
+    "licensesTexts": "Textos de las licencias",
+    "licensesOther": "Otros componentes",
+    "licensesFonts": "Tipografía DM Sans, © The DM Sans Project Authors, SIL Open Font License 1.1 (openfontlicense.org).",
+    "licensesServices": "Google ML Kit (reconocimiento de texto en el dispositivo) y los servicios de Google Firebase están sujetos a los términos de Google.",
+    "creditsIntro": "Shelfy usa datos abiertos y servicios de terceros. Gracias a quienes los hacen posibles.",
+    "credits_off_title": "Open Food Facts",
+    "credits_off_body": "Los datos de productos leídos del código de barras (nombre, marca, categoría, cantidad) vienen de Open Food Facts, una base de datos colaborativa y abierta. Está disponible con la licencia Open Database License (ODbL) v1.0; los contenidos individuales con la Database Contents License. © Open Food Facts contributors.",
+    "credits_prices_title": "Open Prices",
+    "credits_prices_body": "Los precios marcados como \"Open Prices\" vienen de Open Prices, el proyecto de precios colaborativos de Open Food Facts, con licencia abierta ODbL. Son orientativos.",
+    "credits_osm_title": "OpenStreetMap",
+    "credits_osm_body": "Para buscar precios cerca de ti convertimos el municipio que escribes en coordenadas con Nominatim. Datos © OpenStreetMap contributors, disponibles con licencia ODbL.",
+    "credits_community_title": "Comunidad Shelfy",
+    "credits_community_body": "Los precios \"de la comunidad\" y los productos añadidos al catálogo los introducen usuarios de Shelfy de forma anónima y son orientativos. Las recetas \"Shelfy\" son textos originales escritos para la app; las demás las publican los usuarios bajo su responsabilidad.",
+    "credits_fonts_title": "Tipografías e iconos",
+    "credits_fonts_body": "Tipografía DM Sans © The DM Sans Project Authors, con licencia SIL Open Font License 1.1. Iconos Ionicons con licencia MIT.",
+    "credits_ocr_title": "Lectura de tickets y fechas",
+    "credits_ocr_body": "En el móvil el reconocimiento de texto usa Google ML Kit directamente en el dispositivo; en la web usa Tesseract.js (Apache 2.0). Las fotos no se envían a nuestros servidores.",
+    "credits_services_title": "Servicios",
+    "credits_services_body": "Shelfy usa Google Firebase (acceso, base de datos, notificaciones, alojamiento), RevenueCat (suscripciones) y Expo (actualizaciones de la app). Los detalles están en la Política de privacidad."
+  },
+  "consent": {
+    "title": "¿De qué guía vienes?",
+    "body": "Para saber qué guías son útiles, podemos recordar en tu navegador el nombre de la guía de la que vienes y asociarlo a tu cuenta si te registras. Si lo rechazas, Shelfy funciona igual.",
+    "accept": "Aceptar",
+    "reject": "Rechazar",
+    "more": "Privacidad"
+  },
+  "legalNotice": {
+    "prefix": "Al usar Shelfy aceptas los ",
+    "terms": "Términos del servicio",
+    "middle": " y confirmas que has leído la ",
+    "privacy": "Política de privacidad",
+    "suffix": "."
+  },
   "serverErrors": {
+    "recentLoginRequired": "Por seguridad, inicia sesión de nuevo e inténtalo otra vez.",
     "adminOnly": "Solo para administradores.",
     "registrationRequired": "Regístrate para usar esta función.",
     "loginRequired": "Debes iniciar sesión.",

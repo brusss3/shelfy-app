@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Shelfy — Privacy Policy</title>
+<title>Shelfy — Informativa sulla Privacy</title>
+<meta name="description" content="Informativa sulla privacy di Shelfy (GDPR): quali dati trattiamo, perché, con chi li condividiamo e come esercitare i tuoi diritti." />
 <style>
   :root {
     --ink: #2f2a20;
@@ -30,7 +31,7 @@
   }
   h1 { font-size: 30px; margin: 0 0 8px; color: var(--ink); }
   .updated { color: var(--ink2); font-size: 13px; margin: 0; }
-  .langSwitch { margin-top: 20px; display: flex; gap: 8px; }
+  .langSwitch { margin-top: 20px; display: flex; gap: 8px; flex-wrap: wrap; }
   .langBtn {
     border: 1px solid var(--line); background: var(--surface); color: var(--ink);
     padding: 6px 14px; border-radius: 100px; font-size: 13px; font-weight: 600;
@@ -50,244 +51,496 @@
   .card p { margin: 0; font-size: 13.5px; }
   footer { border-top: 1px solid var(--line); margin-top: 40px; padding-top: 20px; }
   footer p { font-size: 13px; }
-  [data-lang="en"] { display: none; }
+  /* Italiano di default (anche senza JavaScript); EN/ES si attivano via classe sul body. */
+  [data-lang="en"], [data-lang="es"] { display: none; }
+  body.lang-en [data-lang="it"], body.lang-es [data-lang="it"] { display: none; }
+  body.lang-en [data-lang="en"], body.lang-es [data-lang="es"] { display: block; }
 </style>
 </head>
 <body>
   <div class="wrap">
     <header>
       <span class="badge">Shelfy</span>
-      <h1>Informativa sulla Privacy</h1>
-      <p class="updated" data-lang="it">Ultimo aggiornamento: 29 settembre 2026</p>
-      <p class="updated" data-lang="en">Last updated: September 29, 2026</p>
+      <h1 data-lang="it">Informativa sulla Privacy</h1>
+      <h1 data-lang="en">Privacy Policy</h1>
+      <h1 data-lang="es">Política de Privacidad</h1>
+      <p class="updated" data-lang="it">Ultimo aggiornamento: 13 ottobre 2026</p>
+      <p class="updated" data-lang="en">Last updated: October 13, 2026</p>
+      <p class="updated" data-lang="es">Última actualización: 13 de octubre de 2026</p>
       <div class="langSwitch">
         <button class="langBtn active" onclick="setLang('it')" id="btn-it">Italiano</button>
         <button class="langBtn" onclick="setLang('en')" id="btn-en">English</button>
+        <button class="langBtn" onclick="setLang('es')" id="btn-es">Español</button>
       </div>
     </header>
 
+    <!-- ===================== ITALIANO ===================== -->
     <div data-lang="it">
+      <p>Questa informativa spiega, ai sensi degli artt. 13 e 14 del Regolamento (UE) 2016/679 (GDPR) e del D.Lgs. 196/2003, come Shelfy tratta i dati personali di chi usa l'app e il sito shelfy-app.it. Abbiamo cercato di scriverla in modo semplice e di descrivere solo ciò che l'app fa davvero.</p>
+
       <section>
         <h2>1. Titolare del trattamento</h2>
-        <p>Shelfy è sviluppata e gestita da Andrea Casula. Per qualsiasi richiesta relativa ai
-        tuoi dati personali puoi scrivere a
+        <!-- TODO(titolare): P.IVA e sede legale prima di attivare i piani a pagamento -->
+        <p>Il titolare del trattamento è Andrea Casula (persona fisica), che sviluppa e gestisce Shelfy. Non è stato nominato un Responsabile della protezione dei dati (DPO). Per qualsiasi richiesta sui tuoi dati personali scrivi a
         <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a>.</p>
       </section>
 
       <section>
-        <h2>2. Quali dati raccogliamo</h2>
+        <h2>2. Quali dati trattiamo</h2>
         <div class="card">
-          <h3>Dati account</h3>
-          <p>Email e nome, forniti tramite registrazione con email/password o Accesso Google
-          (Firebase Authentication).</p>
+          <h3>Dati dell'account</h3>
+          <p>Email e nome visualizzato, forniti con la registrazione via email e password o con l'Accesso Google (Firebase Authentication). La password è gestita da Firebase Authentication e non la conosciamo. Registriamo anche la lingua scelta, la data di creazione dell'account e la data dell'ultimo utilizzo.</p>
+        </div>
+        <div class="card">
+          <h3>Modalità ospite</h3>
+          <p>Puoi provare l'app senza registrarti: Firebase crea un account anonimo, con un identificativo tecnico e senza email. L'ospite ha solo la dispensa personale (massimo 10 prodotti) e non ha lista della spesa, community, dispensa condivisa né prezzi. Se poi ti registri, i tuoi dati restano associati allo stesso account.</p>
         </div>
         <div class="card">
           <h3>Contenuti che inserisci</h3>
-          <p>Prodotti, date di scadenza, ricette e note che aggiungi nella tua dispensa
-          (personale o condivisa).</p>
+          <p>Prodotti (nome, marca, codice a barre, quantità, categoria, scadenza, zona di conservazione, note), lista della spesa e voci preferite, ricette salvate e ricette personali.</p>
         </div>
         <div class="card">
-          <h3>Foto e scansioni</h3>
-          <p>Fotocamera usata per scansionare codici a barre, scontrini ed etichette. Il
-          riconoscimento testo avviene <strong>sul dispositivo</strong>: la foto non lascia il
-          telefono, viene inviato ai nostri server solo il testo estratto, per completare
-          l'inserimento del prodotto o generare suggerimenti di ricette.</p>
+          <h3>Dispensa condivisa</h3>
+          <p>Nome della dispensa, elenco dei membri con il loro nome visualizzato, prodotti e lista della spesa condivisi, codice di invito. Si entra solo con un codice verificato dal server (o QR): tutti i membri vedono i contenuti della dispensa e i nomi degli altri membri.</p>
         </div>
         <div class="card">
-          <h3>Notifiche push</h3>
-          <p>Un token del dispositivo, usato per avvisarti quando un prodotto sta per scadere.</p>
+          <h3>Contenuti per la community</h3>
+          <p>Ricette che pubblichi, voti, richieste d'aiuto e proposte di ricetta sono visibili agli utenti registrati insieme al tuo nome visualizzato. I prezzi che segnali (codice a barre, negozio, prezzo) e i prodotti che aggiungi al catalogo sono resi pubblici <strong>senza indicare chi li ha inviati</strong>: l'autore resta registrato in un archivio visibile solo al titolare, per moderazione e prevenzione degli abusi.</p>
         </div>
         <div class="card">
-          <h3>Dati di acquisto</h3>
-          <p>Se attivi un abbonamento Premium, lo stato dell'abbonamento (attivo/scaduto, tipo di
-          piano) viene gestito tramite RevenueCat e gli store (Google Play / App Store). Non
-          gestiamo né memorizziamo i dati della tua carta di pagamento.</p>
+          <h3>Feedback e sondaggi</h3>
+          <p>Se invii un feedback registriamo email, nome, categoria e messaggio. Le risposte ai sondaggi sono associate al tuo identificativo utente.</p>
         </div>
         <div class="card">
-          <h3>Dati di utilizzo</h3>
-          <p>Quanti prodotti hai aggiunto in totale e il giorno dell'ultimo utilizzo. Se ti sei
-          registrato dopo aver letto una delle nostre guide, il nome della guida: il browser lo
-          conserva in memoria locale fino alla registrazione e poi lo associamo al tuo account.</p>
+          <h3>Fotocamera e scansioni</h3>
+          <p>La fotocamera serve a leggere codici a barre e a riconoscere il testo di scontrini e date di scadenza. Il riconoscimento del testo avviene <strong>sul tuo dispositivo</strong> (ML Kit di Google nell'app Android; Tesseract.js nel browser) e la lettura dello scontrino è fatta in locale: le foto non vengono caricate sui nostri server. Nel browser, la prima volta che usi il riconoscimento testo i componenti di Tesseract.js e i dati linguistici sono scaricati dalla rete di distribuzione jsDelivr (vedi sezione 5). Il permesso di accesso alla fotocamera è gestito dal sistema operativo o dal browser e puoi revocarlo in qualsiasi momento.</p>
         </div>
+        <div class="card">
+          <h3>Notifiche</h3>
+          <p>Nell'app per dispositivi mobili i promemoria di scadenza sono programmati in locale sul telefono; se concedi il permesso salviamo anche un token di notifica (Expo). Sul web, se attivi le notifiche, salviamo un token Web Push (Firebase Cloud Messaging) e il nostro server ti invia i promemoria. Salviamo anche la tua preferenza (notifiche attive o no).</p>
+        </div>
+        <div class="card">
+          <h3>Abbonamento</h3>
+          <p>Al momento i piani a pagamento non sono in vendita. Se in futuro lo saranno, lo stato dell'abbonamento (attivo o scaduto, tipo di piano, scadenza) sarà gestito tramite RevenueCat e gli store (Google Play / App Store) e aggiornato sul tuo profilo; RevenueCat usa il tuo identificativo utente Firebase e si applica solo agli utenti registrati, non agli ospiti. Non vediamo né conserviamo i dati della tua carta. Se chiedi di essere avvisato quando il Premium sarà disponibile, registriamo la tua adesione alla lista d'attesa.</p>
+        </div>
+        <div class="card">
+          <h3>Zona dei prezzi</h3>
+          <p>Non accediamo alla tua posizione GPS. Per la funzione prezzi scrivi tu il nome del tuo comune e un raggio: li ricordiamo sul tuo dispositivo e il nome del comune viene inviato alla nostra funzione per trovare le coordinate.</p>
+        </div>
+        <div class="card">
+          <h3>Dati d'uso e dati tecnici</h3>
+          <p>Contatori semplici (prodotti aggiunti, consumati, sprecati) e data dell'ultimo utilizzo, usati per statistiche aggregate; contatori per limitare gli abusi (tentativi di ingresso con codice, invii di prezzi). I server di Google (Hosting, Functions, Firestore) e gli altri servizi di sezione 5 possono registrare dati tecnici come l'indirizzo IP e le informazioni sul dispositivo.</p>
+        </div>
+        <div class="card">
+          <h3>Guida di provenienza (solo web, solo con consenso)</h3>
+          <p>Se accetti l'apposito avviso sul sito, ricordiamo nel browser il nome della guida che ti ha portato a Shelfy e, quando ti registri, lo colleghiamo al tuo account per capire quali guide funzionano. Se rifiuti, non viene salvato nulla.</p>
+        </div>
+        <p>Se non fornisci email e password (o l'Accesso Google) puoi usare solo la modalità ospite, con le sue limitazioni. Non trattiamo categorie particolari di dati (art. 9 GDPR).</p>
       </section>
 
       <section>
-        <h2>3. Come usiamo i tuoi dati</h2>
+        <h2>3. Perché li usiamo e su quale base giuridica</h2>
         <ul>
-          <li>Farti usare l'app: tracciare i prodotti, calcolare le scadenze, inviarti promemoria.</li>
-          <li>Far funzionare la dispensa condivisa tra le persone che inviti tu stesso tramite
-          codice/QR — nessuno può essere aggiunto senza il tuo consenso esplicito.</li>
-          <li>Generare suggerimenti di ricette e interpretare scontrini tramite servizi di
-          intelligenza artificiale di terze parti (vedi sezione 4).</li>
-          <li>Gestire il tuo abbonamento Premium, se attivo.</li>
-          <li>Capire, in forma aggregata, quali guide portano persone che poi usano davvero l'app.</li>
+          <li><strong>Fornirti il servizio</strong> (account, dispensa, scadenze, promemoria, lista della spesa, dispensa condivisa, abbonamento): esecuzione del contratto (art. 6.1.b GDPR).</li>
+          <li><strong>Notifiche push e guida di provenienza</strong>: il tuo consenso (art. 6.1.a), che puoi revocare in qualsiasi momento senza pregiudicare quanto fatto prima.</li>
+          <li><strong>Sicurezza e prevenzione degli abusi</strong> (limiti di frequenza, verifica dei codici di invito), <strong>statistiche aggregate</strong> sull'uso dell'app e <strong>moderazione</strong> di prezzi e catalogo: legittimo interesse del titolare (art. 6.1.f), valutato come non prevalente sui tuoi diritti dato il basso impatto.</li>
+          <li><strong>Obblighi fiscali e contabili</strong>, se in futuro saranno venduti piani a pagamento: obbligo di legge (art. 6.1.c).</li>
+        </ul>
+        <p>Non facciamo profilazione né prendiamo decisioni basate unicamente su trattamenti automatizzati che producano effetti giuridici su di te (art. 22 GDPR). Non vendiamo i tuoi dati e non li usiamo per pubblicità.</p>
+      </section>
+
+      <section>
+        <h2>4. Chi può vedere i tuoi dati</h2>
+        <ul>
+          <li><strong>Altri utenti</strong>: solo ciò che condividi (dispensa condivisa; contenuti della community con il tuo nome visualizzato).</li>
+          <li><strong>Il titolare</strong>, per amministrare il servizio, rispondere alle richieste e moderare.</li>
+          <li><strong>I fornitori di servizi</strong> elencati nella sezione 5, che trattano i dati per nostro conto o, in alcuni casi, come titolari autonomi.</li>
+          <li><strong>Autorità</strong>, solo se previsto dalla legge.</li>
         </ul>
       </section>
 
       <section>
-        <h2>4. Servizi di terze parti</h2>
+        <h2>5. Servizi di terze parti</h2>
         <ul>
-          <li><strong>Google Firebase</strong> — autenticazione, database, hosting, notifiche push.</li>
-          <li><strong>Google Sign-In</strong> — accesso opzionale con account Google.</li>
-          <li><strong>Groq</strong> — elabora il testo estratto da scontrini/richieste per generare
-          ricette e suggerimenti (non riceve foto, solo testo).</li>
-          <li><strong>RevenueCat</strong> — gestisce lo stato degli abbonamenti in-app.</li>
+          <li><strong>Google</strong> — Firebase Authentication, Firestore (database, regione UE "eur3"), Cloud Functions (regione europe-west1), Hosting, Firebase Cloud Messaging (notifiche web), Accesso Google; Google Play (download dell'app e, in futuro, fatturazione). Agisce per nostro conto come responsabile del trattamento per i dati dell'app.</li>
+          <li><strong>Expo</strong> — l'app mobile controlla all'avvio la presenza di aggiornamenti (EAS Update): Expo riceve versione dell'app, versione runtime e piattaforma e vede l'indirizzo IP del dispositivo. Il servizio di notifiche push di Expo (exp.host) è usato per recapitare al titolare notifiche di servizio (nuova registrazione, nuovo feedback), che contengono nome ed email di chi si registra o l'inizio del messaggio di feedback. I promemoria di scadenza degli utenti non passano da Expo.</li>
+          <li><strong>RevenueCat</strong> — gestione dello stato degli abbonamenti, con il tuo identificativo utente Firebase; solo per utenti registrati e solo quando i piani a pagamento saranno attivi. Per eventuali acquisti dal web, il pagamento è elaborato dal fornitore di pagamenti integrato da RevenueCat; per gli acquisti da app mobile, da Google Play o App Store, che trattano i dati di pagamento come titolari autonomi.</li>
+          <li><strong>Open Food Facts</strong> — quando scansioni un codice a barre o cerchi un prodotto per nome, l'app interroga direttamente Open Food Facts: il servizio vede il codice o il testo cercato e il tuo indirizzo IP. I dati dei prodotti sono © contributori di Open Food Facts, licenza ODbL.</li>
+          <li><strong>Open Prices (Open Food Facts)</strong> — per mostrarti prezzi indicativi, la nostra Cloud Function (non il tuo dispositivo) interroga prices.openfoodfacts.org con i codici a barre e un'area geografica; non vengono inviati il tuo nome né il tuo IP. Dati sotto licenza aperta (ODbL).</li>
+          <li><strong>OpenStreetMap (Nominatim)</strong> — la nostra Cloud Function invia il nome del comune che hai scritto per ottenere le coordinate; il risultato è memorizzato in una cache senza collegamento al tuo account. Dati © contributori di OpenStreetMap, licenza ODbL.</li>
+          <li><strong>jsDelivr</strong> — solo sul web: rete di distribuzione da cui il browser scarica i componenti e i dati linguistici del riconoscimento testo (Tesseract.js). Il servizio vede il tuo indirizzo IP; non riceve foto né testi.</li>
         </ul>
-        <p>Questi servizi trattano i dati secondo le proprie policy, nella misura necessaria a
-        fornire le funzionalità dell'app.</p>
+        <p>Questi servizi trattano i dati secondo le proprie informative. Non usiamo strumenti di analisi o pubblicità di terze parti.</p>
       </section>
 
       <section>
-        <h2>5. Conservazione dei dati</h2>
-        <p>Conserviamo i tuoi dati finché il tuo account è attivo. Puoi richiedere la cancellazione
-        completa del tuo account e dei dati associati scrivendo a
-        <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a>.</p>
+        <h2>6. Trasferimenti fuori dallo Spazio Economico Europeo</h2>
+        <p>I dati dell'app sono conservati in Unione Europea (Firestore "eur3", Cloud Functions in europe-west1). Alcuni fornitori (ad es. Google, Expo, RevenueCat) possono però trattare dati anche negli Stati Uniti o in altri Paesi extra-SEE. Dove applicabile, il trasferimento si basa su una decisione di adeguatezza della Commissione europea (compreso il quadro UE-USA per la protezione dei dati, per i fornitori che vi aderiscono) oppure sulle Clausole contrattuali standard.</p>
       </section>
 
       <section>
-        <h2>6. I tuoi diritti</h2>
-        <p>In quanto utente nell'Unione Europea, hai diritto di accesso, rettifica, cancellazione,
-        limitazione e portabilità dei tuoi dati, oltre al diritto di opporti al trattamento.
-        Puoi esercitare questi diritti contattandoci via email.</p>
+        <h2>7. Per quanto tempo conserviamo i dati</h2>
+        <ul>
+          <li><strong>Account registrato</strong>: fino a quando non lo elimini.</li>
+          <li><strong>Account ospite</strong>: eliminato automaticamente, con i suoi dati, dopo 30 giorni.</li>
+          <li><strong>Token di notifica</strong>: finché non li revochi o non elimini l'account.</li>
+          <li><strong>Autore di prezzi e prodotti inviati</strong>: fino all'eliminazione dell'account. I prezzi e i prodotti pubblici non contengono l'autore e restano.</li>
+          <li><strong>Eliminazione dell'account</strong>: i dati sono cancellati subito, tranne i contenuti della community (che diventano anonimi, vedi sotto). Copie tecniche di sicurezza (backup) presso Google possono restare per i tempi dei normali cicli di Firebase.</li>
+          <li><strong>Dati contabili e fiscali</strong>, se in futuro vendessimo piani a pagamento: per i termini di legge.</li>
+        </ul>
       </section>
 
       <section>
-        <h2>7. Minori</h2>
-        <p>Shelfy non è rivolta a minori di 13 anni e non raccogliamo consapevolmente dati di
-        minori di tale età.</p>
+        <h2>8. Archiviazione locale e cookie</h2>
+        <p>Non usiamo cookie di profilazione. Il sito e l'app web salvano nel tuo dispositivo solo ciò che serve a farli funzionare (art. 122 Codice privacy: non richiede consenso): la sessione di accesso (Firebase Authentication), la lingua e il tema scelti, la dispensa attiva, il comune e il raggio dei prezzi, i suggerimenti già visti, il service worker per le notifiche web (solo se le attivi) e le copie temporanee dei componenti di riconoscimento testo. L'unica voce facoltativa è la guida di provenienza (<code>shelfy.acquisition</code>), salvata solo se accetti l'avviso. L'app mobile usa lo spazio locale dell'app (AsyncStorage) per lingua, tema, dispensa attiva e suggerimenti. Puoi cancellare questi dati dalle impostazioni del browser o disinstallando l'app.</p>
       </section>
 
       <section>
-        <h2>8. Sicurezza</h2>
-        <p>I dati sono trasmessi tramite connessioni cifrate (HTTPS) e archiviati su infrastruttura
-        Google Firebase.</p>
+        <h2>9. I tuoi diritti</h2>
+        <p>Hai diritto di accesso, rettifica, cancellazione, limitazione, portabilità e opposizione, e di revocare un consenso in qualsiasi momento. Nell'app, in <strong>Impostazioni → Account</strong>, puoi <strong>scaricare i tuoi dati</strong> in formato JSON ("Scarica i miei dati") ed <strong>eliminare l'account</strong> ("Elimina account"). Per ogni altra richiesta scrivi a <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a>: rispondiamo senza ingiustificato ritardo e in ogni caso entro un mese (prorogabile in casi complessi). Per i dettagli sulla cancellazione vedi <a href="/elimina-account" data-nav>Come eliminare il tuo account</a>.</p>
+        <p>Cosa succede quando elimini l'account: vengono cancellati subito profilo, dispensa personale, lista della spesa, ricette salvate e personali, token di notifica, feedback e risposte ai sondaggi inviati, e il legame con prezzi e prodotti del catalogo che hai segnalato. Le ricette, le proposte e le richieste che hai pubblicato nella community restano ma in forma anonima (autore "Utente eliminato"). Sei rimosso dalle dispense condivise: se eri il creatore e ci sono altri membri, la proprietà passa a un altro membro; se eri solo, la dispensa è eliminata. <strong>L'eliminazione non annulla un abbonamento a pagamento: va disdetto da Google Play o App Store.</strong></p>
+        <p>Se ritieni che il trattamento violi la normativa puoi proporre reclamo al Garante per la protezione dei dati personali (<a href="https://www.garanteprivacy.it" rel="noopener">www.garanteprivacy.it</a>) o all'autorità del tuo Stato UE di residenza.</p>
       </section>
 
       <section>
-        <h2>9. Modifiche a questa informativa</h2>
-        <p>Possiamo aggiornare questa informativa nel tempo. La data di "ultimo aggiornamento" in
-        alto riflette la versione più recente.</p>
+        <h2>10. Minori</h2>
+        <p>Shelfy non è rivolta a minori di 14 anni (età del consenso digitale in Italia, art. 2-quinquies D.Lgs. 196/2003) e non raccogliamo consapevolmente dati di minori di tale età. Se pensi che un minore ci abbia fornito dati, scrivici e li cancelleremo.</p>
+      </section>
+
+      <section>
+        <h2>11. Sicurezza</h2>
+        <p>I dati viaggiano su connessioni cifrate (HTTPS) e sono conservati su infrastruttura Google Firebase. L'accesso ai dati è limitato da regole che permettono a ciascun utente di leggere solo i propri dati e quelli delle dispense di cui fa parte; l'ingresso in una dispensa condivisa richiede un codice verificato dal server, con limite ai tentativi. Nessun sistema è sicuro al 100%: adottiamo misure ragionevoli e proporzionate.</p>
+      </section>
+
+      <section>
+        <h2>12. Modifiche a questa informativa</h2>
+        <p>Possiamo aggiornare questa informativa nel tempo. La data di "ultimo aggiornamento" in alto indica la versione più recente; in caso di modifiche rilevanti ti avviseremo nell'app o via email.</p>
       </section>
     </div>
 
+    <!-- ===================== ENGLISH ===================== -->
     <div data-lang="en">
+      <p>This notice explains, under Articles 13 and 14 of Regulation (EU) 2016/679 (GDPR) and Italian Legislative Decree 196/2003, how Shelfy processes the personal data of people using the app and the shelfy-app.it website. We tried to keep it simple and to describe only what the app actually does.</p>
+
       <section>
         <h2>1. Data controller</h2>
-        <p>Shelfy is developed and operated by Andrea Casula. For any request regarding your
-        personal data, write to
+        <!-- TODO(titolare): P.IVA e sede legale prima di attivare i piani a pagamento -->
+        <p>The data controller is Andrea Casula (an individual), who develops and operates Shelfy. No Data Protection Officer (DPO) has been appointed. For any request about your personal data, write to
         <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a>.</p>
       </section>
 
       <section>
-        <h2>2. What we collect</h2>
+        <h2>2. What data we process</h2>
         <div class="card">
           <h3>Account data</h3>
-          <p>Email and name, provided via email/password sign-up or Google Sign-In (Firebase
-          Authentication).</p>
+          <p>Email and display name, provided when you sign up with email and password or with Google Sign-In (Firebase Authentication). Your password is handled by Firebase Authentication and is not known to us. We also record your chosen language, the account creation date and the date you last used the app.</p>
+        </div>
+        <div class="card">
+          <h3>Guest mode</h3>
+          <p>You can try the app without signing up: Firebase creates an anonymous account with a technical identifier and no email. A guest only has the personal pantry (maximum 10 products) and has no shopping list, community, shared pantry or prices. If you sign up later, your data stays attached to the same account.</p>
         </div>
         <div class="card">
           <h3>Content you add</h3>
-          <p>Products, expiry dates, recipes and notes you add to your pantry (personal or
-          shared).</p>
+          <p>Products (name, brand, barcode, quantity, category, expiry date, storage zone, notes), shopping list and favourite items, saved recipes and your own recipes.</p>
         </div>
         <div class="card">
-          <h3>Photos and scans</h3>
-          <p>Camera access is used to scan barcodes, receipts and labels. Text recognition
-          happens <strong>on your device</strong>: the photo never leaves your phone, only the
-          extracted text is sent to our servers to complete a product entry or generate recipe
-          suggestions.</p>
+          <h3>Shared pantry</h3>
+          <p>Pantry name, list of members with their display names, shared products and shopping list, invite code. You can only join with a code (or QR) validated by the server: all members can see the pantry content and the other members' names.</p>
         </div>
         <div class="card">
-          <h3>Push notifications</h3>
-          <p>A device token, used to notify you when a product is about to expire.</p>
+          <h3>Community content</h3>
+          <p>Recipes you publish, ratings, help requests and recipe proposals are visible to registered users together with your display name. Prices you report (barcode, store, price) and products you add to the catalogue are made public <strong>without showing who submitted them</strong>: the author is kept in a record visible only to the controller, for moderation and abuse prevention.</p>
         </div>
         <div class="card">
-          <h3>Purchase data</h3>
-          <p>If you subscribe to Premium, your subscription status (active/expired, plan type) is
-          managed via RevenueCat and the app stores (Google Play / App Store). We never handle or
-          store your payment card details.</p>
+          <h3>Feedback and surveys</h3>
+          <p>If you send feedback we record your email, name, category and message. Survey answers are linked to your user identifier.</p>
         </div>
         <div class="card">
-          <h3>Usage data</h3>
-          <p>How many products you have added in total and the day you last used the app. If you
-          signed up after reading one of our guides, the name of that guide: your browser keeps it
-          in local storage until you sign up, and we then link it to your account.</p>
+          <h3>Camera and scans</h3>
+          <p>The camera is used to read barcodes and to recognise text on receipts and expiry dates. Text recognition happens <strong>on your device</strong> (Google ML Kit in the Android app; Tesseract.js in the browser) and receipts are parsed locally: photos are not uploaded to our servers. In the browser, the first time you use text recognition the Tesseract.js components and language data are downloaded from the jsDelivr content delivery network (see section 5). Camera permission is managed by your operating system or browser and you can revoke it at any time.</p>
         </div>
+        <div class="card">
+          <h3>Notifications</h3>
+          <p>In the mobile app, expiry reminders are scheduled locally on your phone; if you grant permission we also store a notification token (Expo). On the web, if you turn notifications on, we store a Web Push token (Firebase Cloud Messaging) and our server sends you the reminders. We also store your preference (notifications on or off).</p>
+        </div>
+        <div class="card">
+          <h3>Subscription</h3>
+          <p>Paid plans are not currently on sale. If they are in the future, your subscription status (active or expired, plan type, expiry date) will be handled through RevenueCat and the app stores (Google Play / App Store) and updated on your profile; RevenueCat uses your Firebase user identifier and applies only to registered users, not guests. We never see or store your card details. If you ask to be notified when Premium becomes available, we record your waitlist sign-up.</p>
+        </div>
+        <div class="card">
+          <h3>Price area</h3>
+          <p>We do not access your GPS location. For the prices feature you type your town name and a radius: we remember them on your device and the town name is sent to our function to find its coordinates.</p>
+        </div>
+        <div class="card">
+          <h3>Usage and technical data</h3>
+          <p>Simple counters (products added, consumed, wasted) and the date you last used the app, used for aggregate statistics; counters to limit abuse (invite-code attempts, price submissions). Google's servers (Hosting, Functions, Firestore) and the other services in section 5 may log technical data such as IP address and device information.</p>
+        </div>
+        <div class="card">
+          <h3>Origin guide (web only, consent-based)</h3>
+          <p>If you accept the notice on the website, we remember in your browser the name of the guide that brought you to Shelfy and, when you sign up, link it to your account to understand which guides work. If you decline, nothing is stored.</p>
+        </div>
+        <p>If you do not provide an email and password (or use Google Sign-In) you can only use guest mode, with its limits. We do not process special categories of data (Art. 9 GDPR).</p>
       </section>
 
       <section>
-        <h2>3. How we use your data</h2>
+        <h2>3. Why we use it and on what legal basis</h2>
         <ul>
-          <li>To run the app: tracking products, computing expiry dates, sending reminders.</li>
-          <li>To run the shared pantry between people you invite yourself via code/QR — no one can
-          be added without your explicit consent.</li>
-          <li>To generate recipe suggestions and parse receipts via third-party AI services (see
-          section 4).</li>
-          <li>To manage your Premium subscription, if active.</li>
-          <li>To understand, in aggregate, which guides bring people who go on to use the app.</li>
+          <li><strong>Providing the service</strong> (account, pantry, expiry dates, reminders, shopping list, shared pantry, subscription): performance of a contract (Art. 6(1)(b) GDPR).</li>
+          <li><strong>Push notifications and origin guide</strong>: your consent (Art. 6(1)(a)), which you can withdraw at any time without affecting what was done before.</li>
+          <li><strong>Security and abuse prevention</strong> (rate limits, invite-code checks), <strong>aggregate statistics</strong> on app usage and <strong>moderation</strong> of prices and catalogue: the controller's legitimate interest (Art. 6(1)(f)), assessed as not overriding your rights given the low impact.</li>
+          <li><strong>Tax and accounting obligations</strong>, if paid plans are ever sold: legal obligation (Art. 6(1)(c)).</li>
+        </ul>
+        <p>We do not profile you or take decisions based solely on automated processing that produce legal effects on you (Art. 22 GDPR). We do not sell your data and do not use it for advertising.</p>
+      </section>
+
+      <section>
+        <h2>4. Who can see your data</h2>
+        <ul>
+          <li><strong>Other users</strong>: only what you share (shared pantry; community content with your display name).</li>
+          <li><strong>The controller</strong>, to run the service, answer requests and moderate.</li>
+          <li><strong>Service providers</strong> listed in section 5, which process data on our behalf or, in some cases, as independent controllers.</li>
+          <li><strong>Authorities</strong>, only where required by law.</li>
         </ul>
       </section>
 
       <section>
-        <h2>4. Third-party services</h2>
+        <h2>5. Third-party services</h2>
         <ul>
-          <li><strong>Google Firebase</strong> — authentication, database, hosting, push
-          notifications.</li>
-          <li><strong>Google Sign-In</strong> — optional sign-in with a Google account.</li>
-          <li><strong>Groq</strong> — processes text extracted from receipts/requests to generate
-          recipes and suggestions (never receives photos, only text).</li>
-          <li><strong>RevenueCat</strong> — manages in-app subscription status.</li>
+          <li><strong>Google</strong> — Firebase Authentication, Firestore (database, EU region "eur3"), Cloud Functions (europe-west1 region), Hosting, Firebase Cloud Messaging (web notifications), Google Sign-In; Google Play (app download and, in future, billing). It acts on our behalf as data processor for app data.</li>
+          <li><strong>Expo</strong> — the mobile app checks for updates at startup (EAS Update): Expo receives the app version, runtime version and platform and can see the device's IP address. Expo's push notification service (exp.host) is used to deliver service notifications to the controller (new sign-up, new feedback), which contain the name and email of the person signing up or the beginning of the feedback message. Users' expiry reminders do not go through Expo.</li>
+          <li><strong>RevenueCat</strong> — subscription status management, using your Firebase user identifier; only for registered users and only once paid plans are active. For any purchases made on the web, payment is processed by the payment provider integrated by RevenueCat; for purchases in the mobile app, by Google Play or the App Store, which process payment data as independent controllers.</li>
+          <li><strong>Open Food Facts</strong> — when you scan a barcode or search a product by name, the app queries Open Food Facts directly: the service sees the barcode or search text and your IP address. Product data is © Open Food Facts contributors, ODbL licence.</li>
+          <li><strong>Open Prices (Open Food Facts)</strong> — to show indicative prices, our Cloud Function (not your device) queries prices.openfoodfacts.org with barcodes and a geographic area; your name and IP address are not sent. Data under an open licence (ODbL).</li>
+          <li><strong>OpenStreetMap (Nominatim)</strong> — our Cloud Function sends the town name you typed to obtain coordinates; the result is stored in a cache that is not linked to your account. Data © OpenStreetMap contributors, ODbL licence.</li>
+          <li><strong>jsDelivr</strong> — web only: the content delivery network from which your browser downloads the text-recognition components and language data (Tesseract.js). The service sees your IP address; it receives no photos or text.</li>
         </ul>
-        <p>These services process data according to their own policies, to the extent necessary to
-        provide the app's features.</p>
+        <p>These services process data under their own notices. We do not use third-party analytics or advertising tools.</p>
       </section>
 
       <section>
-        <h2>5. Data retention</h2>
-        <p>We keep your data for as long as your account is active. You can request full deletion
-        of your account and associated data by emailing
+        <h2>6. Transfers outside the European Economic Area</h2>
+        <p>App data is stored in the European Union (Firestore "eur3", Cloud Functions in europe-west1). Some providers (e.g. Google, Expo, RevenueCat) may however process data in the United States or other non-EEA countries. Where applicable, the transfer relies on a European Commission adequacy decision (including the EU-US Data Privacy Framework, for providers that participate in it) or on Standard Contractual Clauses.</p>
+      </section>
+
+      <section>
+        <h2>7. How long we keep data</h2>
+        <ul>
+          <li><strong>Registered account</strong>: until you delete it.</li>
+          <li><strong>Guest account</strong>: automatically deleted, with its data, after 30 days.</li>
+          <li><strong>Notification tokens</strong>: until you revoke them or delete the account.</li>
+          <li><strong>Authorship of submitted prices and products</strong>: until the account is deleted. Public prices and products do not contain the author and remain.</li>
+          <li><strong>Account deletion</strong>: data is deleted immediately, except community content (which becomes anonymous, see below). Technical backup copies at Google may remain for the duration of Firebase's normal cycles.</li>
+          <li><strong>Accounting and tax records</strong>, if we ever sell paid plans: for the periods required by law.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>8. Local storage and cookies</h2>
+        <p>We do not use profiling cookies. The website and web app store on your device only what is needed to make them work (Art. 122 of the Italian Privacy Code: no consent required): your sign-in session (Firebase Authentication), chosen language and theme, active pantry, price town and radius, hints already seen, the service worker for web notifications (only if you turn them on) and temporary copies of the text-recognition components. The only optional item is the origin guide (<code>shelfy.acquisition</code>), stored only if you accept the notice. The mobile app uses the app's local storage (AsyncStorage) for language, theme, active pantry and hints. You can clear this data from your browser settings or by uninstalling the app.</p>
+      </section>
+
+      <section>
+        <h2>9. Your rights</h2>
+        <p>You have the right of access, rectification, erasure, restriction, portability and objection, and to withdraw consent at any time. In the app, under <strong>Settings → Account</strong>, you can <strong>download your data</strong> as JSON ("Download my data") and <strong>delete your account</strong> ("Delete account"). For any other request write to <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a>: we reply without undue delay and in any case within one month (extendable in complex cases). For deletion details see <a href="/elimina-account" data-nav>How to delete your account</a>.</p>
+        <p>What happens when you delete your account: your profile, personal pantry, shopping list, saved and personal recipes, notification tokens, feedback and survey answers you sent, and the link to prices and catalogue products you submitted are deleted immediately. Recipes, proposals and requests you published to the community remain but anonymised (author shown as "Deleted user"). You are removed from shared pantries: if you were the owner and other members remain, ownership passes to another member; if you were alone, the pantry is deleted. <strong>Deleting your account does not cancel a paid subscription: cancel it in Google Play or the App Store.</strong></p>
+        <p>If you believe the processing breaches the law you may lodge a complaint with the Italian Data Protection Authority, the Garante per la protezione dei dati personali (<a href="https://www.garanteprivacy.it" rel="noopener">www.garanteprivacy.it</a>), or with the authority of your EU country of residence.</p>
+      </section>
+
+      <section>
+        <h2>10. Children</h2>
+        <p>Shelfy is not directed at children under 14 (the age of digital consent in Italy, Art. 2-quinquies of Legislative Decree 196/2003) and we do not knowingly collect data from children under that age. If you think a child has given us data, write to us and we will delete it.</p>
+      </section>
+
+      <section>
+        <h2>11. Security</h2>
+        <p>Data travels over encrypted connections (HTTPS) and is stored on Google Firebase infrastructure. Access is restricted by rules that let each user read only their own data and that of the pantries they belong to; joining a shared pantry requires a server-validated code, with a limit on attempts. No system is 100% secure: we adopt reasonable and proportionate measures.</p>
+      </section>
+
+      <section>
+        <h2>12. Changes to this notice</h2>
+        <p>We may update this notice over time. The "last updated" date at the top shows the latest version; for significant changes we will tell you in the app or by email.</p>
+      </section>
+    </div>
+
+    <!-- ===================== ESPAÑOL ===================== -->
+    <div data-lang="es">
+      <p>Esta política explica, conforme a los arts. 13 y 14 del Reglamento (UE) 2016/679 (RGPD) y al Decreto Legislativo italiano 196/2003, cómo trata Shelfy los datos personales de quienes usan la app y el sitio shelfy-app.it. Hemos intentado escribirla de forma sencilla y describir solo lo que la app realmente hace.</p>
+
+      <section>
+        <h2>1. Responsable del tratamiento</h2>
+        <!-- TODO(titolare): P.IVA e sede legale prima di attivare i piani a pagamento -->
+        <p>El responsable del tratamiento es Andrea Casula (persona física), que desarrolla y gestiona Shelfy. No se ha nombrado un Delegado de Protección de Datos (DPD). Para cualquier consulta sobre tus datos personales escribe a
         <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a>.</p>
       </section>
 
       <section>
-        <h2>6. Your rights</h2>
-        <p>As an EU user, you have the right to access, rectify, delete, restrict and port your
-        data, as well as the right to object to processing. You can exercise these rights by
-        contacting us via email.</p>
+        <h2>2. Qué datos tratamos</h2>
+        <div class="card">
+          <h3>Datos de la cuenta</h3>
+          <p>Correo electrónico y nombre visible, facilitados al registrarte con correo y contraseña o con el acceso de Google (Firebase Authentication). La contraseña la gestiona Firebase Authentication y nosotros no la conocemos. También registramos el idioma elegido, la fecha de creación de la cuenta y la fecha del último uso.</p>
+        </div>
+        <div class="card">
+          <h3>Modo invitado</h3>
+          <p>Puedes probar la app sin registrarte: Firebase crea una cuenta anónima, con un identificador técnico y sin correo. El invitado solo tiene la despensa personal (máximo 10 productos) y no dispone de lista de la compra, comunidad, despensa compartida ni precios. Si luego te registras, tus datos siguen asociados a la misma cuenta.</p>
+        </div>
+        <div class="card">
+          <h3>Contenido que añades</h3>
+          <p>Productos (nombre, marca, código de barras, cantidad, categoría, caducidad, zona de almacenamiento, notas), lista de la compra y artículos favoritos, recetas guardadas y recetas propias.</p>
+        </div>
+        <div class="card">
+          <h3>Despensa compartida</h3>
+          <p>Nombre de la despensa, lista de miembros con su nombre visible, productos y lista de la compra compartidos, código de invitación. Solo se entra con un código (o QR) validado por el servidor: todos los miembros ven el contenido de la despensa y los nombres de los demás miembros.</p>
+        </div>
+        <div class="card">
+          <h3>Contenido para la comunidad</h3>
+          <p>Las recetas que publicas, las valoraciones, las peticiones de ayuda y las propuestas de receta son visibles para los usuarios registrados junto con tu nombre visible. Los precios que indicas (código de barras, tienda, precio) y los productos que añades al catálogo se hacen públicos <strong>sin indicar quién los envió</strong>: el autor queda registrado en un archivo visible solo para el responsable, para moderación y prevención de abusos.</p>
+        </div>
+        <div class="card">
+          <h3>Comentarios y encuestas</h3>
+          <p>Si envías un comentario registramos tu correo, nombre, categoría y mensaje. Las respuestas a encuestas se asocian a tu identificador de usuario.</p>
+        </div>
+        <div class="card">
+          <h3>Cámara y escaneos</h3>
+          <p>La cámara sirve para leer códigos de barras y reconocer el texto de tickets y fechas de caducidad. El reconocimiento de texto se hace <strong>en tu dispositivo</strong> (ML Kit de Google en la app Android; Tesseract.js en el navegador) y los tickets se interpretan en local: las fotos no se suben a nuestros servidores. En el navegador, la primera vez que usas el reconocimiento de texto, los componentes de Tesseract.js y los datos de idioma se descargan de la red de distribución jsDelivr (ver sección 5). El permiso de la cámara lo gestiona tu sistema operativo o navegador y puedes revocarlo en cualquier momento.</p>
+        </div>
+        <div class="card">
+          <h3>Notificaciones</h3>
+          <p>En la app móvil los recordatorios de caducidad se programan en local en tu teléfono; si concedes el permiso, guardamos además un token de notificación (Expo). En la web, si activas las notificaciones, guardamos un token Web Push (Firebase Cloud Messaging) y nuestro servidor te envía los recordatorios. También guardamos tu preferencia (notificaciones activadas o no).</p>
+        </div>
+        <div class="card">
+          <h3>Suscripción</h3>
+          <p>Por ahora los planes de pago no están a la venta. Si lo estuvieran en el futuro, el estado de la suscripción (activa o caducada, tipo de plan, fecha de vencimiento) se gestionaría mediante RevenueCat y las tiendas (Google Play / App Store) y se actualizaría en tu perfil; RevenueCat usa tu identificador de usuario de Firebase y solo se aplica a usuarios registrados, no a invitados. Nunca vemos ni guardamos los datos de tu tarjeta. Si pides que te avisemos cuando Premium esté disponible, registramos tu inscripción en la lista de espera.</p>
+        </div>
+        <div class="card">
+          <h3>Zona de precios</h3>
+          <p>No accedemos a tu ubicación GPS. Para la función de precios escribes tú el nombre de tu municipio y un radio: los recordamos en tu dispositivo y el nombre del municipio se envía a nuestra función para obtener sus coordenadas.</p>
+        </div>
+        <div class="card">
+          <h3>Datos de uso y datos técnicos</h3>
+          <p>Contadores sencillos (productos añadidos, consumidos, desperdiciados) y fecha del último uso, para estadísticas agregadas; contadores para limitar abusos (intentos de entrada con código, envíos de precios). Los servidores de Google (Hosting, Functions, Firestore) y los demás servicios de la sección 5 pueden registrar datos técnicos como la dirección IP y la información del dispositivo.</p>
+        </div>
+        <div class="card">
+          <h3>Guía de origen (solo web, con consentimiento)</h3>
+          <p>Si aceptas el aviso del sitio, recordamos en tu navegador el nombre de la guía que te llevó a Shelfy y, cuando te registras, lo vinculamos a tu cuenta para saber qué guías funcionan. Si lo rechazas, no se guarda nada.</p>
+        </div>
+        <p>Si no facilitas correo y contraseña (o no usas el acceso de Google), solo puedes usar el modo invitado, con sus límites. No tratamos categorías especiales de datos (art. 9 RGPD).</p>
       </section>
 
       <section>
-        <h2>7. Children</h2>
-        <p>Shelfy is not directed at children under 13, and we do not knowingly collect data from
-        children under that age.</p>
+        <h2>3. Para qué los usamos y con qué base jurídica</h2>
+        <ul>
+          <li><strong>Prestarte el servicio</strong> (cuenta, despensa, caducidades, recordatorios, lista de la compra, despensa compartida, suscripción): ejecución de un contrato (art. 6.1.b RGPD).</li>
+          <li><strong>Notificaciones push y guía de origen</strong>: tu consentimiento (art. 6.1.a), que puedes retirar en cualquier momento sin afectar a lo hecho antes.</li>
+          <li><strong>Seguridad y prevención de abusos</strong> (límites de frecuencia, verificación de códigos de invitación), <strong>estadísticas agregadas</strong> sobre el uso de la app y <strong>moderación</strong> de precios y catálogo: interés legítimo del responsable (art. 6.1.f), valorado como no prevalente sobre tus derechos dado su bajo impacto.</li>
+          <li><strong>Obligaciones fiscales y contables</strong>, si en el futuro se venden planes de pago: obligación legal (art. 6.1.c).</li>
+        </ul>
+        <p>No elaboramos perfiles ni tomamos decisiones basadas únicamente en tratamientos automatizados que produzcan efectos jurídicos sobre ti (art. 22 RGPD). No vendemos tus datos ni los usamos para publicidad.</p>
       </section>
 
       <section>
-        <h2>8. Security</h2>
-        <p>Data is transmitted over encrypted connections (HTTPS) and stored on Google Firebase
-        infrastructure.</p>
+        <h2>4. Quién puede ver tus datos</h2>
+        <ul>
+          <li><strong>Otros usuarios</strong>: solo lo que compartes (despensa compartida; contenido de la comunidad con tu nombre visible).</li>
+          <li><strong>El responsable</strong>, para administrar el servicio, atender solicitudes y moderar.</li>
+          <li><strong>Proveedores de servicios</strong> de la sección 5, que tratan datos por nuestra cuenta o, en algunos casos, como responsables independientes.</li>
+          <li><strong>Autoridades</strong>, solo cuando lo exija la ley.</li>
+        </ul>
       </section>
 
       <section>
-        <h2>9. Changes to this policy</h2>
-        <p>We may update this policy over time. The "last updated" date at the top reflects the
-        most recent version.</p>
+        <h2>5. Servicios de terceros</h2>
+        <ul>
+          <li><strong>Google</strong> — Firebase Authentication, Firestore (base de datos, región UE "eur3"), Cloud Functions (región europe-west1), Hosting, Firebase Cloud Messaging (notificaciones web), acceso con Google; Google Play (descarga de la app y, en el futuro, facturación). Actúa por nuestra cuenta como encargado del tratamiento de los datos de la app.</li>
+          <li><strong>Expo</strong> — la app móvil comprueba al iniciarse si hay actualizaciones (EAS Update): Expo recibe la versión de la app, la versión de runtime y la plataforma, y ve la dirección IP del dispositivo. El servicio de notificaciones push de Expo (exp.host) se usa para entregar al responsable avisos de servicio (nuevo registro, nuevo comentario), que contienen el nombre y el correo de quien se registra o el comienzo del mensaje de comentario. Los recordatorios de caducidad de los usuarios no pasan por Expo.</li>
+          <li><strong>RevenueCat</strong> — gestión del estado de las suscripciones, con tu identificador de usuario de Firebase; solo para usuarios registrados y solo cuando los planes de pago estén activos. En compras hechas en la web, el pago lo procesa el proveedor de pagos integrado por RevenueCat; en compras desde la app móvil, Google Play o App Store, que tratan los datos de pago como responsables independientes.</li>
+          <li><strong>Open Food Facts</strong> — cuando escaneas un código de barras o buscas un producto por nombre, la app consulta directamente Open Food Facts: el servicio ve el código o el texto buscado y tu dirección IP. Los datos de productos son © colaboradores de Open Food Facts, licencia ODbL.</li>
+          <li><strong>Open Prices (Open Food Facts)</strong> — para mostrarte precios orientativos, nuestra Cloud Function (no tu dispositivo) consulta prices.openfoodfacts.org con códigos de barras y un área geográfica; no se envían tu nombre ni tu IP. Datos con licencia abierta (ODbL).</li>
+          <li><strong>OpenStreetMap (Nominatim)</strong> — nuestra Cloud Function envía el nombre del municipio que has escrito para obtener las coordenadas; el resultado se guarda en una caché sin vínculo con tu cuenta. Datos © colaboradores de OpenStreetMap, licencia ODbL.</li>
+          <li><strong>jsDelivr</strong> — solo en la web: red de distribución desde la que el navegador descarga los componentes y los datos de idioma del reconocimiento de texto (Tesseract.js). El servicio ve tu dirección IP; no recibe fotos ni textos.</li>
+        </ul>
+        <p>Estos servicios tratan los datos según sus propias políticas. No usamos herramientas de analítica ni de publicidad de terceros.</p>
+      </section>
+
+      <section>
+        <h2>6. Transferencias fuera del Espacio Económico Europeo</h2>
+        <p>Los datos de la app se almacenan en la Unión Europea (Firestore "eur3", Cloud Functions en europe-west1). Sin embargo, algunos proveedores (por ejemplo Google, Expo, RevenueCat) pueden tratar datos también en Estados Unidos u otros países fuera del EEE. Cuando proceda, la transferencia se basa en una decisión de adecuación de la Comisión Europea (incluido el Marco de Privacidad de Datos UE-EE. UU., para los proveedores que se adhieren a él) o en las Cláusulas Contractuales Tipo.</p>
+      </section>
+
+      <section>
+        <h2>7. Cuánto tiempo conservamos los datos</h2>
+        <ul>
+          <li><strong>Cuenta registrada</strong>: hasta que la elimines.</li>
+          <li><strong>Cuenta de invitado</strong>: se elimina automáticamente, con sus datos, a los 30 días.</li>
+          <li><strong>Tokens de notificación</strong>: hasta que los revoques o elimines la cuenta.</li>
+          <li><strong>Autoría de precios y productos enviados</strong>: hasta que se elimine la cuenta. Los precios y productos públicos no contienen al autor y permanecen.</li>
+          <li><strong>Eliminación de la cuenta</strong>: los datos se borran de inmediato, salvo el contenido de la comunidad (que pasa a ser anónimo, ver abajo). Las copias técnicas de seguridad (backups) en Google pueden permanecer durante los ciclos normales de Firebase.</li>
+          <li><strong>Datos contables y fiscales</strong>, si en el futuro vendiéramos planes de pago: durante los plazos legales.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>8. Almacenamiento local y cookies</h2>
+        <p>No usamos cookies de elaboración de perfiles. El sitio y la app web guardan en tu dispositivo solo lo necesario para funcionar (art. 122 del Código de privacidad italiano: no requiere consentimiento): la sesión de acceso (Firebase Authentication), el idioma y el tema elegidos, la despensa activa, el municipio y el radio de precios, las sugerencias ya vistas, el service worker para las notificaciones web (solo si las activas) y copias temporales de los componentes de reconocimiento de texto. El único elemento opcional es la guía de origen (<code>shelfy.acquisition</code>), que solo se guarda si aceptas el aviso. La app móvil usa el almacenamiento local de la app (AsyncStorage) para idioma, tema, despensa activa y sugerencias. Puedes borrar estos datos desde los ajustes del navegador o desinstalando la app.</p>
+      </section>
+
+      <section>
+        <h2>9. Tus derechos</h2>
+        <p>Tienes derecho de acceso, rectificación, supresión, limitación, portabilidad y oposición, y a retirar un consentimiento en cualquier momento. En la app, en <strong>Ajustes → Cuenta</strong>, puedes <strong>descargar tus datos</strong> en formato JSON ("Descargar mis datos") y <strong>eliminar la cuenta</strong> ("Eliminar cuenta"). Para cualquier otra solicitud escribe a <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a>: respondemos sin dilación indebida y, en todo caso, en el plazo de un mes (ampliable en casos complejos). Para los detalles de la eliminación consulta <a href="/elimina-account" data-nav>Cómo eliminar tu cuenta</a>.</p>
+        <p>Qué ocurre al eliminar la cuenta: se borran de inmediato tu perfil, despensa personal, lista de la compra, recetas guardadas y propias, tokens de notificación, comentarios y respuestas a encuestas que enviaste, y el vínculo con los precios y productos del catálogo que indicaste. Las recetas, propuestas y peticiones que publicaste en la comunidad permanecen, pero de forma anónima (autor mostrado como "Usuario eliminado"). Se te retira de las despensas compartidas: si eras el creador y quedan otros miembros, la propiedad pasa a otro miembro; si estabas solo, la despensa se elimina. <strong>Eliminar la cuenta no cancela una suscripción de pago: cancélala en Google Play o App Store.</strong></p>
+        <p>Si consideras que el tratamiento infringe la normativa, puedes presentar una reclamación ante la autoridad italiana de protección de datos, el Garante per la protezione dei dati personali (<a href="https://www.garanteprivacy.it" rel="noopener">www.garanteprivacy.it</a>), o ante la autoridad de tu país de residencia en la UE.</p>
+      </section>
+
+      <section>
+        <h2>10. Menores</h2>
+        <p>Shelfy no está dirigida a menores de 14 años (edad del consentimiento digital en Italia, art. 2-quinquies del Decreto Legislativo 196/2003) y no recogemos conscientemente datos de menores de esa edad. Si crees que un menor nos ha facilitado datos, escríbenos y los eliminaremos.</p>
+      </section>
+
+      <section>
+        <h2>11. Seguridad</h2>
+        <p>Los datos viajan por conexiones cifradas (HTTPS) y se almacenan en la infraestructura de Google Firebase. El acceso se limita con reglas que permiten a cada usuario leer solo sus datos y los de las despensas de las que forma parte; entrar en una despensa compartida exige un código validado por el servidor, con límite de intentos. Ningún sistema es 100 % seguro: adoptamos medidas razonables y proporcionadas.</p>
+      </section>
+
+      <section>
+        <h2>12. Cambios en esta política</h2>
+        <p>Podemos actualizar esta política con el tiempo. La fecha de "última actualización" de arriba indica la versión más reciente; ante cambios relevantes te avisaremos en la app o por correo.</p>
       </section>
     </div>
 
     <footer>
-      <p>Shelfy — <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a></p>
+      <p data-lang="it"><a href="/privacy" data-nav>Privacy</a> · <a href="/termini" data-nav>Termini di servizio</a> · <a href="/elimina-account" data-nav>Elimina account</a> · <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a></p>
+      <p data-lang="en"><a href="/privacy" data-nav>Privacy</a> · <a href="/termini" data-nav>Terms of Service</a> · <a href="/elimina-account" data-nav>Delete account</a> · <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a></p>
+      <p data-lang="es"><a href="/privacy" data-nav>Privacidad</a> · <a href="/termini" data-nav>Términos del servicio</a> · <a href="/elimina-account" data-nav>Eliminar cuenta</a> · <a href="mailto:business.shelfy@gmail.com">business.shelfy@gmail.com</a></p>
     </footer>
   </div>
 
   <script>
-    function setLang(lang) {
-      document.querySelectorAll('[data-lang]').forEach(function (el) {
-        el.style.display = (el.getAttribute('data-lang') === lang) ? '' : 'none';
-      });
-      document.getElementById('btn-it').classList.toggle('active', lang === 'it');
-      document.getElementById('btn-en').classList.toggle('active', lang === 'en');
-    }
+    (function () {
+      var LANGS = ['it', 'en', 'es'];
+      var TITLES = {
+        it: 'Shelfy — Informativa sulla Privacy',
+        en: 'Shelfy — Privacy Policy',
+        es: 'Shelfy — Política de Privacidad'
+      };
+      function setLang(lang, remember) {
+        if (LANGS.indexOf(lang) < 0) lang = 'it';
+        document.body.className = 'lang-' + lang;
+        document.documentElement.lang = lang;
+        document.title = TITLES[lang];
+        LANGS.forEach(function (l) {
+          document.getElementById('btn-' + l).classList.toggle('active', l === lang);
+        });
+        document.querySelectorAll('a[data-nav]').forEach(function (a) {
+          a.setAttribute('href', a.getAttribute('href').split('#')[0] + '#' + lang);
+        });
+        if (remember && window.history && history.replaceState) {
+          try { history.replaceState(null, '', '#' + lang); } catch (e) {}
+        }
+      }
+      window.setLang = function (lang) { setLang(lang, true); };
+      var hash = (location.hash || '').replace('#', '');
+      var start = LANGS.indexOf(hash) >= 0 ? hash : ((navigator.language || 'it').slice(0, 2).toLowerCase());
+      setLang(LANGS.indexOf(start) >= 0 ? start : 'it', false);
+    })();
   </script>
 </body>
 </html>

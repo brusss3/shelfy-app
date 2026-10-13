@@ -3,7 +3,17 @@ import {
   serverTimestamp, Timestamp, writeBatch, getDocs, where, setDoc, increment, limit,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { NewShoppingItem, ShoppingFavorite, ShoppingItem } from '@/types';
+import { NewShoppingItem, Product, ShoppingFavorite, ShoppingItem } from '@/types';
+
+// Cosa finisce in lista quando si ricompra un prodotto della dispensa: tutto
+// ciò che lo identifica (barcode incluso, così una voce già presente si
+// riconosce e ne sale la quantità), non scadenza e zona di quella confezione.
+export function shoppingItemOf(p: Product): NewShoppingItem {
+  return {
+    name: p.name, brand: p.brand || undefined, qty: p.qty || undefined,
+    barcode: p.barcode, category: p.category, tint: p.tint, zone: p.zone,
+  };
+}
 
 // La lista segue lo stesso scope della dispensa: personale sotto l'utente,
 // condivisa sotto la casa — così i conviventi vedono e spuntano la stessa

@@ -19,6 +19,7 @@ import { setupNotificationHandler, setupNotificationCategories } from '@/lib/not
 import NotificationsScheduler from '@/components/NotificationsScheduler';
 import LanguageSync from '@/components/LanguageSync';
 import SurveyModal from '@/components/SurveyModal';
+import ConsentBanner from '@/components/ConsentBanner';
 import { captureAcquisitionSource } from '@/lib/acquisition';
 
 SplashScreen.preventAutoHideAsync();
@@ -88,6 +89,7 @@ function RootNavigator() {
         <NotificationsScheduler />
         <LanguageSync />
         <SurveyModal />
+        <ConsentBanner />
         <ProductsProvider>
           <ShoppingProvider>
           <RecipesProvider>
